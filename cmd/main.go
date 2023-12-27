@@ -10,10 +10,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
-	// start a libp2p node with default settings
+
 	node, err := libp2p.New(
 		libp2p.ListenAddrStrings("/ip4/192.168.1.106/tcp/2300"),
 		libp2p.Ping(false),
@@ -24,6 +25,7 @@ func main() {
 	// 	// attach a ping service to the node
 	pingService := &ping.PingService{Host: node}
 	node.SetStreamHandler(ping.ID, pingService.PingHandler)
+
 	// print the node's listening addresses
 	fmt.Println("Listen addresses:", node.Addrs())
 	// print the node's PeerInfo in multiaddr format
@@ -34,26 +36,42 @@ func main() {
 	addrs, err := peerstore.AddrInfoToP2pAddrs(&peerInfo)
 	fmt.Println("libp2p node address:", addrs[0])
 
-	// if a remote peer has been passed on the command line, connect to it
-	// and send it 5 ping messages, otherwise wait for a signal to stop
 	if len(os.Args) > 1 {
-		addr, err := multiaddr.NewMultiaddr(os.Args[1])
-		if err != nil {
-			panic(err)
-		}
-		peer, err := peerstore.AddrInfoFromP2pAddr(addr)
-		if err != nil {
-			panic(err)
-		}
-		if err := node.Connect(context.Background(), *peer); err != nil {
-			panic(err)
-		}
-		fmt.Println("sending 5 ping messages to", addr)
-		ch := pingService.Ping(context.Background(), peer.ID)
-		for i := 0; i < 5; i++ {
-			res := <-ch
-			fmt.Println("got ping response!", "RTT:", res.RTT)
-		}
+
+		go func() {
+			for {
+				addr, err := multiaddr.NewMultiaddr(os.Args[1])
+				if err != nil {
+					panic(err)
+				}
+				peer, err := peerstore.AddrInfoFromP2pAddr(addr)
+				if err != nil {
+					panic(err)
+				}
+				if err := node.Connect(context.Background(), *peer); err != nil {
+					panic(err)
+				}
+				fmt.Println("sending  broadcast messages every 3 seconds to", addr)
+				ch := pingService.Ping(context.Background(), peer.ID)
+
+				res := <-ch
+				fmt.Println("got ping response!", "RTT:", res.RTT)
+				stream, err := node.NewStream(context.Background(), peer.ID, ping.ID)
+				if err != nil {
+					fmt.Println("Error creating stream:", err)
+
+				}
+				message := "Hello, this is a broadcasted message!"
+				_, err = stream.Write([]byte(message))
+				if err != nil {
+					fmt.Println("Error writing to stream:", err)
+				}
+				stream.Close()
+				time.Sleep(3 * time.Second)
+			}
+		}()
+		select {}
+
 	} else {
 		// wait for a SIGINT or SIGTERM signal
 		ch := make(chan os.Signal, 1)
