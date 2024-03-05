@@ -4,22 +4,23 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	multiaddr "github.com/multiformats/go-multiaddr"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
+var connectedPeers = make(map[peer.ID]peer.AddrInfo)
+var mutex = &sync.Mutex{} // For synchronizing access to connectedPeers
+
 func setupNode(ctx context.Context) (host.Host, error) {
-	// Creating a new libp2p host
 	node, err := libp2p.New(
 		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/0"), // Listen on all interfaces and a random port
 		libp2p.Ping(false), // Disable the built-in ping protocol
@@ -27,14 +28,32 @@ func setupNode(ctx context.Context) (host.Host, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create libp2p host: %w", err)
 	}
+
+	// Register connection handler to update connectedPeers
+	node.Network().Notify(&network.NotifyBundle{
+		ConnectedF: func(n network.Network, c network.Conn) {
+			mutex.Lock()
+			peerInfo := peer.AddrInfo{
+				ID:    c.RemotePeer(),
+				Addrs: []multiaddr.Multiaddr{c.RemoteMultiaddr()},
+			}
+			connectedPeers[c.RemotePeer()] = peerInfo
+			mutex.Unlock()
+			fmt.Printf("Connected to %s\n", c.RemotePeer())
+		},
+		DisconnectedF: func(n network.Network, c network.Conn) {
+			mutex.Lock()
+			delete(connectedPeers, c.RemotePeer())
+			mutex.Unlock()
+			fmt.Printf("Disconnected from %s\n", c.RemotePeer())
+		},
+	})
+
 	return node, nil
 }
 
 func printNodeInfo(node host.Host) {
-	// Print the node's listening addresses
 	fmt.Println("Listen addresses:", node.Addrs())
-
-	// Print the node's PeerInfo in multiaddr format
 	peerInfo := peer.AddrInfo{
 		ID:    node.ID(),
 		Addrs: node.Addrs(),
@@ -69,15 +88,12 @@ const customProtocolID = "/myapp/message/1.0.0"
 func setupStreamHandler(node host.Host) {
 	node.SetStreamHandler(protocol.ID(customProtocolID), func(s network.Stream) {
 		defer s.Close()
-
-		// Read message from the stream
 		buf := bufio.NewReader(s)
 		str, err := buf.ReadString('\n')
 		if err != nil {
 			fmt.Println("Failed to read from stream:", err)
 			return
 		}
-
 		fmt.Printf("Received message: %s\n", str)
 	})
 }
@@ -97,6 +113,20 @@ func sendMessage(ctx context.Context, node host.Host, peerID peer.ID, message st
 	return nil
 }
 
+// Function to broadcast a message to all connected peers
+func broadcastMessage(ctx context.Context, host host.Host, message string) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	for peerID, _ := range connectedPeers {
+		if peerID == host.ID() {
+			continue // Skip sending message to self
+		}
+		if err := sendMessage(ctx, host, peerID, message); err != nil {
+			fmt.Printf("Error broadcasting message to %s: %s\n", peerID, err)
+		}
+	}
+}
+
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -105,56 +135,40 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer node.Close() // Ensure the node is closed on exit
+	defer node.Close()
 
 	printNodeInfo(node)
 	setupStreamHandler(node)
 
-	if len(os.Args) > 1 {
-		// Connect to the specified peer and get its ID for pinging
-		peerAddrStr := os.Args[1]
-		err := connectToPeer(ctx, node, peerAddrStr)
-		if err != nil {
-			fmt.Println("Error connecting to peer:", err)
-			return
-		}
-
-		// Extract the peer ID from the multiaddress for pinging
-		addr, err := multiaddr.NewMultiaddr(peerAddrStr)
-		if err != nil {
-			fmt.Println("Failed to parse multiaddress:", err)
-			return
-		}
-		peerInfo, err := peer.AddrInfoFromP2pAddr(addr)
-		if err != nil {
-			fmt.Println("Failed to extract peer info from address:", err)
-			return
-		}
-		peerID := peerInfo.ID
-
-		// Attach the ping service and handler
-		pingService := ping.NewPingService(node)
-
-		// Start pinging the peer
-		go func() {
-			fmt.Println("Sending ping messages to", peerID)
-			for {
-				pingMessage := pingService.Ping(ctx, peerID)
-				if pingMessage == nil {
-					fmt.Println("Ping failed:", err)
-				} else {
-					sendMessage(ctx, node, peerID, "Hello from "+node.ID().String())
-					fmt.Println("Ping successful to", peerID)
-				}
-				time.Sleep(3 * time.Second)
+	// Handling user input in a separate goroutine
+	go func() {
+		scanner := bufio.NewScanner(os.Stdin)
+		fmt.Println("Enter message to broadcast (Type 'exit' to quit):")
+		for scanner.Scan() {
+			input := scanner.Text()
+			if input == "exit" {
+				break
 			}
-		}()
+			broadcastMessage(ctx, node, input)
+		}
+		cancel() // Cancel the context to exit the main program
+	}()
+
+	// Argument to connect to a peer if provided
+	if len(os.Args) > 1 {
+		peerAddrStr := os.Args[1]
+		if err := connectToPeer(ctx, node, peerAddrStr); err != nil {
+			fmt.Println("Error connecting to peer:", err)
+		}
 	}
 
-	// Wait for a SIGINT (Ctrl+C) or SIGTERM signal to shut down gracefully.
+	// Wait for a SIGINT (Ctrl+C) or SIGTERM signal to shut down gracefully
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-	<-ch
-
-	fmt.Println("Received signal, shutting down...")
+	select {
+	case <-ch:
+		fmt.Println("Received signal, shutting down...")
+	case <-ctx.Done():
+		fmt.Println("Context cancelled, shutting down...")
+	}
 }
