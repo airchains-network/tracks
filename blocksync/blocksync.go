@@ -2,37 +2,14 @@ package blocksync
 
 import (
 	"context"
-	"fmt"
-	stationConfig "github.com/airchains-network/decentralized-sequencer/config"
-	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"log"
-	"os"
+	"github.com/syndtr/goleveldb/leveldb"
+	"sync"
 )
 
-func StartIndexer() {
+func StartIndexer(wg *sync.WaitGroup, client *ethclient.Client, ctx context.Context, blockDatabaseConnection *leveldb.DB, txnDatabaseConnection *leveldb.DB, latestBlock int) {
+	defer wg.Done()
 
-	StationType := "EVM"
-	if StationType == "EVM" {
-		// Intialize the Database
-		response := InitDb()
-		if !response {
-			log.Fatal("Error in initializing db")
-			os.Exit(0)
-		}
-		logs.Log.Info("Initialized the database")
-		// Connect to the Ethereum client
-		client, err := ethclient.Dial(stationConfig.StationRPC)
-		fmt.Println(client)
-		if err != nil {
-			log.Fatal("Failed to connect to the Ethereum client:", err)
-			os.Exit(0)
-		}
-		ctx := context.Background()
-		blockDatabaseConnection := GetBlockDbInstance()
-		txnDatabaseConnection := GetTxDbInstance()
+	StoreEVMBlock(client, ctx, latestBlock, blockDatabaseConnection, txnDatabaseConnection)
 
-		StoreEVMBlock(client, ctx, 0, blockDatabaseConnection, txnDatabaseConnection)
-
-	}
 }

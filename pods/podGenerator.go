@@ -4,12 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/common"
 	"github.com/airchains-network/decentralized-sequencer/config"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/types"
+	"github.com/airchains-network/decentralized-sequencer/utilis"
 	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1"
-	settlement_client "github.com/airchains-network/evm-sequencer-node/handlers/settlement-client"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/syndtr/goleveldb/leveldb"
 	"os"
@@ -57,19 +56,19 @@ func BatchGeneration(wg *sync.WaitGroup, client *ethclient.Client, ctx context.C
 			os.Exit(0)
 		}
 
-		senderBalancesCheck, err := common.GetBalance(tx.From, (tx.BlockNumber - 1))
+		senderBalancesCheck, err := utilis.GetBalance(tx.From, (tx.BlockNumber - 1))
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in getting sender balance : %s", err.Error()))
 			os.Exit(0)
 		}
 
-		receiverBalancesCheck, err := common.GetBalance(tx.To, (tx.BlockNumber - 1))
+		receiverBalancesCheck, err := utilis.GetBalance(tx.To, (tx.BlockNumber - 1))
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in getting reciver balance : %s", err.Error()))
 			os.Exit(0)
 		}
 
-		accountNouceCheck, err := common.GetAccountNonce(ctx, tx.Hash, tx.BlockNumber)
+		accountNouceCheck, err := utilis.GetAccountNonce(ctx, tx.Hash, tx.BlockNumber)
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in getting account nonce : %s", err.Error()))
 			os.Exit(0)
@@ -99,64 +98,68 @@ func BatchGeneration(wg *sync.WaitGroup, client *ethclient.Client, ctx context.C
 	witnessVector, currentStatusHash, proofByte, pkErr := v1.GenerateProof(batch, limitInt+1)
 	if pkErr != nil {
 		logs.Log.Error(fmt.Sprintf("Error in generating proof : %s", pkErr.Error()))
-		os.Exit(0)
+		BatchGeneration(wg, client, ctx, lds, ldt, ldbatch, ldda, []byte(strconv.Itoa(config.PODSize*(limitInt+1))))
 	}
-
-	daKeyHash, err := DaCall(batch.TransactionHash, client, ctx, currentStatusHash, limitInt+1, ldda)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in adding Da client : %s", err.Error()))
-		logs.Log.Warn("Trying again...")
-		time.Sleep(3 * time.Second)
-		BatchGeneration(wg, client, ctx, lds, ldt, ldbatch, ldda, []byte(strconv.Itoa(common.BatchSize*(limitInt+1))))
-	}
-
-	logs.Log.Warn(fmt.Sprintf("Successfully added Da client for Batch %s in the latest phase", daKeyHash))
-
-	addBatchRes := settlement_client.AddBatch(witnessVector, limitInt+1, lds)
-	if addBatchRes == "nil" {
-		logs.Log.Error(fmt.Sprintf("Error in adding batch to settlement client : %s", addBatchRes))
-		os.Exit(0)
-	}
-
-	status := settlement_client.VerifyBatch(limitInt+1, proofByte, ldda, lds)
-	if !status {
-		logs.Log.Error(fmt.Sprintf("Error in verifying batch to settlement client : %s", status))
-		os.Exit(0)
-	}
-
 	logs.Log.Warn(fmt.Sprintf("Successfully generated proof for Batch %s in the latest phase", strconv.Itoa(limitInt+1)))
+	fmt.Println("Witness Vector: ", witnessVector)
+	fmt.Println("Current Status Hash: ", currentStatusHash)
+	fmt.Println("Proof Byte: ", proofByte)
 
-	batchJSON, err := json.Marshal(batch)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in marshalling batch data : %s", err.Error()))
-		os.Exit(0)
-	}
+	//daKeyHash, err := DaCall(batch.TransactionHash, client, ctx, currentStatusHash, limitInt+1, ldda)
+	//if err != nil {
+	//	logs.Log.Error(fmt.Sprintf("Error in adding Da client : %s", err.Error()))
+	//	logs.Log.Warn("Trying again...")
+	//	time.Sleep(3 * time.Second)
+	//	BatchGeneration(wg, client, ctx, lds, ldt, ldbatch, ldda, []byte(strconv.Itoa(config.PODSize*(limitInt+1))))
+	//}
+	//
+	//logs.Log.Warn(fmt.Sprintf("Successfully added Da client for Batch %s in the latest phase", daKeyHash))
+	//
+	//addBatchRes := settlement_client.AddBatch(witnessVector, limitInt+1, lds)
+	//if addBatchRes == "nil" {
+	//	logs.Log.Error(fmt.Sprintf("Error in adding batch to settlement client : %s", addBatchRes))
+	//	os.Exit(0)
+	//}
+	//
+	//status := settlement_client.VerifyBatch(limitInt+1, proofByte, ldda, lds)
+	//if !status {
+	//	logs.Log.Error(fmt.Sprintf("Error in verifying batch to settlement client : %s", status))
+	//	os.Exit(0)
+	//}
+	//
+	//logs.Log.Warn(fmt.Sprintf("Successfully generated proof for Batch %s in the latest phase", strconv.Itoa(limitInt+1)))
+	//
+	//batchJSON, err := json.Marshal(batch)
+	//if err != nil {
+	//	logs.Log.Error(fmt.Sprintf("Error in marshalling batch data : %s", err.Error()))
+	//	os.Exit(0)
+	//}
+	//
+	//batchKey := fmt.Sprintf("batch-%d", limitInt+1)
+	//err = ldbatch.Put([]byte(batchKey), batchJSON, nil)
+	//if err != nil {
+	//	logs.Log.Error(fmt.Sprintf("Error in writing batch data to file : %s", err.Error()))
+	//	os.Exit(0)
+	//}
+	//
+	//err = lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(config.PODSize*(limitInt+1))), nil)
+	//if err != nil {
+	//	logs.Log.Error(fmt.Sprintf("Error in updating batchStartIndex in static db : %s", err.Error()))
+	//	os.Exit(0)
+	//}
+	//
+	//err = lds.Put([]byte("batchCount"), []byte(strconv.Itoa(limitInt+1)), nil)
+	//if err != nil {
+	//	logs.Log.Error(fmt.Sprintf("Error in updating batchCount in static db : %s", err.Error()))
+	//	os.Exit(0)
+	//}
+	//
+	//err = os.WriteFile("data/batchCount.txt", []byte(strconv.Itoa(limitInt+1)), 0666)
+	//if err != nil {
+	//	panic("Failed to update batch number: " + err.Error())
+	//}
+	//
+	//logs.Log.Warn(fmt.Sprintf("Successfully saved Batch %s in the latest phase", strconv.Itoa(limitInt+1)))
 
-	batchKey := fmt.Sprintf("batch-%d", limitInt+1)
-	err = ldbatch.Put([]byte(batchKey), batchJSON, nil)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in writing batch data to file : %s", err.Error()))
-		os.Exit(0)
-	}
-
-	err = lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(common.BatchSize*(limitInt+1))), nil)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in updating batchStartIndex in static db : %s", err.Error()))
-		os.Exit(0)
-	}
-
-	err = lds.Put([]byte("batchCount"), []byte(strconv.Itoa(limitInt+1)), nil)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in updating batchCount in static db : %s", err.Error()))
-		os.Exit(0)
-	}
-
-	err = os.WriteFile("data/batchCount.txt", []byte(strconv.Itoa(limitInt+1)), 0666)
-	if err != nil {
-		panic("Failed to update batch number: " + err.Error())
-	}
-
-	logs.Log.Warn(fmt.Sprintf("Successfully saved Batch %s in the latest phase", strconv.Itoa(limitInt+1)))
-
-	BatchGeneration(wg, client, ctx, lds, ldt, ldbatch, ldda, []byte(strconv.Itoa(config.PODSize*(limitInt+1))))
+	//BatchGeneration(wg, client, ctx, lds, ldt, ldbatch, ldda, []byte(strconv.Itoa(config.PODSize*(limitInt+1))))
 }

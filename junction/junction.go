@@ -1,1 +1,1 @@
-package jucntion
+package junction

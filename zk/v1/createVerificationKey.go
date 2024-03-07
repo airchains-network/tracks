@@ -1,9 +1,9 @@
-package prover
+package v1
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/airchains-network/evm-sequencer-node/common/logs"
+	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"os"
 )
 

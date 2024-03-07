@@ -1,8 +1,13 @@
-package indexer
+package blocksync
 
 import (
+	"encoding/json"
+	"fmt"
+	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"log"
+	"os"
 )
 
 var txDbInstance *leveldb.DB
@@ -34,7 +39,23 @@ func InitBlockDb() bool {
 		log.Fatal("Failed to open block LevelDB:", err)
 		return false
 	}
+	fmt.Println("blockDB", blockDB)
 	blockDbInstance = blockDB
+
+	// get
+
+	// check is its assignes
+	blockNumberByte, err := blockDB.Get([]byte("blockCount"), nil)
+
+	if blockNumberByte == nil || err != nil {
+		err = blockDB.Put([]byte("blockCount"), []byte("0"), nil)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in saving blockCount in blockDatabase : %s", err.Error()))
+			//return false
+			os.Exit(0)
+		}
+	}
+
 	return true
 }
 
@@ -90,7 +111,26 @@ func InitDaDb() bool {
 		log.Fatal("Failed to open da LevelDB:", err)
 		return false
 	}
+	da := types.DAStruct{
+		DAKey:             "0",
+		DAClientName:      "0",
+		BatchNumber:       "0",
+		PreviousStateHash: "0",
+		CurrentStateHash:  "0",
+	}
+
+	daBytes, err := json.Marshal(da)
+
 	daDbInstance = daDB
+	daBytes, err = daDbInstance.Get([]byte("batch_0"), nil)
+	if daBytes == nil || err != nil {
+		err = daDbInstance.Put([]byte("batch_0"), daBytes, nil)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in saving daBytes in da Database : %s", err.Error()))
+			return false
+		}
+	}
+
 	return true
 }
 func InitMockDb() bool {

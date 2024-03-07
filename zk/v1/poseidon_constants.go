@@ -1,4 +1,4 @@
-package prover
+package v1
 
 import (
 	"fmt"
