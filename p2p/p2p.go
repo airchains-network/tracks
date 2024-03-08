@@ -3,7 +3,6 @@ package p2p
 import (
 	"bufio"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -12,25 +11,26 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	multiaddr "github.com/multiformats/go-multiaddr"
+	"math/rand"
 	"os"
 	"sync"
+	"time"
 )
 
 var connectedPeers = make(map[peer.ID]peer.AddrInfo)
 var mutex = &sync.Mutex{} // For synchronizing access to connectedPeers
+var Node host.Host
 
 func startNode(ctx context.Context) (host.Host, error) {
-	// Hex-encoded private key
-	serializedPrivKey := "08011240ced049e2de9cdd76c281975d59ee35a950a0b0239c603628fda5b7766080310d1a379e48c51ebc92f96351530954cd0a83726bdb5978d7fcc9926a547f903e8d"
-
-	// Decode the hex-encoded private key
-	privKeyBytes, err := hex.DecodeString(serializedPrivKey)
+	filepath := "sequencer/identity.info"
+	// Load the file into a byte slice
+	serializedPrivKey, err := os.ReadFile(filepath)
 	if err != nil {
-		panic(fmt.Errorf("failed to decode private key: %w", err))
+		fmt.Println("Error reading file:", err)
 	}
 
 	// Unmarshal the private key bytes into a libp2p PrivKey object
-	privKey, err := crypto.UnmarshalPrivateKey(privKeyBytes)
+	privKey, err := crypto.UnmarshalPrivateKey(serializedPrivKey)
 	if err != nil {
 		panic(fmt.Errorf("failed to unmarshal private key: %w", err))
 	}
@@ -135,14 +135,15 @@ func setupStreamHandler(node host.Host) {
 	})
 }
 
-func sendMessage(ctx context.Context, node host.Host, peerID peer.ID, message string) error {
+func sendMessage(ctx context.Context, node host.Host, peerID peer.ID, message []byte) error {
 	s, err := node.NewStream(ctx, peerID, protocol.ID(customProtocolID))
+	fmt.Printf("Sending message to %s\n", peerID)
 	if err != nil {
 		return fmt.Errorf("failed to open stream: %w", err)
 	}
 	defer s.Close()
 
-	_, err = s.Write([]byte(message + "\n"))
+	_, err = s.Write(message)
 	if err != nil {
 		return fmt.Errorf("failed to write message to stream: %w", err)
 	}
@@ -151,11 +152,16 @@ func sendMessage(ctx context.Context, node host.Host, peerID peer.ID, message st
 }
 
 // Function to broadcast a message to all connected peers
-func BroadcastMessage(ctx context.Context, host host.Host, message string) {
+func BroadcastMessage(ctx context.Context, host host.Host, message []byte) {
 	mutex.Lock()
+	fmt.Println("Broadcasting message to all connected peers")
 	defer mutex.Unlock()
 	for peerID, _ := range connectedPeers {
+		if len(connectedPeers) == 1 {
+			fmt.Println("Only 1 peer to broadcast message ")
+		}
 		if peerID == host.ID() {
+			fmt.Println("Skipping message to self")
 			continue // Skip sending message to self
 		}
 		if err := sendMessage(ctx, host, peerID, message); err != nil {
@@ -168,12 +174,38 @@ func P2PConfiguration() bool {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	node, err := startNode(ctx)
+	Node = node
 	if err != nil {
 		panic(err)
 		return false
 	}
-	defer node.Close()
-	printNodeInfo(node)
-	setupStreamHandler(node)
+	defer Node.Close()
+	printNodeInfo(Node)
+	setupStreamHandler(Node)
 	return true
+}
+
+var lastSelectedIndex int = -1
+
+func selectLeader(h host.Host, peers []peer.ID) peer.ID {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	rand.Seed(time.Now().UnixNano())
+
+	if len(peers) == 0 {
+		return h.ID() // Fallback to self if no other peers are available
+	}
+
+	// Ensure we cycle through peers and check availability
+	for i := 0; i < len(peers); i++ {
+		lastSelectedIndex = (lastSelectedIndex + 1) % len(peers)
+		potentialLeader := peers[lastSelectedIndex]
+
+		//if isPeerAvailable(h, potentialLeader) {
+		return potentialLeader
+		//}
+	}
+
+	return h.ID() // Fallback to self if no peers are available/active
 }

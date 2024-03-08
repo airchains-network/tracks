@@ -1,7 +1,11 @@
 package p2p
 
-func BatchGossip() {}
+import "context"
 
-func ZKPGossip() {}
+func ZKPGossip(Message []byte) {
+
+	ctx := context.Background()
+	BroadcastMessage(ctx, Node, Message)
+}
 
 func VrfGossip() {}

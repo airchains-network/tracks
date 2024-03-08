@@ -18,40 +18,41 @@ import (
 func Node() {
 	connectResult := p2p.P2PConfiguration()
 	if connectResult {
-
 		response := blocksync.InitDb()
 		if !response {
 			logs.Log.Error("Error in initializing db")
 		}
 		logs.Log.Info("Initialized the database")
 		ctx := context.Background()
-		blockDatabaseConnection := blocksync.GetBlockDbInstance()
-		txnDatabaseConnection := blocksync.GetTxDbInstance()
-		podsDatabaseConnection := blocksync.GetBatchesDbInstance()
-		dataAvailabilityDatabaseConnection := blocksync.GetDaDbInstance()
-		staticDatabaseConnection := blocksync.GetStaticDbInstance()
-		fmt.Println("staticDatabaseConnection", staticDatabaseConnection)
+		var (
+			BlockDatabaseConnection            = blocksync.GetBlockDbInstance()
+			TxnDatabaseConnection              = blocksync.GetTxDbInstance()
+			PodsDatabaseConnection             = blocksync.GetBatchesDbInstance()
+			DataAvailabilityDatabaseConnection = blocksync.GetDaDbInstance()
+			StaticDatabaseConnection           = blocksync.GetStaticDbInstance()
+		)
+		fmt.Println("staticDatabaseConnection", StaticDatabaseConnection)
 
-		batchStartIndex, err := staticDatabaseConnection.Get([]byte("batchStartIndex"), nil)
+		batchStartIndex, err := StaticDatabaseConnection.Get([]byte("batchStartIndex"), nil)
 
 		if err != nil {
-			err = staticDatabaseConnection.Put([]byte("batchStartIndex"), []byte("0"), nil)
+			err = StaticDatabaseConnection.Put([]byte("batchStartIndex"), []byte("0"), nil)
 			if err != nil {
 				logs.Log.Error(fmt.Sprintf("Error in saving batchStartIndex in static db : %s", err.Error()))
 				os.Exit(0)
 			}
 		}
 
-		_, err = staticDatabaseConnection.Get([]byte("batchCount"), nil)
+		_, err = StaticDatabaseConnection.Get([]byte("batchCount"), nil)
 		if err != nil {
-			err = staticDatabaseConnection.Put([]byte("batchCount"), []byte("0"), nil)
+			err = StaticDatabaseConnection.Put([]byte("batchCount"), []byte("0"), nil)
 			if err != nil {
 				logs.Log.Error(fmt.Sprintf("Error in saving batchCount in static db : %s", err.Error()))
 				os.Exit(0)
 			}
 		}
 
-		latestBlockBytes, err := blockDatabaseConnection.Get([]byte("blockCount"), nil)
+		latestBlockBytes, err := BlockDatabaseConnection.Get([]byte("blockCount"), nil)
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in getting blockCount from block db : %s", err.Error()))
 			os.Exit(0) //TODO : Handle this error
@@ -68,11 +69,11 @@ func Node() {
 		wg.Add(2)
 		go func() {
 			defer wg.Done()
-			blocksync.StartIndexer(&wg, client, ctx, blockDatabaseConnection, txnDatabaseConnection, latestBlock)
+			blocksync.StartIndexer(&wg, client, ctx, BlockDatabaseConnection, TxnDatabaseConnection, latestBlock)
 		}()
 		go func() {
 			defer wg.Done()
-			pods.BatchGeneration(&wg, client, ctx, staticDatabaseConnection, txnDatabaseConnection, podsDatabaseConnection, dataAvailabilityDatabaseConnection, batchStartIndex)
+			pods.BatchGeneration(&wg, client, ctx, StaticDatabaseConnection, TxnDatabaseConnection, PodsDatabaseConnection, DataAvailabilityDatabaseConnection, batchStartIndex)
 		}()
 		wg.Wait()
 	} else {

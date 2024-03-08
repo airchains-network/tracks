@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/config"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/airchains-network/decentralized-sequencer/p2p"
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/airchains-network/decentralized-sequencer/utilis"
 	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1"
@@ -94,7 +95,6 @@ func BatchGeneration(wg *sync.WaitGroup, client *ethclient.Client, ctx context.C
 	batch.Messages = Messages
 	batch.TransactionNonces = TransactionNonces
 	batch.AccountNonces = AccountNonces
-
 	witnessVector, currentStatusHash, proofByte, pkErr := v1.GenerateProof(batch, limitInt+1)
 	if pkErr != nil {
 		logs.Log.Error(fmt.Sprintf("Error in generating proof : %s", pkErr.Error()))
@@ -105,6 +105,7 @@ func BatchGeneration(wg *sync.WaitGroup, client *ethclient.Client, ctx context.C
 	fmt.Println("Current Status Hash: ", currentStatusHash)
 	fmt.Println("Proof Byte: ", proofByte)
 
+	p2p.ZKPGossip(proofByte)
 	//daKeyHash, err := DaCall(batch.TransactionHash, client, ctx, currentStatusHash, limitInt+1, ldda)
 	//if err != nil {
 	//	logs.Log.Error(fmt.Sprintf("Error in adding Da client : %s", err.Error()))
@@ -113,8 +114,8 @@ func BatchGeneration(wg *sync.WaitGroup, client *ethclient.Client, ctx context.C
 	//	BatchGeneration(wg, client, ctx, lds, ldt, ldbatch, ldda, []byte(strconv.Itoa(config.PODSize*(limitInt+1))))
 	//}
 	//
-	//logs.Log.Warn(fmt.Sprintf("Successfully added Da client for Batch %s in the latest phase", daKeyHash))
-	//
+	logs.Log.Warn(fmt.Sprintf("Successfully added Da client for Batch %s in the latest phase", "x"))
+
 	//addBatchRes := settlement_client.AddBatch(witnessVector, limitInt+1, lds)
 	//if addBatchRes == "nil" {
 	//	logs.Log.Error(fmt.Sprintf("Error in adding batch to settlement client : %s", addBatchRes))
@@ -127,39 +128,39 @@ func BatchGeneration(wg *sync.WaitGroup, client *ethclient.Client, ctx context.C
 	//	os.Exit(0)
 	//}
 	//
-	//logs.Log.Warn(fmt.Sprintf("Successfully generated proof for Batch %s in the latest phase", strconv.Itoa(limitInt+1)))
+	logs.Log.Warn(fmt.Sprintf("Successfully generated proof for Batch %s in the latest phase", strconv.Itoa(limitInt+1)))
 	//
-	//batchJSON, err := json.Marshal(batch)
-	//if err != nil {
-	//	logs.Log.Error(fmt.Sprintf("Error in marshalling batch data : %s", err.Error()))
-	//	os.Exit(0)
-	//}
-	//
-	//batchKey := fmt.Sprintf("batch-%d", limitInt+1)
-	//err = ldbatch.Put([]byte(batchKey), batchJSON, nil)
-	//if err != nil {
-	//	logs.Log.Error(fmt.Sprintf("Error in writing batch data to file : %s", err.Error()))
-	//	os.Exit(0)
-	//}
-	//
-	//err = lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(config.PODSize*(limitInt+1))), nil)
-	//if err != nil {
-	//	logs.Log.Error(fmt.Sprintf("Error in updating batchStartIndex in static db : %s", err.Error()))
-	//	os.Exit(0)
-	//}
-	//
-	//err = lds.Put([]byte("batchCount"), []byte(strconv.Itoa(limitInt+1)), nil)
-	//if err != nil {
-	//	logs.Log.Error(fmt.Sprintf("Error in updating batchCount in static db : %s", err.Error()))
-	//	os.Exit(0)
-	//}
-	//
-	//err = os.WriteFile("data/batchCount.txt", []byte(strconv.Itoa(limitInt+1)), 0666)
-	//if err != nil {
-	//	panic("Failed to update batch number: " + err.Error())
-	//}
-	//
+	batchJSON, err := json.Marshal(batch)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in marshalling batch data : %s", err.Error()))
+		os.Exit(0)
+	}
+
+	batchKey := fmt.Sprintf("batch-%d", limitInt+1)
+	err = ldbatch.Put([]byte(batchKey), batchJSON, nil)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in writing batch data to file : %s", err.Error()))
+		os.Exit(0)
+	}
+
+	err = lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(config.PODSize*(limitInt+1))), nil)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in updating batchStartIndex in static db : %s", err.Error()))
+		os.Exit(0)
+	}
+
+	err = lds.Put([]byte("batchCount"), []byte(strconv.Itoa(limitInt+1)), nil)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in updating batchCount in static db : %s", err.Error()))
+		os.Exit(0)
+	}
+
+	err = os.WriteFile("data/batchCount.txt", []byte(strconv.Itoa(limitInt+1)), 0666)
+	if err != nil {
+		panic("Failed to update batch number: " + err.Error())
+	}
+
 	//logs.Log.Warn(fmt.Sprintf("Successfully saved Batch %s in the latest phase", strconv.Itoa(limitInt+1)))
 
-	//BatchGeneration(wg, client, ctx, lds, ldt, ldbatch, ldda, []byte(strconv.Itoa(config.PODSize*(limitInt+1))))
+	BatchGeneration(wg, client, ctx, lds, ldt, ldbatch, ldda, []byte(strconv.Itoa(config.PODSize*(limitInt+1))))
 }

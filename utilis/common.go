@@ -62,8 +62,10 @@ func GetBalance(address string, blockNumber uint64) (string, error) {
 			return "", fmt.Errorf("failed to parse balance")
 		}
 
-		etherBalance := new(big.Float).Quo(new(big.Float).SetInt(balance), new(big.Float).SetInt64(1e18))
-		return etherBalance.String(), nil
+		return balance.String(), nil
+		//etherBalance := new(big.Float).Quo(new(big.Float).SetInt(balance), new(big.Float).SetInt64(1e18))
+		//formattedBalance := fmt.Sprintf("%.18f", etherBalance) // Format the balance
+		//return etherBalance, nil
 	} else {
 		log.Fatal("Failed to parse balance")
 		return "", err

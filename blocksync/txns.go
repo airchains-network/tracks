@@ -7,7 +7,7 @@ import (
 	"fmt"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	stationTypes "github.com/airchains-network/decentralized-sequencer/types"
-	"github.com/emirpasic/gods/utils"
+	"github.com/airchains-network/decentralized-sequencer/utilis"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -38,7 +38,6 @@ func insertTxn(db *leveldb.DB, txns stationTypes.TransactionStruct, transactionN
 }
 
 func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *leveldb.DB, transactionHash string, blockNumber int, blockHash string) {
-	fmt.Println("Storing EVM Transactions")
 	blockNumberUint64, err := strconv.ParseUint(strconv.Itoa(blockNumber), 10, 64)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error parsing block number to uint64:", err))
@@ -82,15 +81,15 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 		BlockHash:        blockHash,
 		BlockNumber:      blockNumberUint64,
 		From:             msg.Hex(),
-		Gas:              utils.ToString(tx.Gas()),
+		Gas:              utilis.ToString(tx.Gas()),
 		GasPrice:         tx.GasPrice().String(),
 		Hash:             tx.Hash().Hex(),
 		Input:            string(tx.Data()),
-		Nonce:            utils.ToString(tx.Nonce()),
+		Nonce:            utilis.ToString(tx.Nonce()),
 		R:                r.String(),
 		S:                s.String(),
 		To:               tx.To().Hex(),
-		TransactionIndex: utils.ToString(receipt.TransactionIndex),
+		TransactionIndex: utilis.ToString(receipt.TransactionIndex),
 		Type:             fmt.Sprintf("%d", tx.Type()),
 		V:                v.String(),
 		Value:            tx.Value().String(),
@@ -123,7 +122,7 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 		os.Exit(0)
 	}
 
-	logs.Log.Debug(fmt.Sprintf("Successfully saved Transation %s in the latest phase", txHash))
+	//logs.Log.Debug(fmt.Sprintf("Successfully saved Transation %s in the latest phase", txHash))
 
 }
 
