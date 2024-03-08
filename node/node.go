@@ -16,14 +16,21 @@ import (
 )
 
 func Node() {
-	connectResult := p2p.P2PConfiguration()
-	if connectResult {
+	var wg1 sync.WaitGroup
+	wg1.Add(2)
+	go func() {
+		defer wg1.Done()
+		_ = p2p.P2PConfiguration()
+	}()
+	go func() {
+		defer wg1.Done()
 		response := blocksync.InitDb()
 		if !response {
 			logs.Log.Error("Error in initializing db")
 		}
 		logs.Log.Info("Initialized the database")
 		ctx := context.Background()
+
 		var (
 			BlockDatabaseConnection            = blocksync.GetBlockDbInstance()
 			TxnDatabaseConnection              = blocksync.GetTxDbInstance()
@@ -76,7 +83,6 @@ func Node() {
 			pods.BatchGeneration(&wg, client, ctx, StaticDatabaseConnection, TxnDatabaseConnection, PodsDatabaseConnection, DataAvailabilityDatabaseConnection, batchStartIndex)
 		}()
 		wg.Wait()
-	} else {
-		logs.Log.Error("Failed to connect to the network")
-	}
+	}()
+	wg1.Wait()
 }

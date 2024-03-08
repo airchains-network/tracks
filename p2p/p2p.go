@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"github.com/libp2p/go-libp2p"
@@ -10,10 +9,14 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	multiaddr "github.com/multiformats/go-multiaddr"
+	"io"
 	"math/rand"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -34,6 +37,7 @@ func startNode(ctx context.Context) (host.Host, error) {
 	if err != nil {
 		panic(fmt.Errorf("failed to unmarshal private key: %w", err))
 	}
+	//fmt.Printf("Node's Private Key: %x\n", privKey)
 
 	node, err := libp2p.New(
 		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/2300"), // Listen on all interfaces and a random port
@@ -116,22 +120,39 @@ const customProtocolID = "/station/tracks/0.0.1"
 func setupStreamHandler(node host.Host) {
 	node.SetStreamHandler(protocol.ID(customProtocolID), func(s network.Stream) {
 		defer s.Close()
-		buf := bufio.NewReader(s)
-		str, err := buf.ReadString('\n')
-		if err != nil {
-			fmt.Println("Failed to read from stream:", err)
-			os.Exit(1)
+		//buf := bufio.NewReader(s)
+		//str, err := buf.ReadString('\n')
+		//if err != nil {
+		//	fmt.Println("Failed to read from stream:", err)
+		//	os.Exit(1)
+		//}
+
+		//var receivedNumber int
+		//_, err = fmt.Sscanf(str, "Random number: %d", &receivedNumber)
+		//if err != nil {
+		//	fmt.Println("Failed to parse received number:", err)
+		//	os.Exit(1)
+		//}
+		//
+		//fmt.Printf("Received random number: %d\n", receivedNumber)
+
+		buf := make([]byte, 1024) // Adjust the buffer size as needed.
+
+		for {
+			n, err := s.Read(buf)
+			if err == io.EOF {
+				fmt.Println("Stream closed by sender")
+				break
+			}
+			if err != nil {
+				fmt.Println("Failed to read from stream:", err)
+				return // Exit the handler on read error.
+			}
+
+			// Here, buf[:n] contains the received bytes.
+			// Process the received bytes according to your application's needs.
+			fmt.Printf("Received bytes: %v\n", buf[:n])
 		}
-
-		var receivedNumber int
-		_, err = fmt.Sscanf(str, "Random number: %d", &receivedNumber)
-		if err != nil {
-			fmt.Println("Failed to parse received number:", err)
-			os.Exit(1)
-		}
-
-		fmt.Printf("Received random number: %d\n", receivedNumber)
-
 	})
 }
 
@@ -171,6 +192,7 @@ func BroadcastMessage(ctx context.Context, host host.Host, message []byte) {
 }
 
 func P2PConfiguration() bool {
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	node, err := startNode(ctx)
@@ -182,6 +204,56 @@ func P2PConfiguration() bool {
 	defer Node.Close()
 	printNodeInfo(Node)
 	setupStreamHandler(Node)
+
+	if len(os.Args) > 2 {
+		// Connect to the specified peer and get its ID for pinging
+		peerAddrStr := os.Args[1]
+		err := connectToPeer(ctx, node, peerAddrStr)
+		if err != nil {
+			fmt.Println("Error connecting to peer:", err)
+			return false
+		}
+
+		// Extract the peer ID from the multiaddress for pinging
+		addr, err := multiaddr.NewMultiaddr(peerAddrStr)
+		if err != nil {
+			fmt.Println("Failed to parse multiaddress:", err)
+			return false
+		}
+		peerInfo, err := peer.AddrInfoFromP2pAddr(addr)
+		if err != nil {
+			fmt.Println("Failed to extract peer info from address:", err)
+			return false
+		}
+		peerID := peerInfo.ID
+
+		// Attach the ping service and handler
+		pingService := ping.NewPingService(node)
+
+		// Start pinging the peer
+		go func() {
+			fmt.Println("Sending ping messages to", peerID)
+			for {
+				pingMessage := pingService.Ping(ctx, peerID)
+				if pingMessage == nil {
+					fmt.Println("Ping failed:", err)
+				} else {
+					sendMessage(ctx, node, peerID, []byte("Hello from the other side"))
+					fmt.Println("Ping successful to", peerID)
+				}
+				time.Sleep(3 * time.Second)
+			}
+		}()
+	} else {
+		// Start the leader election process
+		fmt.Println()
+	}
+	// Wait for a SIGINT (Ctrl+C) or SIGTERM signal to shut down gracefully.
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	<-ch
+
+	fmt.Println("Received signal, shutting down...")
 	return true
 }
 
