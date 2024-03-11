@@ -1,5 +1,10 @@
 package types
 
+type GossipData struct {
+	Type string `json:"type"`
+	Data []byte `json:"data"`
+}
+
 type BlockStruct struct {
 	BaseFeePerGas    string `json:"basefeepergas"`
 	Difficulty       string `json:"difficulty"`

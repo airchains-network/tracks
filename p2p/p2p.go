@@ -3,6 +3,15 @@ package p2p
 import (
 	"context"
 	"fmt"
+	"io"
+	"math/rand"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
+
+	"github.com/airchains-network/decentralized-sequencer/p2p/gossiphandler"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -11,13 +20,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	multiaddr "github.com/multiformats/go-multiaddr"
-	"io"
-	"math/rand"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
-	"time"
 )
 
 var connectedPeers = make(map[peer.ID]peer.AddrInfo)
@@ -117,29 +119,15 @@ func connectToPeer(ctx context.Context, node host.Host, addrStr string) error {
 
 const customProtocolID = "/station/tracks/0.0.1"
 
-func setupStreamHandler(node host.Host) {
+func setupStreamHandler(node host.Host, ctx context.Context) {
 	node.SetStreamHandler(protocol.ID(customProtocolID), func(s network.Stream) {
 		defer s.Close()
-		//buf := bufio.NewReader(s)
-		//str, err := buf.ReadString('\n')
-		//if err != nil {
-		//	fmt.Println("Failed to read from stream:", err)
-		//	os.Exit(1)
-		//}
-
-		//var receivedNumber int
-		//_, err = fmt.Sscanf(str, "Random number: %d", &receivedNumber)
-		//if err != nil {
-		//	fmt.Println("Failed to parse received number:", err)
-		//	os.Exit(1)
-		//}
-		//
-		//fmt.Printf("Received random number: %d\n", receivedNumber)
 
 		buf := make([]byte, 1024) // Adjust the buffer size as needed.
 
 		for {
 			n, err := s.Read(buf)
+
 			if err == io.EOF {
 				fmt.Println("Stream closed by sender")
 				break
@@ -149,10 +137,17 @@ func setupStreamHandler(node host.Host) {
 				return // Exit the handler on read error.
 			}
 
-			// Here, buf[:n] contains the received bytes.
-			// Process the received bytes according to your application's needs.
 			fmt.Printf("Received bytes: %v\n", buf[:n])
+
+			dataType, dataByte, err := DecodeGossipData(buf[:n])
+			if err != nil {
+				fmt.Println("Error in getting data type:", err)
+				return
+			}
+
+			gossiphandler.HandleGossipData(node, ctx, dataType, dataByte)
 		}
+
 	})
 }
 
@@ -191,7 +186,7 @@ func BroadcastMessage(ctx context.Context, host host.Host, message []byte) {
 	}
 }
 
-func P2PConfiguration() bool {
+func P2PConfiguration() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -199,11 +194,13 @@ func P2PConfiguration() bool {
 	Node = node
 	if err != nil {
 		panic(err)
-		return false
+		//return false
 	}
 	defer Node.Close()
+
 	printNodeInfo(Node)
-	setupStreamHandler(Node)
+
+	setupStreamHandler(Node, ctx)
 
 	if len(os.Args) > 2 {
 		// Connect to the specified peer and get its ID for pinging
@@ -211,19 +208,19 @@ func P2PConfiguration() bool {
 		err := connectToPeer(ctx, node, peerAddrStr)
 		if err != nil {
 			fmt.Println("Error connecting to peer:", err)
-			return false
+			//return false
 		}
 
 		// Extract the peer ID from the multiaddress for pinging
 		addr, err := multiaddr.NewMultiaddr(peerAddrStr)
 		if err != nil {
 			fmt.Println("Failed to parse multiaddress:", err)
-			return false
+			//return false
 		}
 		peerInfo, err := peer.AddrInfoFromP2pAddr(addr)
 		if err != nil {
 			fmt.Println("Failed to extract peer info from address:", err)
-			return false
+			//return false
 		}
 		peerID := peerInfo.ID
 
@@ -248,13 +245,12 @@ func P2PConfiguration() bool {
 		// Start the leader election process
 		fmt.Println()
 	}
-	// Wait for a SIGINT (Ctrl+C) or SIGTERM signal to shut down gracefully.
+	//Wait for a SIGINT (Ctrl+C) or SIGTERM signal to shut down gracefully.
 	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(ch, syscall.SIGTERM)
 	<-ch
 
 	fmt.Println("Received signal, shutting down...")
-	return true
 }
 
 var lastSelectedIndex int = -1

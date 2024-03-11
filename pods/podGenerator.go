@@ -105,7 +105,19 @@ func BatchGeneration(wg *sync.WaitGroup, client *ethclient.Client, ctx context.C
 	fmt.Println("Current Status Hash: ", currentStatusHash)
 	fmt.Println("Proof Byte: ", proofByte)
 
-	p2p.ZKPGossip(proofByte)
+	proofData := types.GossipData{
+		Type: "proof",
+		Data: proofByte,
+	}
+	// proofData to byte
+	proofDataByte, err := json.Marshal(proofData)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in marshalling proof data : %s", err.Error()))
+		os.Exit(0)
+	}
+
+	p2p.ZKPGossip(proofDataByte)
+
 	//daKeyHash, err := DaCall(batch.TransactionHash, client, ctx, currentStatusHash, limitInt+1, ldda)
 	//if err != nil {
 	//	logs.Log.Error(fmt.Sprintf("Error in adding Da client : %s", err.Error()))

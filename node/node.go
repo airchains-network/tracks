@@ -20,7 +20,7 @@ func Node() {
 	wg1.Add(2)
 	go func() {
 		defer wg1.Done()
-		_ = p2p.P2PConfiguration()
+		p2p.P2PConfiguration()
 	}()
 	go func() {
 		defer wg1.Done()
