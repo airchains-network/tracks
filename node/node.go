@@ -9,6 +9,7 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/p2p"
 	"github.com/airchains-network/decentralized-sequencer/pods"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/syndtr/goleveldb/leveldb"
 	"os"
 	"strconv"
 	"strings"
@@ -18,71 +19,94 @@ import (
 func Node() {
 	var wg1 sync.WaitGroup
 	wg1.Add(2)
-	go func() {
-		defer wg1.Done()
-		p2p.P2PConfiguration()
-	}()
-	go func() {
-		defer wg1.Done()
-		response := blocksync.InitDb()
-		if !response {
-			logs.Log.Error("Error in initializing db")
-		}
-		logs.Log.Info("Initialized the database")
-		ctx := context.Background()
 
-		var (
-			BlockDatabaseConnection            = blocksync.GetBlockDbInstance()
-			TxnDatabaseConnection              = blocksync.GetTxDbInstance()
-			PodsDatabaseConnection             = blocksync.GetBatchesDbInstance()
-			DataAvailabilityDatabaseConnection = blocksync.GetDaDbInstance()
-			StaticDatabaseConnection           = blocksync.GetStaticDbInstance()
-		)
-		fmt.Println("staticDatabaseConnection", StaticDatabaseConnection)
+	go configureP2P(&wg1)
+	go initializeDBAndStartIndexing(&wg1)
 
-		batchStartIndex, err := StaticDatabaseConnection.Get([]byte("batchStartIndex"), nil)
-
-		if err != nil {
-			err = StaticDatabaseConnection.Put([]byte("batchStartIndex"), []byte("0"), nil)
-			if err != nil {
-				logs.Log.Error(fmt.Sprintf("Error in saving batchStartIndex in static db : %s", err.Error()))
-				os.Exit(0)
-			}
-		}
-
-		_, err = StaticDatabaseConnection.Get([]byte("batchCount"), nil)
-		if err != nil {
-			err = StaticDatabaseConnection.Put([]byte("batchCount"), []byte("0"), nil)
-			if err != nil {
-				logs.Log.Error(fmt.Sprintf("Error in saving batchCount in static db : %s", err.Error()))
-				os.Exit(0)
-			}
-		}
-
-		latestBlockBytes, err := BlockDatabaseConnection.Get([]byte("blockCount"), nil)
-		if err != nil {
-			logs.Log.Error(fmt.Sprintf("Error in getting blockCount from block db : %s", err.Error()))
-			os.Exit(0) //TODO : Handle this error
-		}
-
-		latestBlock, _ := strconv.Atoi(strings.TrimSpace(string(latestBlockBytes)))
-		fmt.Println("latestBlock", latestBlock)
-
-		client, err := ethclient.Dial(stationConfig.StationRPC)
-		if err != nil {
-			fmt.Println("Error in connecting to the network")
-		}
-		var wg sync.WaitGroup
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
-			blocksync.StartIndexer(&wg, client, ctx, BlockDatabaseConnection, TxnDatabaseConnection, latestBlock)
-		}()
-		go func() {
-			defer wg.Done()
-			pods.BatchGeneration(&wg, client, ctx, StaticDatabaseConnection, TxnDatabaseConnection, PodsDatabaseConnection, DataAvailabilityDatabaseConnection, batchStartIndex)
-		}()
-		wg.Wait()
-	}()
 	wg1.Wait()
+}
+
+func configureP2P(wg *sync.WaitGroup) {
+	defer wg.Done()
+	p2p.P2PConfiguration()
+}
+
+func initializeDBAndStartIndexing(wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	if !blocksync.InitDb() {
+		logs.Log.Error("Error in initializing db")
+		return
+	}
+	logs.Log.Info("Initialized the database")
+
+	dbConnections := initializeDatabaseConnections()
+	staticDB := dbConnections.StaticDatabaseConnection
+	checkAndInitializeDBCounters(staticDB)
+
+	latestBlock := getLatestBlock(dbConnections.BlockDatabaseConnection)
+	client, err := ethclient.Dial(stationConfig.StationRPC)
+	if err != nil {
+		logs.Log.Error("Error in connecting to the network")
+		return
+	}
+
+	var wg2 sync.WaitGroup
+	wg2.Add(2)
+	go blocksync.StartIndexer(&wg2, client, context.Background(), dbConnections.BlockDatabaseConnection, dbConnections.TxnDatabaseConnection, latestBlock)
+	go pods.BatchGeneration(&wg2, client, context.Background(), staticDB, dbConnections.TxnDatabaseConnection, dbConnections.PodsDatabaseConnection, dbConnections.DataAvailabilityDatabaseConnection, GetLatestBatchIndex(staticDB))
+
+	wg2.Wait()
+}
+
+func initializeDatabaseConnections() (connections struct {
+	BlockDatabaseConnection            *leveldb.DB
+	TxnDatabaseConnection              *leveldb.DB
+	PodsDatabaseConnection             *leveldb.DB
+	DataAvailabilityDatabaseConnection *leveldb.DB
+	StaticDatabaseConnection           *leveldb.DB
+}) {
+	connections.BlockDatabaseConnection = blocksync.GetBlockDbInstance()
+	connections.TxnDatabaseConnection = blocksync.GetTxDbInstance()
+	connections.PodsDatabaseConnection = blocksync.GetBatchesDbInstance()
+	connections.DataAvailabilityDatabaseConnection = blocksync.GetDaDbInstance()
+	connections.StaticDatabaseConnection = blocksync.GetStaticDbInstance()
+	return
+}
+
+func checkAndInitializeDBCounters(staticDB *leveldb.DB) {
+	ensureCounter(staticDB, "batchStartIndex")
+	ensureCounter(staticDB, "batchCount")
+}
+
+func ensureCounter(db *leveldb.DB, counterKey string) {
+	if _, err := db.Get([]byte(counterKey), nil); err != nil {
+		if err = db.Put([]byte(counterKey), []byte("0"), nil); err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in saving %s in static db: %s", counterKey, err.Error()))
+			os.Exit(0)
+		}
+	}
+}
+
+func getLatestBlock(blockDB *leveldb.DB) int {
+	latestBlockBytes, err := blockDB.Get([]byte("blockCount"), nil)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in getting blockCount from block db: %s", err.Error()))
+		os.Exit(0) // Consider proper error handling instead of os.Exit
+	}
+	latestBlock, _ := strconv.Atoi(strings.TrimSpace(string(latestBlockBytes)))
+	return latestBlock
+}
+
+func GetLatestBatchIndex(staticDB *leveldb.DB) []byte {
+	batchStartIndex, err := staticDB.Get([]byte("batchStartIndex"), nil)
+
+	if err != nil {
+		err = staticDB.Put([]byte("batchStartIndex"), []byte("0"), nil)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in saving batchStartIndex in static db : %s", err.Error()))
+			os.Exit(0)
+		}
+	}
+	return batchStartIndex
 }

@@ -9,7 +9,7 @@ import (
 )
 
 func ProcessGossipMessage(node host.Host, ctx context.Context, dataType string, dataByte []byte) {
-
+	fmt.Println("Processing gossip message")
 	switch dataType {
 	case "proof":
 		ProofHandler(node, ctx, dataByte)

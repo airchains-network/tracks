@@ -103,11 +103,20 @@ func BatchGeneration(wg *sync.WaitGroup, client *ethclient.Client, ctx context.C
 	logs.Log.Warn(fmt.Sprintf("Successfully generated proof for Batch %s in the latest phase", strconv.Itoa(limitInt+1)))
 	fmt.Println("Witness Vector: ", witnessVector)
 	fmt.Println("Current Status Hash: ", currentStatusHash)
-	fmt.Println("Proof Byte: ", proofByte)
+
+	proofGossip := types.ProofData{
+		Proof:     proofByte,
+		PodNumber: uint64(limitInt + 1),
+	}
+	proofByteGossip, err := json.Marshal(proofGossip)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in marshalling proof data : %s", err.Error()))
+		os.Exit(0)
+	}
 
 	proofData := types.GossipData{
 		Type: "proof",
-		Data: proofByte,
+		Data: proofByteGossip,
 	}
 	// proofData to byte
 	proofDataByte, err := json.Marshal(proofData)
