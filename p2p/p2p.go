@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/airchains-network/decentralized-sequencer/p2p/gossiphandler"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -145,7 +144,7 @@ func setupStreamHandler(node host.Host, ctx context.Context) {
 				return
 			}
 
-			gossiphandler.HandleGossipData(node, ctx, dataType, dataByte)
+			ProcessGossipMessage(node, ctx, dataType, dataByte)
 		}
 
 	})
