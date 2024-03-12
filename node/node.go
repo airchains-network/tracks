@@ -91,6 +91,5 @@ func InitializeDatabaseConnections() DatabaseConnections {
 	connections.DataAvailabilityDatabaseConnection = blocksync.GetDaDbInstance()
 
 	connections.StaticDatabaseConnection = blocksync.GetStaticDbInstance()
-	fmt.Println(connections)
 	return connections
 }

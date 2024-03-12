@@ -50,7 +50,9 @@ func InitializePodState() PodState {
 	}
 }
 func GetPodState() PodState {
+	fmt.Println(Node.podState)
 	return Node.podState
+
 }
 
 func SetPodState(podState PodState) {

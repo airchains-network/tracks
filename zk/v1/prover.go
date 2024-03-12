@@ -124,9 +124,11 @@ func GenerateVerificationKey() (groth16.ProvingKey, groth16.VerifyingKey, error)
 func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []byte, error) {
 
 	ccs := ComputeCCS()
-
+	fmt.Println(batchNum)
 	var transactions []TransactionSecond
+
 	for i := 0; i < config.PODSize; i++ {
+
 		transaction := TransactionSecond{
 			To:              inputData.To[i],
 			From:            inputData.From[i],
