@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/config"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/p2p"
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/airchains-network/decentralized-sequencer/utilis"
 	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1"
@@ -134,7 +133,7 @@ func BatchGeneration(wg *sync.WaitGroup, client *ethclient.Client, ctx context.C
 	// check who is the validator of this POD
 	// if validator is this node:
 
-	p2p.ZKPGossip(ProofDataByte)
+	//p2p.ZKPGossip(ProofDataByte)
 	//daKeyHash, err := DaCall(batch.TransactionHash, client, ctx, currentStatusHash, limitInt+1, ldda)
 	//if err != nil {
 	//	logs.Log.Error(fmt.Sprintf("Error in adding Da client : %s", err.Error()))

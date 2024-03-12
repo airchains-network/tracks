@@ -46,16 +46,6 @@ func ProofHandler(node host.Host, ctx context.Context, dataByte []byte) { // , N
 	// get thet data again  and print
 	currentPodData = shared.GetPodState()
 	fmt.Println("current pod data:", currentPodData)
-	fmt.Println("current pod data:", currentPodData)
-	fmt.Println("current pod data:", currentPodData)
-	fmt.Println("current pod data:", currentPodData)
-	fmt.Println("current pod data:", currentPodData)
-	fmt.Println("current pod data:", currentPodData)
-	fmt.Println("current pod data:", currentPodData)
-	fmt.Println("current pod data:", currentPodData)
-	fmt.Println("current pod data:", currentPodData)
-	fmt.Println("current pod data:", currentPodData)
-	fmt.Println("current pod data:", currentPodData)
 
 	//connection := command.GetConnections()
 	//fmt.Println(connection)

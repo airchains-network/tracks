@@ -9,10 +9,12 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var (
 	Node *NodeS
+	mu   sync.Mutex // Mutex to ensure thread-safe access
 )
 
 type Votes struct {
@@ -37,11 +39,11 @@ type Connections struct {
 
 type NodeS struct {
 	config   *config.Config
-	podState PodState
+	podState *PodState
 }
 
-func InitializePodState() PodState {
-	return PodState{
+func InitializePodState() *PodState {
+	return &PodState{
 		LatestPodHeight:         0,
 		LatestPodMerkleRootHash: nil,
 		LatestPodProof:          nil,
@@ -49,13 +51,16 @@ func InitializePodState() PodState {
 		Votes:                   make(map[string]Votes),
 	}
 }
-func GetPodState() PodState {
-	fmt.Println(Node.podState)
+func GetPodState() *PodState {
+	mu.Lock()
+	defer mu.Unlock()
+	//fmt.Println(Node.podState)
 	return Node.podState
-
 }
 
-func SetPodState(podState PodState) {
+func SetPodState(podState *PodState) {
+	mu.Lock()
+	defer mu.Unlock()
 	Node.podState = podState
 }
 
@@ -109,11 +114,15 @@ func GetLatestBatchIndex(staticDB *leveldb.DB) []byte {
 	return batchStartIndex
 }
 
-func NewNode(conf *config.Config, podState PodState) *NodeS {
-	return &NodeS{
+func NewNode(conf *config.Config) {
+	//PodState{}
+
+	podState := InitializePodState()
+	Node = &NodeS{
 		config:   conf,
 		podState: podState,
 	}
+
 }
 
 //type PodStateManager interface {

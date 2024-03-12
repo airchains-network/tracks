@@ -144,8 +144,13 @@ func handleStreamData(s network.Stream) {
 			fmt.Println("Error in getting data type:", err)
 			return
 		}
-		fmt.Println("Data Type:", dataType)
-
+		//fmt.Println("Data Type:", dataType)
+		//fmt.Printf("Data: %s\n", dataByte)
+		//shared.SetPodState(shared.PodState{
+		//	LatestPodHeight:         1000000,
+		//	LatestPodMerkleRootHash: nil,
+		//})
+		fmt.Println("current pod data:")
 		ProcessGossipMessage(Node, CTX, dataType, dataByte)
 	}
 }

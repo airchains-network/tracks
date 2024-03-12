@@ -14,12 +14,12 @@ var StationCmd = &cobra.Command{
 
 		// default values
 		conf := config.DefaultConfig()
-		podState := shared.InitializePodState()
+		shared.InitializePodState()
 
 		// TODO: make changes in default values from config.yaml
 
 		// node config
-		shared.NewNode(conf, podState)
+		shared.NewNode(conf)
 
 		// start node
 		node.Start()
