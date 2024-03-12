@@ -76,11 +76,7 @@ import (
 func BatchGeneration(wg *sync.WaitGroup, client *ethclient.Client, ctx context.Context, lds *leveldb.DB, ldt *leveldb.DB, ldbatch *leveldb.DB, ldda *leveldb.DB, batchStartIndex []byte) {
 
 	defer wg.Done()
-	initialCount := uint64(0)                        // Example initial count
-	initialProofData := []byte("initial proof data") // Example initial proof data
 
-	latestData := NewLatestUnverifiedData(initialCount, initialProofData)
-	fmt.Println(latestData)
 	limit, err := lds.Get([]byte("batchCount"), nil)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in getting batchCount from static db : %s", err.Error()))

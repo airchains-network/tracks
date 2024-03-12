@@ -50,6 +50,10 @@ func ProofHandler(node host.Host, ctx context.Context, dataByte []byte) {
 	//}
 	//ProofResult
 	// marshal proof result
+	proofResult := types.ProofResult{
+		PodNumber: ProofData.PodNumber,
+		Success:   true,
+	}
 	proofResultByte, err := json.Marshal(proofResult)
 	if err != nil {
 		panic("error in mashaling proof result")

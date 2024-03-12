@@ -52,8 +52,7 @@ func initializeDBAndStartIndexing(wg *sync.WaitGroup) {
 		return
 	}
 
-	//DefaultUnverifiedData  define default pod data
-	pods.DefaultUnverifiedData()
+	//DefaultUnverifiedData  define default pod data\
 
 	var wg2 sync.WaitGroup
 	wg2.Add(2)
