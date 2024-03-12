@@ -26,6 +26,7 @@ func Node() {
 	wg1.Wait()
 }
 
+// Removed (data stationConfig.LatestUnverifiedData)
 func configureP2P(wg *sync.WaitGroup) {
 	defer wg.Done()
 	p2p.P2PConfiguration()
@@ -50,6 +51,9 @@ func initializeDBAndStartIndexing(wg *sync.WaitGroup) {
 		logs.Log.Error("Error in connecting to the network")
 		return
 	}
+
+	//DefaultUnverifiedData  define default pod data
+	pods.DefaultUnverifiedData()
 
 	var wg2 sync.WaitGroup
 	wg2.Add(2)

@@ -30,16 +30,25 @@ func ProofHandler(node host.Host, ctx context.Context, dataByte []byte) {
 		panic("error in unmarshling proof")
 	}
 
-	proof := ProofData.Proof
-	fmt.Println("Proof received: ", proof)
+	//ReceivedProof := ProofData.Proof
+	//podNumber := ProofData.PodNumber
 
-	//TODO: verify proof and put proofResult below
+	// Proof Local Pod
+	//LocalGeneratedProof := pods.LatestUnverifiedValue.ValueUnverifiedProof()
 
-	proofResult := types.ProofResult{
-		PodNumber: ProofData.PodNumber,
-		Success:   true,
-	}
-
+	//proofResult := types.ProofResult{}
+	//if bytes.Equal(ReceivedProof, LocalGeneratedProof) {
+	//	proofResult = types.ProofResult{
+	//		PodNumber: ProofData.PodNumber,
+	//		Success:   true,
+	//	}
+	//} else {
+	//	proofResult = types.ProofResult{
+	//		PodNumber: ProofData.PodNumber,
+	//		Success:   false,
+	//	}
+	//}
+	//ProofResult
 	// marshal proof result
 	proofResultByte, err := json.Marshal(proofResult)
 	if err != nil {
