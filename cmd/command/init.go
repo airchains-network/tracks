@@ -25,6 +25,8 @@ var InitCmd = &cobra.Command{
 		}
 		tracksDir := filepath.Join(homeDir, config.DefaultTracksDir)
 
+		conf := config.DefaultConfig()
+
 		conf.RootDir = tracksDir
 		conf.SetRoot(conf.RootDir)
 		config.EnsureRoot(conf.RootDir)

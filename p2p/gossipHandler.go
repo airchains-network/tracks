@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/airchains-network/decentralized-sequencer/types"
-
 	"github.com/libp2p/go-libp2p/core/host"
 )
 
@@ -33,6 +33,29 @@ func ProofHandler(node host.Host, ctx context.Context, dataByte []byte) { // , N
 	if err != nil {
 		panic("error in unmarshling proof")
 	}
+
+	currentPodData := shared.GetPodState()
+	fmt.Println("current pod data:", currentPodData)
+
+	// updatee pod state
+	currentPodData.LatestPodHeight = 1000000
+
+	// update pod state
+	shared.SetPodState(currentPodData)
+
+	// get thet data again  and print
+	currentPodData = shared.GetPodState()
+	fmt.Println("current pod data:", currentPodData)
+	fmt.Println("current pod data:", currentPodData)
+	fmt.Println("current pod data:", currentPodData)
+	fmt.Println("current pod data:", currentPodData)
+	fmt.Println("current pod data:", currentPodData)
+	fmt.Println("current pod data:", currentPodData)
+	fmt.Println("current pod data:", currentPodData)
+	fmt.Println("current pod data:", currentPodData)
+	fmt.Println("current pod data:", currentPodData)
+	fmt.Println("current pod data:", currentPodData)
+	fmt.Println("current pod data:", currentPodData)
 
 	//connection := command.GetConnections()
 	//fmt.Println(connection)

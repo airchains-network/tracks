@@ -3,7 +3,6 @@ package utilis
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/config"
 	"io"
 	"math/big"
 	"net/http"
@@ -22,7 +21,7 @@ func TestGetBalance(t *testing.T) {
 		"id": 1
 	}`, address, "0x"+strconv.FormatUint(blockNumber, 16))
 
-	resp, err := http.Post(config.StationRPC, "application/json", strings.NewReader(payload))
+	resp, err := http.Post("http://192.168.1.106:8545", "application/json", strings.NewReader(payload))
 	if err != nil {
 	}
 	defer resp.Body.Close()

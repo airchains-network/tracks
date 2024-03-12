@@ -34,7 +34,7 @@ func GetBalance(address string, blockNumber uint64) (string, error) {
 		"id": 1
 	}`, address, "0x"+strconv.FormatUint(blockNumber, 16))
 
-	resp, err := http.Post("locahost:8545", "application/json", strings.NewReader(payload))
+	resp, err := http.Post("http://192.168.1.106:8545", "application/json", strings.NewReader(payload))
 	if err != nil {
 		return "", err
 	}
@@ -72,7 +72,7 @@ func GetBalance(address string, blockNumber uint64) (string, error) {
 }
 
 func GetAccountNonce(ctx context.Context, address string, blockNumber uint64) (string, error) {
-	client, err := rpc.Dial("locahost:8545")
+	client, err := rpc.Dial("http://192.168.1.106:8545")
 	if err != nil {
 		return "0", err
 	}
