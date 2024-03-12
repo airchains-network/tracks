@@ -2,20 +2,11 @@ package command
 
 import (
 	"github.com/airchains-network/decentralized-sequencer/config"
-	"github.com/airchains-network/decentralized-sequencer/node"
 	"github.com/airchains-network/decentralized-sequencer/p2p"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
 )
-
-var StationCmd = &cobra.Command{
-	Use:   "start",
-	Short: "start the sequencer nodes",
-	Run: func(cmd *cobra.Command, args []string) {
-		node.Node()
-	},
-}
 
 var moniker string
 var stationType string
@@ -27,7 +18,7 @@ var InitCmd = &cobra.Command{
 		moniker, _ := cmd.Flags().GetString("moniker")
 		stationType, _ := cmd.Flags().GetString("stationType")
 		daType, _ := cmd.Flags().GetString("daType")
-		conf := config.DefaultConfig()
+
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			panic(err) // Handle error appropriately

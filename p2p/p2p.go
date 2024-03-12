@@ -145,6 +145,7 @@ func handleStreamData(s network.Stream) {
 			return
 		}
 		fmt.Println("Data Type:", dataType)
+
 		ProcessGossipMessage(Node, CTX, dataType, dataByte)
 	}
 }
@@ -186,6 +187,9 @@ func BroadcastMessage(ctx context.Context, host host.Host, message []byte) {
 }
 
 func P2PConfiguration() {
+
+	// create state
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	CTX = ctx

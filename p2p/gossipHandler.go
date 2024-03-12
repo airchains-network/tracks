@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/types"
+
 	"github.com/libp2p/go-libp2p/core/host"
 )
 
+// podStateManager shared.PodStateManager,
 func ProcessGossipMessage(node host.Host, ctx context.Context, dataType string, dataByte []byte) {
 	fmt.Println("Processing gossip message")
 	switch dataType {
 	case "proof":
+		// podStateManager
 		ProofHandler(node, ctx, dataByte)
 		return
 	case "proofResult":
@@ -22,13 +25,35 @@ func ProcessGossipMessage(node host.Host, ctx context.Context, dataType string, 
 	}
 }
 
-func ProofHandler(node host.Host, ctx context.Context, dataByte []byte) {
+// podStateManager shared.PodStateManager,
+func ProofHandler(node host.Host, ctx context.Context, dataByte []byte) { // , Node *command.Node
 
 	var ProofData types.ProofData
 	err := json.Unmarshal(dataByte, &ProofData)
 	if err != nil {
 		panic("error in unmarshling proof")
 	}
+
+	//connection := command.GetConnections()
+	//fmt.Println(connection)
+
+	//podState := Node.GetPodState()
+	//fmt.Println(podState)
+
+	// update pod state
+	// new data for pod
+
+	//newPodData := n.PodState{
+	//	LatestPodHeight:         1000000,
+	//	LatestPodMerkleRootHash: podState.LatestPodMerkleRootHash,
+	//	LatestPodProof:          ProofData.Proof,
+	//	LatestPublicWitness:     podState.LatestPublicWitness,
+	//	Votes:                   podState.Votes,
+	//}
+	//command.Node.SetPodState(newPodData)
+
+	//latestPodState := command.Node.GetPodState()
+	//fmt.Println("new pod state:", latestPodState)
 
 	//ReceivedProof := ProofData.Proof
 	//podNumber := ProofData.PodNumber
