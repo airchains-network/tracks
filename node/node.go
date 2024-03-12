@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/blocksync"
-	stationConfig "github.com/airchains-network/decentralized-sequencer/config"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/p2p"
 	"github.com/airchains-network/decentralized-sequencer/pods"
@@ -16,11 +15,54 @@ import (
 	"sync"
 )
 
+/*
+type Node struct {
+	service.BaseService
+
+	// config
+	config        *cfg.Config
+	genesisDoc    *types.GenesisDoc   // initial validator set
+	privValidator types.PrivValidator // local node's validator key
+
+	// network
+	transport   *p2p.MultiplexTransport
+	sw          *p2p.Switch  // p2p connections
+	addrBook    pex.AddrBook // known peers
+	nodeInfo    p2p.NodeInfo
+	nodeKey     *p2p.NodeKey // our node privkey
+	isListening bool
+
+	// services
+	eventBus          *types.EventBus // pub/sub for services
+	stateStore        sm.Store
+	blockStore        *store.BlockStore // store the blockchain to disk
+	bcReactor         p2p.Reactor       // for block-syncing
+	mempoolReactor    p2p.Reactor       // for gossipping transactions
+	mempool           mempl.Mempool
+	stateSync         bool                    // whether the node should state sync on startup
+	stateSyncReactor  *statesync.Reactor      // for hosting and restoring state sync snapshots
+	stateSyncProvider statesync.StateProvider // provides state data for bootstrapping a node
+	stateSyncGenesis  sm.State                // provides the genesis state for state sync
+	consensusState    *cs.State               // latest consensus state
+	consensusReactor  *cs.Reactor             // for participating in the consensus
+	pexReactor        *pex.Reactor            // for exchanging peer addresses
+	evidencePool      *evidence.Pool          // tracking evidence
+	proxyApp          proxy.AppConns          // connection to the application
+	rpcListeners      []net.Listener          // rpc servers
+	txIndexer         txindex.TxIndexer
+	blockIndexer      indexer.BlockIndexer
+	indexerService    *txindex.IndexerService
+	prometheusSrv     *http.Server
+	pprofSrv          *http.Server
+}
+*/
+
 func Node() {
 	var wg1 sync.WaitGroup
 	wg1.Add(2)
 
 	go configureP2P(&wg1)
+
 	go initializeDBAndStartIndexing(&wg1)
 
 	wg1.Wait()
@@ -46,7 +88,7 @@ func initializeDBAndStartIndexing(wg *sync.WaitGroup) {
 	checkAndInitializeDBCounters(staticDB)
 
 	latestBlock := getLatestBlock(dbConnections.BlockDatabaseConnection)
-	client, err := ethclient.Dial(stationConfig.StationRPC)
+	client, err := ethclient.Dial("localhost:8545")
 	if err != nil {
 		logs.Log.Error("Error in connecting to the network")
 		return
@@ -56,6 +98,7 @@ func initializeDBAndStartIndexing(wg *sync.WaitGroup) {
 
 	var wg2 sync.WaitGroup
 	wg2.Add(2)
+
 	go blocksync.StartIndexer(&wg2, client, context.Background(), dbConnections.BlockDatabaseConnection, dbConnections.TxnDatabaseConnection, latestBlock)
 	go pods.BatchGeneration(&wg2, client, context.Background(), staticDB, dbConnections.TxnDatabaseConnection, dbConnections.PodsDatabaseConnection, dbConnections.DataAvailabilityDatabaseConnection, GetLatestBatchIndex(staticDB))
 

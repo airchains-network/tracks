@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/config"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"io"
@@ -35,7 +34,7 @@ func GetBalance(address string, blockNumber uint64) (string, error) {
 		"id": 1
 	}`, address, "0x"+strconv.FormatUint(blockNumber, 16))
 
-	resp, err := http.Post(config.StationRPC, "application/json", strings.NewReader(payload))
+	resp, err := http.Post("locahost:8545", "application/json", strings.NewReader(payload))
 	if err != nil {
 		return "", err
 	}
@@ -73,7 +72,7 @@ func GetBalance(address string, blockNumber uint64) (string, error) {
 }
 
 func GetAccountNonce(ctx context.Context, address string, blockNumber uint64) (string, error) {
-	client, err := rpc.Dial(config.StationRPC)
+	client, err := rpc.Dial("locahost:8545")
 	if err != nil {
 		return "0", err
 	}

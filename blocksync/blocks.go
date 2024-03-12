@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/config"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/airchains-network/decentralized-sequencer/utilis"
@@ -22,7 +21,7 @@ func StoreEVMBlock(client *ethclient.Client, ctx context.Context, blockIndex int
 		//errMessage := fmt.Sprintf("Failed to get block data for block number %d: %s", blockIndex, err)
 		//logs.Log.Error(errMessage)
 		logs.Log.Info("Waiting for the next station block..")
-		time.Sleep(config.StationBlockDuration * time.Second)
+		time.Sleep(3 * time.Second)
 		StoreEVMBlock(client, ctx, blockIndex, ldb, ldt)
 	}
 
