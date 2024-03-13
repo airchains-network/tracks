@@ -3,7 +3,6 @@ package p2p
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/config"
@@ -157,12 +156,15 @@ func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witnes
 }
 
 func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
-	h := sha256.New()
-	//h.Write(Witness)
-	h.Write(uZKP)
-	h.Write(MRH)
-	h.Write(podNumber)
-	return h.Sum(nil)
+	//h := sha256.New()
+	////h.Write(Witness)
+	//h.Write(uZKP)
+	//h.Write(MRH)
+	//h.Write(podNumber)
+	//return h.Sum(nil)
+	//return uZKP
+
+	return uZKP
 }
 
 func GenerateUnverifiedPods() {

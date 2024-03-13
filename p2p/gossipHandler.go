@@ -23,7 +23,7 @@ func ProcessGossipMessage(node host.Host, ctx context.Context, dataType string, 
 		ProofResultHandler(node, ctx, dataByte, messageBroadcaster)
 		return
 	case "proofVoteResult":
-		fmt.Println("Proof Vote Result")
+		ProofVoteResultHandler(node, ctx, dataByte, messageBroadcaster)
 		return
 	default:
 		return
@@ -339,4 +339,23 @@ func sendPodVoteResultToAllPeers(voteResult VoteResult) {
 	}
 
 	BroadcastMessage(CTX, Node, gossipMsgByte)
+}
+
+func ProofVoteResultHandler(node host.Host, ctx context.Context, dataByte []byte, messageBroadcaster peer.ID) {
+	var voteResult VoteResult
+	err := json.Unmarshal(dataByte, &voteResult)
+	if err != nil {
+		panic("error in unmarshling proof vote result")
+	}
+
+	if voteResult.Success {
+		// TODO SubmitPodToDA()
+		// TODO SubmitPodToJunction()
+
+		saveVerifiedPOD()        // save data to database
+		GenerateUnverifiedPods() // generate next pod
+	} else {
+		logs.Log.Error("Proof Validation Failed, I am stopping here.. dont know what to do ....")
+		// don't know what to do yet
+	}
 }

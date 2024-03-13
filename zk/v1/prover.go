@@ -9,19 +9,11 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/config"
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/consensys/gnark-crypto/ecc"
-	tedwards "github.com/consensys/gnark-crypto/ecc/twistededwards"
-	"github.com/consensys/gnark-crypto/hash"
-	cryptoEddsa "github.com/consensys/gnark-crypto/signature/eddsa"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
-	"github.com/consensys/gnark/std/algebra/native/twistededwards"
-	"github.com/consensys/gnark/std/hash/mimc"
-	"github.com/consensys/gnark/std/signature/eddsa"
-	"math/rand"
 	"os"
-	"time"
 )
 
 type MyCircuit struct {
@@ -31,9 +23,6 @@ type MyCircuit struct {
 	TransactionHash [config.PODSize]frontend.Variable `gnark:",public"`
 	FromBalances    [config.PODSize]frontend.Variable `gnark:",public"`
 	ToBalances      [config.PODSize]frontend.Variable `gnark:",public"`
-	Messages        [config.PODSize]frontend.Variable `gnark:",public"`
-	PublicKeys      [config.PODSize]eddsa.PublicKey   `gnark:",public"`
-	Signatures      [config.PODSize]eddsa.Signature   `gnark:",public"`
 }
 
 type TransactionSecond struct {
@@ -78,21 +67,6 @@ func GetMerkleRootSecond(transactions []TransactionSecond) string {
 
 func (circuit *MyCircuit) Define(api frontend.API) error {
 	for i := 0; i < config.PODSize; i++ {
-
-		curve, err := twistededwards.NewEdCurve(api, tedwards.ID(ecc.BLS12_381))
-		if err != nil {
-			fmt.Println("Error creating a curve")
-			return err
-		}
-		newMiMC, err := mimc.NewMiMC(api)
-		if err != nil {
-			return err
-		}
-		err = eddsa.Verify(curve, circuit.Signatures[i], circuit.Messages[i], circuit.PublicKeys[i], &newMiMC)
-		if err != nil {
-			fmt.Println("Error verifying signature")
-			return err
-		}
 		api.AssertIsLessOrEqual(circuit.Amount[i], circuit.FromBalances[i]) //TODO  Here is one error1
 
 		api.Sub(circuit.FromBalances[i], circuit.Amount[i])
@@ -154,14 +128,11 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		return nil, "", nil, err
 	}
 
-	seed := time.Now().Unix()
-	randomness := rand.New(rand.NewSource(seed))
-	hFunc := hash.MIMC_BLS12_381.New()
-	snarkField, err := twistededwards.GetSnarkField(tedwards.BLS12_381)
-	if err != nil {
-		fmt.Println("Error getting snark field")
-		return nil, "", nil, err
-	}
+	//snarkField, err := twistededwards.GetSnarkField(tedwards.BLS12_381)
+	//if err != nil {
+	//	fmt.Println("Error getting snark field")
+	//	return nil, "", nil, err
+	//}
 	var inputValueLength int
 
 	fromLength := len(inputData.From)
@@ -210,9 +181,6 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		TransactionHash: [config.PODSize]frontend.Variable{},
 		FromBalances:    [config.PODSize]frontend.Variable{},
 		ToBalances:      [config.PODSize]frontend.Variable{},
-		Signatures:      [config.PODSize]eddsa.Signature{},
-		PublicKeys:      [config.PODSize]eddsa.PublicKey{},
-		Messages:        [config.PODSize]frontend.Variable{},
 	}
 
 	for i := 0; i < config.PODSize; i++ {
@@ -222,24 +190,6 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		inputs.TransactionHash[i] = frontend.Variable(inputData.TransactionHash[i])
 		inputs.FromBalances[i] = frontend.Variable(inputData.SenderBalances[i])
 		inputs.ToBalances[i] = frontend.Variable(inputData.ReceiverBalances[i])
-		// msg := []byte(inputData.Messages[i])
-		msg := make([]byte, len(snarkField.Bytes()))
-
-		inputs.Messages[i] = msg
-		privateKey, err := cryptoEddsa.New(tedwards.ID(ecc.BLS12_381), randomness)
-		if err != nil {
-			fmt.Println("Not able to generate private keys")
-		}
-		publicKey := privateKey.Public()
-		signature, err := privateKey.Sign(msg, hFunc)
-		if err != nil {
-			fmt.Println("Error signing the message")
-			return nil, "", nil, err
-		}
-		_publicKey := publicKey.Bytes()
-
-		inputs.PublicKeys[i].Assign(tedwards.BLS12_381, _publicKey[:32])
-		inputs.Signatures[i].Assign(tedwards.BLS12_381, signature)
 	}
 
 	witness, err := frontend.NewWitness(&inputs, ecc.BLS12_381.ScalarField())
@@ -268,6 +218,8 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		fmt.Printf("Error generating proof: %v\n", err)
 		return nil, "", nil, err
 	}
+	fmt.Println("proof", proof)
+	//os.Exit(0)
 
 	proofDb := blocksync.GetProofDbInstance()
 	proofDbKey := fmt.Sprintf("proof_%d", batchNum)
