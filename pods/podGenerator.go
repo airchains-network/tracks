@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/config"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/airchains-network/decentralized-sequencer/p2p"
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/airchains-network/decentralized-sequencer/utilis"
 	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1"
@@ -117,12 +118,14 @@ func BatchGeneration(wg *sync.WaitGroup, client *ethclient.Client, ctx context.C
 		Type: "proof",
 		Data: proofByteGossip,
 	}
+
 	// proofData to byte
 	ProofDataByte, err := json.Marshal(proofData)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in marshalling proof data : %s", err.Error()))
 		os.Exit(0)
 	}
+	p2p.ZKPGossip(ProofDataByte)
 
 	err = lds.Put([]byte("podPool"), ProofDataByte, nil)
 	if err != nil {
