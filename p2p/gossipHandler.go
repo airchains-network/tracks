@@ -348,6 +348,8 @@ func ProofVoteResultHandler(node host.Host, ctx context.Context, dataByte []byte
 		panic("error in unmarshling proof vote result")
 	}
 
+	fmt.Println("Proof Vote Result Received: ", voteResult)
+
 	if voteResult.Success {
 		// TODO SubmitPodToDA()
 		// TODO SubmitPodToJunction()

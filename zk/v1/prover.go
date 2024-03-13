@@ -231,8 +231,6 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		fmt.Printf("Error generating proof: %v\n", err)
 		return nil, "", nil, err
 	}
-	fmt.Println("proof", proof)
-	//os.Exit(0)
 
 	proofDb := blocksync.GetProofDbInstance()
 	proofDbKey := fmt.Sprintf("proof_%d", batchNum)

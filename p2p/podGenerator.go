@@ -26,12 +26,14 @@ func BatchGeneration(wg *sync.WaitGroup) {
 }
 
 func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
+
 	limit, err := lds.Get([]byte("batchCount"), nil)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in getting batchCount from static db : %s", err.Error()))
-		return nil, nil, nil, nil, err
+		os.Exit(0)
 	}
 	limitInt, _ := strconv.Atoi(strings.TrimSpace(string(limit)))
+
 	batchStartIndexInt, _ := strconv.Atoi(strings.TrimSpace(string(batchStartIndex)))
 
 	var batch types.BatchStruct
@@ -111,7 +113,6 @@ func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witnes
 	witnessVectorByte, err := json.Marshal(witnessVector)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in marshalling witness vector : %s", err.Error()))
-		os.Exit(0)
 	}
 
 	// string to []byte currentStatusHash
@@ -275,19 +276,19 @@ func saveVerifiedPOD() {
 	}
 
 	// uint64 to int
-	err = lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(config.PODSize*(currentPodNumberInt+1))), nil)
+	err = lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(config.PODSize*(currentPodNumberInt))), nil)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in updating batchStartIndex in static db : %s", err.Error()))
 		os.Exit(0)
 	}
 
-	err = lds.Put([]byte("batchCount"), []byte(strconv.Itoa(currentPodNumberInt+1)), nil)
+	err = lds.Put([]byte("batchCount"), []byte(strconv.Itoa(currentPodNumberInt)), nil)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in updating batchCount in static db : %s", err.Error()))
 		os.Exit(0)
 	}
 
-	err = os.WriteFile("data/batchCount.txt", []byte(strconv.Itoa(currentPodNumberInt+1)), 0666)
+	err = os.WriteFile("data/batchCount.txt", []byte(strconv.Itoa(currentPodNumberInt)), 0666)
 	if err != nil {
 		panic("Failed to update batch number: " + err.Error())
 	}
