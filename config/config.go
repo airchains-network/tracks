@@ -25,13 +25,15 @@ const (
 	defaultMoniker                = "tracks"
 	DefaultTracksDir              = ".tracks"
 	DefaultConfigDir              = "config"
+	DefaultGenesisFileName        = "genesis.json"
 	DefaultDataDir                = "data"
 	DefaultConfigFileName         = "sequencer.toml"
 	defaultSubscriptionBufferSize = 200
 )
 
 var (
-	defaultConfigFilePath = filepath.Join(DefaultConfigDir, DefaultConfigFileName)
+	defaultConfigFilePath  = filepath.Join(DefaultConfigDir, DefaultConfigFileName)
+	defaultGenesisFilePath = filepath.Join(DefaultConfigDir, DefaultGenesisFileName)
 )
 
 type Config struct {

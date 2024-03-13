@@ -31,6 +31,8 @@ type PodState struct {
 	Votes               map[string]Votes
 	TracksAppHash       []byte
 	Batch               *types.BatchStruct
+
+	MasterTrackAppHash []byte
 }
 type Connections struct {
 	mu                                 sync.Mutex
@@ -56,6 +58,7 @@ func InitializePodState() *PodState {
 		Votes:               make(map[string]Votes),
 		TracksAppHash:       nil,
 		Batch:               nil,
+		MasterTrackAppHash:  nil,
 	}
 }
 func GetPodState() *PodState {

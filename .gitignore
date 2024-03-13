@@ -1,4 +1,4 @@
 data/
 sequencer/
-provingKey.txt
-verificationKey.txt
+#provingKey.txt
+#verificationKey.txt

@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -22,21 +23,6 @@ import (
 func BatchGeneration(wg *sync.WaitGroup) {
 	defer wg.Done()
 	GenerateUnverifiedPods()
-
-	//}, client *ethclient.Client, ctx context.Context, lds *leveldb.DB, ldt *leveldb.DB, ldbatch *leveldb.DB, ldda *leveldb.DB, batchStartIndex []byte) {
-	//Flow of the POD
-	//1. Get who will submit the POD : ✔️ done
-	//2. Make The POD , and generate sha256 of the proof  : ✔️ done
-	//3. save that in the proofState : ✔️ done
-	//4. If Leader :- Brodcast the POD : working
-	//4. If not Leader:-  verify the POD and send vote
-
-	//5 If Leader Submit data to the settlement client, da and update the status of the POD
-	//5 If Not Leader : wait for the new leader selection
-	//6. If the POD is verified submit to settlement client and DA
-
-	// select Pod proof submitter
-
 }
 
 func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
@@ -113,6 +99,10 @@ func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witnes
 	batch.Messages = Messages
 	batch.TransactionNonces = TransactionNonces
 	batch.AccountNonces = AccountNonces
+
+	logs.Log.Warn("batch:")
+	fmt.Println(batch)
+
 	witnessVector, currentStatusHash, proofByte, pkErr := v1.GenerateProof(batch, limitInt+1)
 	if pkErr != nil {
 		logs.Log.Error(fmt.Sprintf("Error in generating proof : %s", pkErr.Error()))
@@ -133,6 +123,10 @@ func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witnes
 		logs.Log.Error(fmt.Sprintf("Error in marshalling current status hash : %s", err.Error()))
 		os.Exit(0)
 	}
+
+	//fmt.Println("Witness Vector: ", witnessVector)
+	//fmt.Println("Proof: ", proofByte)
+	//fmt.Println("Current Status Hash: ", currentStatusHash)
 
 	return witnessVectorByte, proofByte, currentStatusHashByte, &batch, nil
 
@@ -164,7 +158,7 @@ func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witnes
 
 func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
 	h := sha256.New()
-	h.Write(Witness)
+	//h.Write(Witness)
 	h.Write(uZKP)
 	h.Write(MRH)
 	h.Write(podNumber)
@@ -195,14 +189,21 @@ func GenerateUnverifiedPods() {
 	}
 
 	TrackAppHash := generatePodHash(Witness, uZKP, MRH, latestBatch)
-	updateNewPodState(TrackAppHash, Witness, uZKP, MRH, uint64(batchNumber), batchInput)
+	podState := shared.GetPodState()
+
+	tempMasterTrackAppHash := podState.MasterTrackAppHash
+	if podState.MasterTrackAppHash != nil {
+		tempMasterTrackAppHash = podState.MasterTrackAppHash
+	}
+
+	updateNewPodState(TrackAppHash, Witness, uZKP, MRH, uint64(batchNumber+1), batchInput)
 
 	// Here the MasterTrack Will Broadcast the uZKP in the Network
 	if SelectedMaster == Node.ID() {
 		// Preparing the Message that master track will gossip to the Network
 
 		proofData := ProofData{
-			PodNumber:    uint64(batchNumber),
+			PodNumber:    uint64(batchNumber + 1),
 			TrackAppHash: TrackAppHash,
 		}
 
@@ -227,7 +228,14 @@ func GenerateUnverifiedPods() {
 		BroadcastMessage(context.Background(), Node, gossipMsgByte)
 
 	} else {
-
+		currentPodData := shared.GetPodState()
+		if bytes.Equal(currentPodData.TracksAppHash, tempMasterTrackAppHash) {
+			SendValidProof(CTX, currentPodData.LatestPodHeight, SelectedMaster)
+			return
+		} else {
+			SendInvalidProofError(CTX, currentPodData.LatestPodHeight, SelectedMaster)
+			return
+		}
 	}
 
 }

@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -18,21 +17,21 @@ func ProcessGossipMessage(node host.Host, ctx context.Context, dataType string, 
 	fmt.Println("Processing gossip message")
 	switch dataType {
 	case "proof":
-		// podStateManager
-		messageBroadcasterProofHandler(node, ctx, dataByte, messageBroadcaster)
+		ProofHandler(node, ctx, dataByte, messageBroadcaster)
 		return
 	case "proofResult":
 		ProofResultHandler(node, ctx, dataByte, messageBroadcaster)
 		return
-	//case "finalizationRequest":
-
+	case "proofVoteResult":
+		fmt.Println("Proof Vote Result")
+		return
 	default:
 		return
 	}
 }
 
 // ProofHandler processes the proof received in a P2P message.
-func messageBroadcasterProofHandler(node host.Host, ctx context.Context, dataByte []byte, messageBroadcaster peer.ID) {
+func ProofHandler(node host.Host, ctx context.Context, dataByte []byte, messageBroadcaster peer.ID) {
 	var proofData ProofData
 	if err := json.Unmarshal(dataByte, &proofData); err != nil {
 		logs.Log.Info("Error unmarshaling proof: %v")
@@ -43,19 +42,41 @@ func messageBroadcasterProofHandler(node host.Host, ctx context.Context, dataByt
 	receivedTrackAppHash := proofData.TrackAppHash
 	receivedPodNumber := proofData.PodNumber
 
+	fmt.Println("local latest pod number: ", currentPodData.LatestPodHeight)
+	fmt.Println("received pod number:", receivedPodNumber)
+
 	// match pod numbers
 	if currentPodData.LatestPodHeight != receivedPodNumber {
-		SendWrongPodNumberError(ctx, receivedPodNumber, messageBroadcaster)
-		return
-	}
-
-	// match track app hash
-	if bytes.Equal(currentPodData.TracksAppHash, receivedTrackAppHash) {
-		SendValidProof(ctx, receivedPodNumber, messageBroadcaster)
-		return
+		fmt.Println("madarcvhod")
+		// maybe proof may not be generated and its still in previous pod
+		if currentPodData.LatestPodHeight+1 == receivedPodNumber {
+			// insert it in MasterTrackAppHash
+			logs.Log.Info("Pod Number Is 1 behind current pod")
+			currentPodData.MasterTrackAppHash = receivedTrackAppHash
+			shared.SetPodState(currentPodData)
+			return
+		} else {
+			logs.Log.Warn("Pod Number Mismatch")
+			SendWrongPodNumberError(ctx, receivedPodNumber, messageBroadcaster)
+			return
+		}
 	} else {
-		SendInvalidProofError(ctx, receivedPodNumber, messageBroadcaster)
-		return
+		logs.Log.Info("Current App Hash")
+		fmt.Println(currentPodData.TracksAppHash)
+		logs.Log.Info("Received App Hash")
+		fmt.Println(receivedTrackAppHash)
+
+		// match track app hash
+		if string(currentPodData.TracksAppHash) == string(receivedTrackAppHash) {
+			//if bytes.Equal(currentPodData.TracksAppHash, receivedTrackAppHash) {
+			logs.Log.Info("Tracks App Hash Matched. Sending Valid Proof Vote")
+			SendValidProof(ctx, receivedPodNumber, messageBroadcaster)
+			return
+		} else {
+			logs.Log.Warn("Tracks App Hash NOT Matched. Sending NOT Valid Proof Vote")
+			SendInvalidProofError(ctx, receivedPodNumber, messageBroadcaster)
+			return
+		}
 	}
 
 }

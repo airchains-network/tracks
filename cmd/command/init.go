@@ -2,7 +2,9 @@ package command
 
 import (
 	"github.com/airchains-network/decentralized-sequencer/config"
+	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/p2p"
+	"github.com/airchains-network/decentralized-sequencer/utilis"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
@@ -24,9 +26,13 @@ var InitCmd = &cobra.Command{
 			panic(err) // Handle error appropriately
 		}
 		tracksDir := filepath.Join(homeDir, config.DefaultTracksDir)
-
+		genFile := filepath.Join(homeDir, config.DefaultGenesisFileName)
 		conf := config.DefaultConfig()
+		if utilis.FileExists(genFile) {
+			logs.Log.Info("Found genesis file")
+		} else {
 
+		}
 		conf.RootDir = tracksDir
 		conf.SetRoot(conf.RootDir)
 		config.EnsureRoot(conf.RootDir)

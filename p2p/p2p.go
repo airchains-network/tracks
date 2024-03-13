@@ -146,7 +146,7 @@ func handleStreamData(s network.Stream) {
 			fmt.Println("Error in getting data type:", err)
 			return
 		}
-		fmt.Println("Data Type Received from 2nnd Peer :", dataType)
+		fmt.Println("Data Type Received from other Peer :", dataType)
 
 		ProcessGossipMessage(Node, CTX, dataType, dataByte, messageBroadcaster)
 	}
@@ -205,7 +205,6 @@ func P2PConfiguration() {
 
 	printNodeInfo(Node)
 	setupStreamHandler(Node)
-
 	handlePeerConnections(ctx, Node)
 	waitForShutdownSignal()
 }
@@ -233,6 +232,9 @@ func MasterTracksSelection(host host.Host) peer.ID {
 		}
 	}
 
+	// new peer id
+	defaultPeerID := peer.ID("12D3KooWADvW4hXKZUG2RTzAivPFUrMLWz12b7QmFguWx4zsSsWQ")
+
 	//TODO : USING A CENTRALIZED PEER FOR NOW TO TEST THE FUNCTIONALITY
-	return "12D3KooWADvW4hXKZUG2RTzAivPFUrMLWz12b7QmFguWx4zsSsWQ"
+	return defaultPeerID
 }
