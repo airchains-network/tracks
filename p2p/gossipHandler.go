@@ -14,7 +14,7 @@ import (
 )
 
 // podStateManager shared.PodStateManager,
-func ProcessGossipMessage(node host.Host, ctx context.Context, dataType string, dataByte []byte) {
+func ProcessGossipMessage(node host.Host, ctx context.Context, dataType string, dataByte []byte, messageBroadcaster peer.ID) {
 	fmt.Println("Processing gossip message")
 	switch dataType {
 	case "proof":
@@ -128,4 +128,194 @@ func ProofResultHandler(node host.Host, ctx context.Context, dataByte []byte, me
 		}
 	}
 	// else: votes are not enough yet, so do nothing....
+}
+
+func SendWrongPodNumberError(ctx context.Context, podNumber uint64, messageBroadcaster peer.ID) {
+
+	logs.Log.Error("Wrong Pods Number Receieved Cannot Process Proof")
+
+	ProofResult := ProofResult{
+		PodNumber: podNumber,
+		Success:   false,
+	}
+
+	ProofResultByte, err := json.Marshal(ProofResult)
+	if err != nil {
+		logs.Log.Error("Error in Marshaling Proof Result")
+		return
+	}
+
+	gossipMsg := types.GossipData{
+		Type: "proofResult",
+		Data: ProofResultByte,
+	}
+	gossipMsgByte, err := json.Marshal(gossipMsg)
+	if err != nil {
+		logs.Log.Error("Error marshaling gossip message")
+		return
+	}
+
+	err = sendMessage(ctx, Node, messageBroadcaster, gossipMsgByte)
+	if err != nil {
+		return
+	}
+
+}
+
+func SendInvalidProofError(ctx context.Context, podNumber uint64, messageBroadcaster peer.ID) {
+
+	logs.Log.Error("Tracks App Hash  Recieved Doesnt Match with the Generated Track App Hash")
+
+	ProofResult := ProofResult{
+		PodNumber: podNumber,
+		Success:   false,
+	}
+
+	ProofResultByte, err := json.Marshal(ProofResult)
+	if err != nil {
+		logs.Log.Error("Error in Marshaling Proof Result")
+		return
+	}
+
+	gossipMsg := types.GossipData{
+		Type: "proofResult",
+		Data: ProofResultByte,
+	}
+	gossipMsgByte, err := json.Marshal(gossipMsg)
+	if err != nil {
+		logs.Log.Error("Error marshaling gossip message")
+		return
+	}
+
+	sendMessage(ctx, Node, messageBroadcaster, gossipMsgByte)
+}
+
+func SendValidProof(ctx context.Context, podNumber uint64, messageBroadcaster peer.ID) {
+	logs.Log.Info("Proof Validated Successfully")
+
+	ProofResult := ProofResult{
+		PodNumber: podNumber,
+		Success:   true,
+	}
+
+	ProofResultByte, err := json.Marshal(ProofResult)
+	if err != nil {
+		logs.Log.Error("Error in Marshaling Proof Result")
+		return
+	}
+
+	gossipMsg := types.GossipData{
+		Type: "proofResult",
+		Data: ProofResultByte,
+	}
+	gossipMsgByte, err := json.Marshal(gossipMsg)
+	if err != nil {
+		logs.Log.Error("Error marshaling gossip message")
+		return
+	}
+
+	sendMessage(ctx, Node, messageBroadcaster, gossipMsgByte)
+}
+
+func updatePodStateVotes(proofResult ProofResult, nodeId peer.ID) {
+	// Logic to update the pod state votes based on the proof result
+	podState := shared.GetPodState()
+
+	currentVotes := podState.Votes
+
+	// check if the vote already exists
+	for _, vote := range currentVotes {
+		if vote.PeerID == nodeId.String() {
+			// vote already exists
+			return
+		}
+	}
+
+	// add new vote to the currentVotes
+	currentVotes[nodeId.String()] = shared.Votes{
+		PeerID: nodeId.String(),
+		Vote:   proofResult.Success,
+	}
+
+	podState.Votes = currentVotes
+
+	shared.SetPodState(podState)
+
+	// calcualte votes
+}
+
+func calculateVotes() (voteResult, isVotesEnough bool) {
+
+	podState := shared.GetPodState()
+	allVotes := podState.Votes
+
+	currentVotesCount := len(allVotes)
+	peerCount := len(ConnectedPeers)
+
+	// if all peers have voted
+	// TODO: do it even if all peers have not voted, and then also 2/3 returned `true`, then do this:
+	if currentVotesCount == peerCount {
+
+		// count votes of all nodes, if 2/3 votes are true
+
+		trueVotes := 0
+		falseVotes := 0
+
+		for _, vote := range allVotes {
+			if vote.Vote {
+				trueVotes++
+			} else {
+				falseVotes++
+			}
+		}
+
+		trueVotePercentage := (float64(trueVotes) / float64(peerCount)) * 100
+
+		voteResult := VoteResult{
+			TrueCount:          trueVotes,
+			FalseCount:         falseVotes,
+			TrueVotePercentage: trueVotePercentage,
+			Votes:              allVotes,
+			Success:            false,
+		}
+
+		// if 2/3 votes are true
+		if trueVotePercentage >= 66.67 {
+			voteResult.Success = true
+		}
+
+		sendPodVoteResultToAllPeers(voteResult)
+
+		if voteResult.Success {
+			return true, true
+		} else {
+			return false, true
+		}
+
+	}
+	return false, false
+}
+
+func sendPodVoteResultToAllPeers(voteResult VoteResult) {
+	// send success result to all peers
+	// and update the pod state
+	logs.Log.Info("Proof Validated Successfully")
+
+	ProofVoteResultByte, err := json.Marshal(voteResult)
+	if err != nil {
+		logs.Log.Error("Error in Marshaling ProofVote Result")
+		return
+	}
+
+	gossipMsg := types.GossipData{
+		Type: "proofVoteResult",
+		Data: ProofVoteResultByte,
+	}
+	gossipMsgByte, err := json.Marshal(gossipMsg)
+	if err != nil {
+		logs.Log.Error("Error marshaling gossip message")
+		return
+	}
+
+	BroadcastMessage(CTX, Node, gossipMsgByte)
 }
