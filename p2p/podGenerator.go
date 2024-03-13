@@ -123,31 +123,6 @@ func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witnes
 	}
 
 	return witnessVectorByte, proofByte, currentStatusHashByte, &batch, nil
-
-	// declear proof
-
-	//proofGossip := types.ProofData{
-	//	Proof:     proofByte,
-	//	PodNumber: uint64(limitInt + 1),
-	//}
-	//proofByteGossip, err := json.Marshal(proofGossip)
-	//if err != nil {
-	//	logs.Log.Error(fmt.Sprintf("Error in marshalling proof data : %s", err.Error()))
-	//	os.Exit(0)
-	//}
-	//
-	//proofData := types.GossipData{
-	//	Type: "proof",
-	//	Data: proofByteGossip,
-	//}
-	//
-	//// proofData to byte
-	//ProofDataByte, err := json.Marshal(proofData)
-	//if err != nil {
-	//	logs.Log.Error(fmt.Sprintf("Error in marshalling proof data : %s", err.Error()))
-	//	os.Exit(0)
-	//}
-
 }
 
 func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
@@ -183,7 +158,7 @@ func GenerateUnverifiedPods() {
 
 	TrackAppHash := generatePodHash(Witness, uZKP, MRH, latestBatch)
 	podState := shared.GetPodState()
-
+	fmt.Println(podState.LatestPodHeight)
 	tempMasterTrackAppHash := podState.MasterTrackAppHash
 	if podState.MasterTrackAppHash != nil {
 		tempMasterTrackAppHash = podState.MasterTrackAppHash
@@ -259,7 +234,7 @@ func saveVerifiedPOD() {
 	// declear useful variables
 	batchInput := podState.Batch
 	currentPodNumber := podState.LatestPodHeight
-	currentPodNumberInt := int(currentPodNumber + 1)
+	currentPodNumberInt := int(currentPodNumber)
 
 	batchJSON, err := json.Marshal(batchInput)
 	if err != nil {
