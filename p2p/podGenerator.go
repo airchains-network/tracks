@@ -100,9 +100,6 @@ func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witnes
 	batch.TransactionNonces = TransactionNonces
 	batch.AccountNonces = AccountNonces
 
-	logs.Log.Warn("batch:")
-	fmt.Println(batch)
-
 	witnessVector, currentStatusHash, proofByte, pkErr := v1.GenerateProof(batch, limitInt+1)
 	if pkErr != nil {
 		logs.Log.Error(fmt.Sprintf("Error in generating proof : %s", pkErr.Error()))
@@ -123,10 +120,6 @@ func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witnes
 		logs.Log.Error(fmt.Sprintf("Error in marshalling current status hash : %s", err.Error()))
 		os.Exit(0)
 	}
-
-	//fmt.Println("Witness Vector: ", witnessVector)
-	//fmt.Println("Proof: ", proofByte)
-	//fmt.Println("Current Status Hash: ", currentStatusHash)
 
 	return witnessVectorByte, proofByte, currentStatusHashByte, &batch, nil
 

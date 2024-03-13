@@ -204,18 +204,16 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		inputs.ToBalances[i] = frontend.Variable(inputData.ReceiverBalances[i])
 	}
 
-	fmt.Println("inputs", inputs)
-
 	witness, err := frontend.NewWitness(&inputs, ecc.BLS12_381.ScalarField())
 	if err != nil {
 		fmt.Printf("Error creating a witness: %v\n", err)
 		return nil, "", nil, err
 	}
-	fmt.Println("witness", witness)
+
 	witnessVector := witness.Vector()
-	fmt.Println("witnessVector", witnessVector)
+
 	publicWitness, _ := witness.Public()
-	fmt.Println("publicWitness", publicWitness)
+
 	publicWitnessDb := blocksync.GetPublicWitnessDbInstance()
 	publicWitnessDbKey := fmt.Sprintf("public_witness_%d", batchNum)
 	publicWitnessDbValue, err := json.Marshal(publicWitness)
