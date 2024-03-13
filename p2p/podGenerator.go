@@ -11,6 +11,7 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/airchains-network/decentralized-sequencer/utilis"
 	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/syndtr/goleveldb/leveldb"
 	"os"
 	"strconv"
@@ -156,15 +157,8 @@ func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witnes
 }
 
 func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
-	//h := sha256.New()
-	////h.Write(Witness)
-	//h.Write(uZKP)
-	//h.Write(MRH)
-	//h.Write(podNumber)
-	//return h.Sum(nil)
-	//return uZKP
 
-	return uZKP
+	return MRH
 }
 
 func GenerateUnverifiedPods() {
@@ -180,6 +174,9 @@ func GenerateUnverifiedPods() {
 		os.Exit(0)
 	}
 	SelectedMaster := MasterTracksSelection(Node)
+	decodedMaster, err := peer.Decode(SelectedMaster)
+
+	fmt.Println(decodedMaster)
 	currentPodNumberInt, _ := strconv.Atoi(strings.TrimSpace(string(currentPodNumber)))
 	batchNumber, _ := strconv.Atoi(strings.TrimSpace(string(currentPodNumberInt + 1)))
 
@@ -199,11 +196,11 @@ func GenerateUnverifiedPods() {
 	}
 
 	updateNewPodState(TrackAppHash, Witness, uZKP, MRH, uint64(batchNumber+1), batchInput)
-
+	fmt.Println(SelectedMaster)
 	// Here the MasterTrack Will Broadcast the uZKP in the Network
-	if SelectedMaster == Node.ID() {
+	if decodedMaster == Node.ID() {
 		// Preparing the Message that master track will gossip to the Network
-
+		fmt.Printf("Hey I am Validator")
 		proofData := ProofData{
 			PodNumber:    uint64(batchNumber + 1),
 			TrackAppHash: TrackAppHash,
@@ -232,10 +229,10 @@ func GenerateUnverifiedPods() {
 	} else {
 		currentPodData := shared.GetPodState()
 		if bytes.Equal(currentPodData.TracksAppHash, tempMasterTrackAppHash) {
-			SendValidProof(CTX, currentPodData.LatestPodHeight, SelectedMaster)
+			SendValidProof(CTX, currentPodData.LatestPodHeight, decodedMaster)
 			return
 		} else {
-			SendInvalidProofError(CTX, currentPodData.LatestPodHeight, SelectedMaster)
+			SendInvalidProofError(CTX, currentPodData.LatestPodHeight, decodedMaster)
 			return
 		}
 	}

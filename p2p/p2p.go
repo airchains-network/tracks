@@ -225,16 +225,11 @@ func waitForShutdownSignal() {
 	fmt.Println("Received signal, shutting down...")
 }
 
-func MasterTracksSelection(host host.Host) peer.ID {
+func MasterTracksSelection(host host.Host) string {
 	for peerID := range ConnectedPeers {
 		if peerID == host.ID() {
 			continue
 		}
 	}
-
-	// new peer id
-	defaultPeerID := peer.ID("12D3KooWADvW4hXKZUG2RTzAivPFUrMLWz12b7QmFguWx4zsSsWQ")
-
-	//TODO : USING A CENTRALIZED PEER FOR NOW TO TEST THE FUNCTIONALITY
-	return defaultPeerID
+	return "12D3KooWADvW4hXKZUG2RTzAivPFUrMLWz12b7QmFguWx4zsSsWQ"
 }

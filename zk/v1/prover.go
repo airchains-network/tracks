@@ -35,9 +35,21 @@ type TransactionSecond struct {
 }
 
 func getTransactionHash(tx TransactionSecond) string {
-	record := tx.To + tx.From + tx.Amount + tx.FromBalances + tx.ToBalances + tx.TransactionHash
+
+	h1 := sha256.Sum256([]byte(tx.To))
+	h2 := sha256.Sum256([]byte(tx.From))
+	h3 := sha256.Sum256([]byte(tx.Amount))
+	h4 := sha256.Sum256([]byte(tx.FromBalances))
+	h5 := sha256.Sum256([]byte(tx.ToBalances))
+	h6 := sha256.Sum256([]byte(tx.TransactionHash))
 	h := sha256.New()
-	h.Write([]byte(record))
+	h.Write(h1[:])
+	h.Write(h2[:])
+	h.Write(h3[:])
+	h.Write(h4[:])
+	h.Write(h5[:])
+	h.Write(h6[:])
+
 	return hex.EncodeToString(h.Sum(nil))
 }
 func GetMerkleRootSecond(transactions []TransactionSecond) string {
@@ -192,15 +204,18 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		inputs.ToBalances[i] = frontend.Variable(inputData.ReceiverBalances[i])
 	}
 
+	fmt.Println("inputs", inputs)
+
 	witness, err := frontend.NewWitness(&inputs, ecc.BLS12_381.ScalarField())
 	if err != nil {
 		fmt.Printf("Error creating a witness: %v\n", err)
 		return nil, "", nil, err
 	}
-
+	fmt.Println("witness", witness)
 	witnessVector := witness.Vector()
-
+	fmt.Println("witnessVector", witnessVector)
 	publicWitness, _ := witness.Public()
+	fmt.Println("publicWitness", publicWitness)
 	publicWitnessDb := blocksync.GetPublicWitnessDbInstance()
 	publicWitnessDbKey := fmt.Sprintf("public_witness_%d", batchNum)
 	publicWitnessDbValue, err := json.Marshal(publicWitness)
