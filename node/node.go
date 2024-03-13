@@ -2,7 +2,6 @@ package node
 
 import (
 	"context"
-	"github.com/airchains-network/decentralized-sequencer/pods"
 	//"fmt"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	//"strconv"
@@ -34,8 +33,7 @@ func configureP2P(wg *sync.WaitGroup) {
 func initializeDBAndStartIndexing(wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	staticDB := shared.Node.NodeConnections.GetBlockDatabaseConnection()
-
+	staticDB := shared.Node.NodeConnections.GetStaticDatabaseConnection()
 	shared.CheckAndInitializeDBCounters(staticDB)
 
 	latestBlock := shared.GetLatestBlock(shared.Node.NodeConnections.BlockDatabaseConnection)
@@ -51,30 +49,9 @@ func initializeDBAndStartIndexing(wg *sync.WaitGroup) {
 	wgnm = &sync.WaitGroup{}
 	wgnm.Add(2)
 
-	latestBatch := shared.GetLatestBatchIndex(staticDB)
-
 	//go configureP2P(wgnm)
 	go blocksync.StartIndexer(wgnm, client, ctx, shared.Node.NodeConnections.BlockDatabaseConnection, shared.Node.NodeConnections.TxnDatabaseConnection, latestBlock)
-	go pods.BatchGeneration(wgnm, client, ctx, shared.Node.NodeConnections.StaticDatabaseConnection, shared.Node.NodeConnections.TxnDatabaseConnection, shared.Node.NodeConnections.PodsDatabaseConnection, shared.Node.NodeConnections.DataAvailabilityDatabaseConnection, latestBatch)
+	go p2p.BatchGeneration(wgnm)
 
 	wgnm.Wait()
 }
-
-// Database connectiobnns
-//type DatabaseConnections struct {
-//	BlockDatabaseConnection            *leveldb.DB
-//	TxnDatabaseConnection              *leveldb.DB
-//	PodsDatabaseConnection             *leveldb.DB
-//	DataAvailabilityDatabaseConnection *leveldb.DB
-//	StaticDatabaseConnection           *leveldb.DB
-//}
-//
-//func InitializeDatabaseConnections() DatabaseConnections {
-//	var connections DatabaseConnections
-//	connections.BlockDatabaseConnection = blocksync.GetBlockDbInstance()
-//	connections.TxnDatabaseConnection = blocksync.GetTxDbInstance()
-//	connections.PodsDatabaseConnection = blocksync.GetBatchesDbInstance()
-//	connections.DataAvailabilityDatabaseConnection = blocksync.GetDaDbInstance()
-//	connections.StaticDatabaseConnection = blocksync.GetStaticDbInstance()
-//	return connections
-//}

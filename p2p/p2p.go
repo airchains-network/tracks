@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	connectedPeers = make(map[peer.ID]peer.AddrInfo)
+	ConnectedPeers = make(map[peer.ID]peer.AddrInfo)
 	mutex          = &sync.Mutex{}
 	Node           host.Host
 	CTX            context.Context
@@ -67,21 +67,20 @@ func onConnected(n network.Network, c network.Conn) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	peerInfo := peer.AddrInfo{ID: c.RemotePeer(), Addrs: []multiaddr.Multiaddr{c.RemoteMultiaddr()}}
-	connectedPeers[c.RemotePeer()] = peerInfo
+	ConnectedPeers[c.RemotePeer()] = peerInfo
 	fmt.Printf("Connected to %s\n", c.RemotePeer())
 }
 
 func onDisconnected(n network.Network, c network.Conn) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	delete(connectedPeers, c.RemotePeer())
+	delete(ConnectedPeers, c.RemotePeer())
 	fmt.Printf("Disconnected from %s\n", c.RemotePeer())
 }
 
 func printNodeInfo(node host.Host) {
 	fmt.Println("Listen addresses:", node.Addrs())
 	fmt.Println("Node ID:", node.ID())
-	printNodePrivateKey(node)
 }
 
 func printNodePrivateKey(node host.Host) {
@@ -127,7 +126,8 @@ func streamHandler(s network.Stream) {
 func handleStreamData(s network.Stream) {
 	const initialBufSize = 8192
 	buf := make([]byte, initialBufSize)
-
+	messageBroadcaster := s.Conn().RemotePeer()
+	fmt.Println(messageBroadcaster)
 	for {
 		n, err := s.Read(buf)
 		if err != nil {
@@ -138,20 +138,17 @@ func handleStreamData(s network.Stream) {
 			}
 			break
 		}
+
 		buf = resizeBufferIfNeeded(buf, n)
+
 		dataType, dataByte, err := DecodeGossipData(buf[:n])
 		if err != nil {
 			fmt.Println("Error in getting data type:", err)
 			return
 		}
-		//fmt.Println("Data Type:", dataType)
-		//fmt.Printf("Data: %s\n", dataByte)
-		//shared.SetPodState(shared.PodState{
-		//	LatestPodHeight:         1000000,
-		//	LatestPodMerkleRootHash: nil,
-		//})
-		fmt.Println("current pod data:")
-		ProcessGossipMessage(Node, CTX, dataType, dataByte)
+		fmt.Println("Data Type Received from 2nnd Peer :", dataType)
+
+		ProcessGossipMessage(Node, CTX, dataType, dataByte, messageBroadcaster)
 	}
 }
 
@@ -162,6 +159,7 @@ func resizeBufferIfNeeded(buf []byte, n int) []byte {
 	}
 	return buf
 }
+
 func sendMessage(ctx context.Context, node host.Host, peerID peer.ID, message []byte) error {
 	s, err := node.NewStream(ctx, peerID, protocol.ID(customProtocolID))
 	fmt.Printf("Sending message to %s\n", peerID)
@@ -181,7 +179,7 @@ func BroadcastMessage(ctx context.Context, host host.Host, message []byte) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	for peerID := range connectedPeers {
+	for peerID := range ConnectedPeers {
 		if peerID == host.ID() {
 			continue
 		}
@@ -226,4 +224,15 @@ func waitForShutdownSignal() {
 	signal.Notify(ch, syscall.SIGTERM)
 	<-ch
 	fmt.Println("Received signal, shutting down...")
+}
+
+func MasterTracksSelection(host host.Host) peer.ID {
+	for peerID := range ConnectedPeers {
+		if peerID == host.ID() {
+			continue
+		}
+	}
+
+	//TODO : USING A CENTRALIZED PEER FOR NOW TO TEST THE FUNCTIONALITY
+	return "12D3KooWADvW4hXKZUG2RTzAivPFUrMLWz12b7QmFguWx4zsSsWQ"
 }

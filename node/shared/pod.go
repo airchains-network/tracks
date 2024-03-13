@@ -6,6 +6,7 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/blocksync"
 	"github.com/airchains-network/decentralized-sequencer/config"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"strconv"
 	"strings"
@@ -18,16 +19,18 @@ var (
 )
 
 type Votes struct {
-	PeerID     string // TODO change this type to proper Peer ID Type
-	Commitment string
-	Vote       bool
+	PeerID string // TODO change this type to proper Peer ID Type
+	//Commitment string
+	Vote bool
 }
 type PodState struct {
-	LatestPodHeight         int
-	LatestPodMerkleRootHash []byte
-	LatestPodProof          []byte
-	LatestPublicWitness     []byte
-	Votes                   map[string]Votes
+	LatestPodHeight     uint64
+	LatestPodHash       []byte
+	LatestPodProof      []byte
+	LatestPublicWitness []byte
+	Votes               map[string]Votes
+	TracksAppHash       []byte
+	Batch               *types.BatchStruct
 }
 type Connections struct {
 	mu                                 sync.Mutex
@@ -46,11 +49,13 @@ type NodeS struct {
 
 func InitializePodState() *PodState {
 	return &PodState{
-		LatestPodHeight:         0,
-		LatestPodMerkleRootHash: nil,
-		LatestPodProof:          nil,
-		LatestPublicWitness:     nil,
-		Votes:                   make(map[string]Votes),
+		LatestPodHeight:     0,
+		LatestPodHash:       nil,
+		LatestPodProof:      nil,
+		LatestPublicWitness: nil,
+		Votes:               make(map[string]Votes),
+		TracksAppHash:       nil,
+		Batch:               nil,
 	}
 }
 func GetPodState() *PodState {
@@ -111,6 +116,7 @@ func CheckAndInitializeDBCounters(staticDB *leveldb.DB) {
 }
 
 func ensureCounter(db *leveldb.DB, counterKey string) {
+	fmt.Println(db)
 	if _, err := db.Get([]byte(counterKey), nil); err != nil {
 		if err = db.Put([]byte(counterKey), []byte("0"), nil); err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in saving %s in static db: %s", counterKey, err.Error()))
