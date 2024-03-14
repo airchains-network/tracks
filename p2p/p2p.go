@@ -325,19 +325,17 @@ func MasterTracksSelection(host host.Host, sharedInput string) string {
 
 	randomPeer := peers[int(randomIndex.Int64())]
 
-	for randomPeer.ID == host.ID() && numPeers > 1 {
-		// Need to re-compute hash and index if the randomly selected peer is the host itself
-		h = sha256.New()
-		h.Write([]byte(sharedInput))
-		hashed = h.Sum(nil)
+	// Need to re-compute hash and index if the randomly selected peer is the host itself
+	h = sha256.New()
+	h.Write([]byte(sharedInput))
+	hashed = h.Sum(nil)
 
-		hashedInt = new(big.Int)
-		hashedInt.SetBytes(hashed)
+	hashedInt = new(big.Int)
+	hashedInt.SetBytes(hashed)
 
-		randomIndex = hashedInt.Mod(hashedInt, big.NewInt(int64(numPeers)))
-		randomPeer = peers[int(randomIndex.Int64())]
-	}
-	//
+	randomIndex = hashedInt.Mod(hashedInt, big.NewInt(int64(numPeers)))
+	randomPeer = peers[int(randomIndex.Int64())]
+
 	fmt.Printf("Selected peer ID: %s\n", randomPeer.ID.String())
 
 	return randomPeer.ID.String()
