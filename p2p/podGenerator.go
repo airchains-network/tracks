@@ -25,16 +25,116 @@ func BatchGeneration(wg *sync.WaitGroup) {
 	GenerateUnverifiedPods()
 }
 
-func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
+func GenerateUnverifiedPods() {
 
-	limit, err := lds.Get([]byte("batchCount"), nil)
+	lds := shared.Node.NodeConnections.GetStaticDatabaseConnection()
+	ldt := shared.Node.NodeConnections.GetTxnDatabaseConnection()
+
+	ConfirmendTransactionIndex, err := lds.Get([]byte("batchStartIndex"), nil)
 	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in getting batchCount from static db : %s", err.Error()))
+		err = lds.Put([]byte("batchStartIndex"), []byte("0"), nil)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in saving batchStartIndex in static db : %s", err.Error()))
+			os.Exit(0)
+		}
+	}
+
+	currentPodNumber, err := lds.Get([]byte("batchCount"), nil)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in getting sssssss from static db : %s", err.Error()))
 		os.Exit(0)
 	}
+
+	SelectedMaster := MasterTracksSelection(Node)
+	decodedMaster, err := peer.Decode(SelectedMaster)
+
+	currentPodNumberInt, _ := strconv.Atoi(strings.TrimSpace(string(currentPodNumber)))
+	batchNumber := currentPodNumberInt + 1
+
+	var batchInput *types.BatchStruct
+	Witness, uZKP, MRH, batchInput, err := createPOD(ldt, ConfirmendTransactionIndex, currentPodNumber)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in creating POD : %s", err.Error()))
+		os.Exit(0)
+	}
+
+	TrackAppHash := generatePodHash(Witness, uZKP, MRH, currentPodNumber)
+	podState := shared.GetPodState()
+	tempMasterTrackAppHash := podState.MasterTrackAppHash
+	if podState.MasterTrackAppHash != nil {
+		tempMasterTrackAppHash = podState.MasterTrackAppHash
+	}
+
+	updateNewPodState(TrackAppHash, Witness, uZKP, MRH, uint64(batchNumber), batchInput)
+
+	// Here the MasterTrack Will Broadcast the uZKP in the Network
+
+	if decodedMaster == Node.ID() {
+
+		// make master's vote true by default
+		podState := shared.GetPodState()
+		currentVotes := podState.Votes
+		currentVotes[decodedMaster.String()] = shared.Votes{
+			PeerID: decodedMaster.String(),
+			Vote:   true,
+		}
+		podState.Votes = currentVotes
+		shared.SetPodState(podState)
+
+		peerCount := len(ConnectedPeers)
+		if peerCount == 0 {
+			// if (no peers connected): update database and make next pod without voting process
+			saveVerifiedPOD()        // save data to database
+			GenerateUnverifiedPods() // generate next pod
+		} else {
+			// Preparing the Message that master track will gossip to the Network
+			proofData := ProofData{
+				PodNumber:    uint64(batchNumber + 1),
+				TrackAppHash: TrackAppHash,
+			}
+
+			// Marshal the proofData
+			proofDataByte, err := json.Marshal(proofData)
+			if err != nil {
+				logs.Log.Error(fmt.Sprintf("Error in marshalling proof data : %s", err.Error()))
+			}
+
+			gossipMsg := types.GossipData{
+				Type: "proof",
+				Data: proofDataByte,
+			}
+
+			gossipMsgByte, err := json.Marshal(gossipMsg)
+			if err != nil {
+				logs.Log.Error("Error marshaling gossip message")
+				return
+			}
+
+			logs.Log.Info("Sending proof result: %s")
+			BroadcastMessage(context.Background(), Node, gossipMsgByte)
+		}
+
+	} else {
+		currentPodData := shared.GetPodState()
+		if bytes.Equal(currentPodData.TracksAppHash, tempMasterTrackAppHash) {
+			SendValidProof(CTX, currentPodData.LatestPodHeight, decodedMaster)
+			return
+		} else {
+			SendInvalidProofError(CTX, currentPodData.LatestPodHeight, decodedMaster)
+			return
+		}
+	}
+
+}
+
+func createPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
+
 	limitInt, _ := strconv.Atoi(strings.TrimSpace(string(limit)))
 
 	batchStartIndexInt, _ := strconv.Atoi(strings.TrimSpace(string(batchStartIndex)))
+
+	fmt.Println(limitInt)
+	fmt.Println(batchStartIndexInt)
 
 	var batch types.BatchStruct
 
@@ -49,6 +149,7 @@ func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witnes
 	var AccountNonces []string
 
 	for i := batchStartIndexInt; i < (config.PODSize * (limitInt + 1)); i++ {
+
 		findKey := fmt.Sprintf("txns-%d", i+1)
 		txData, err := ldt.Get([]byte(findKey), nil)
 		if err != nil {
@@ -125,117 +226,12 @@ func createPOD(lds *leveldb.DB, ldt *leveldb.DB, batchStartIndex []byte) (witnes
 	return witnessVectorByte, proofByte, currentStatusHashByte, &batch, nil
 }
 
-func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
-
-	return MRH
-}
-
-func GenerateUnverifiedPods() {
-	lds := shared.Node.NodeConnections.StaticDatabaseConnection
-	ldt := shared.Node.NodeConnections.TxnDatabaseConnection
-
-	latestBatch := shared.GetLatestBatchIndex(lds)
-	//batchStartIndexInt, _ := strconv.Atoi(strings.TrimSpace(string(latestBatch)))
-
-	currentPodNumber, err := lds.Get([]byte("batchCount"), nil)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in getting sssssss from static db : %s", err.Error()))
-		os.Exit(0)
-	}
-	SelectedMaster := MasterTracksSelection(Node)
-	decodedMaster, err := peer.Decode(SelectedMaster)
-
-	fmt.Println(decodedMaster)
-	currentPodNumberInt, _ := strconv.Atoi(strings.TrimSpace(string(currentPodNumber)))
-	batchNumber, _ := strconv.Atoi(strings.TrimSpace(string(currentPodNumberInt + 1)))
-
-	var batchInput *types.BatchStruct
-	Witness, uZKP, MRH, batchInput, err := createPOD(lds, ldt, latestBatch)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in creating POD : %s", err.Error()))
-		os.Exit(0)
-	}
-
-	TrackAppHash := generatePodHash(Witness, uZKP, MRH, latestBatch)
-	podState := shared.GetPodState()
-	fmt.Println(podState.LatestPodHeight)
-	tempMasterTrackAppHash := podState.MasterTrackAppHash
-	if podState.MasterTrackAppHash != nil {
-		tempMasterTrackAppHash = podState.MasterTrackAppHash
-	}
-
-	updateNewPodState(TrackAppHash, Witness, uZKP, MRH, uint64(batchNumber+1), batchInput)
-	fmt.Println(SelectedMaster)
-	// Here the MasterTrack Will Broadcast the uZKP in the Network
-	if decodedMaster == Node.ID() {
-		// Preparing the Message that master track will gossip to the Network
-		fmt.Printf("Hey I am Validator")
-		proofData := ProofData{
-			PodNumber:    uint64(batchNumber + 1),
-			TrackAppHash: TrackAppHash,
-		}
-
-		// Marshal the proofData
-		proofDataByte, err := json.Marshal(proofData)
-		if err != nil {
-			logs.Log.Error(fmt.Sprintf("Error in marshalling proof data : %s", err.Error()))
-		}
-
-		gossipMsg := types.GossipData{
-			Type: "proof",
-			Data: proofDataByte,
-		}
-
-		gossipMsgByte, err := json.Marshal(gossipMsg)
-		if err != nil {
-			logs.Log.Error("Error marshaling gossip message")
-			return
-		}
-
-		logs.Log.Info("Sending proof result: %s")
-		BroadcastMessage(context.Background(), Node, gossipMsgByte)
-
-	} else {
-		currentPodData := shared.GetPodState()
-		if bytes.Equal(currentPodData.TracksAppHash, tempMasterTrackAppHash) {
-			SendValidProof(CTX, currentPodData.LatestPodHeight, decodedMaster)
-			return
-		} else {
-			SendInvalidProofError(CTX, currentPodData.LatestPodHeight, decodedMaster)
-			return
-		}
-	}
-
-}
-
-func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uint64, batchInput *types.BatchStruct) {
-	var podState *shared.PodState
-	// empty votes
-	votes := make(map[string]shared.Votes)
-
-	podState = &shared.PodState{
-		LatestPodHeight:     podNumber,
-		LatestPodHash:       MRH,
-		LatestPodProof:      uZKP,
-		LatestPublicWitness: Witness,
-		Votes:               votes,
-		TracksAppHash:       CombinedPodHash,
-		Batch:               batchInput,
-	}
-
-	shared.SetPodState(podState)
-}
-
 func saveVerifiedPOD() {
 
-	// get pod data from pod state
 	podState := shared.GetPodState()
-
-	// declear useful variables
 	batchInput := podState.Batch
 	currentPodNumber := podState.LatestPodHeight
 	currentPodNumberInt := int(currentPodNumber)
-
 	batchJSON, err := json.Marshal(batchInput)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in marshalling batch data : %s", err.Error()))
@@ -243,14 +239,12 @@ func saveVerifiedPOD() {
 	}
 	ldbatch := shared.Node.NodeConnections.GetDataAvailabilityDatabaseConnection()
 	lds := shared.Node.NodeConnections.GetStaticDatabaseConnection()
-	batchKey := fmt.Sprintf("batch-%d", currentPodNumberInt+1)
+	batchKey := fmt.Sprintf("batch-%d", currentPodNumberInt)
 	err = ldbatch.Put([]byte(batchKey), batchJSON, nil)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in writing batch data to file : %s", err.Error()))
 		os.Exit(0)
 	}
-
-	// uint64 to int
 	err = lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(config.PODSize*(currentPodNumberInt))), nil)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in updating batchStartIndex in static db : %s", err.Error()))
@@ -268,4 +262,28 @@ func saveVerifiedPOD() {
 		panic("Failed to update batch number: " + err.Error())
 	}
 
+}
+
+func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
+
+	return MRH
+}
+
+func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uint64, batchInput *types.BatchStruct) {
+	var podState *shared.PodState
+	// empty votes
+	votes := make(map[string]shared.Votes)
+	fmt.Println("Hey Saving the States with VIOte")
+	fmt.Println(podNumber)
+	podState = &shared.PodState{
+		LatestPodHeight:     podNumber,
+		LatestPodHash:       MRH,
+		LatestPodProof:      uZKP,
+		LatestPublicWitness: Witness,
+		Votes:               votes,
+		TracksAppHash:       CombinedPodHash,
+		Batch:               batchInput,
+	}
+
+	shared.SetPodState(podState)
 }
