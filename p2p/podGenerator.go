@@ -51,7 +51,7 @@ func GenerateUnverifiedPods() {
 	currentPodNumberInt, _ := strconv.Atoi(strings.TrimSpace(string(currentPodNumber)))
 	batchNumber := currentPodNumberInt + 1
 
-	var batchInput *types.BatchStruct
+	//var batchInput *types.BatchStruct
 	Witness, uZKP, MRH, batchInput, err := createPOD(ldt, ConfirmendTransactionIndex, currentPodNumber)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in creating POD : %s", err.Error()))
@@ -61,10 +61,8 @@ func GenerateUnverifiedPods() {
 	TrackAppHash := generatePodHash(Witness, uZKP, MRH, currentPodNumber)
 	podState := shared.GetPodState()
 	tempMasterTrackAppHash := podState.MasterTrackAppHash
-	if podState.MasterTrackAppHash != nil {
-		tempMasterTrackAppHash = podState.MasterTrackAppHash
-	}
 
+	// update pod state as per latest pod
 	updateNewPodState(TrackAppHash, Witness, uZKP, MRH, uint64(batchNumber), batchInput)
 
 	// Here the MasterTrack Will Broadcast the uZKP in the Network
@@ -115,13 +113,20 @@ func GenerateUnverifiedPods() {
 		}
 
 	} else {
-		currentPodData := shared.GetPodState()
-		if bytes.Equal(currentPodData.TracksAppHash, tempMasterTrackAppHash) {
-			SendValidProof(CTX, currentPodData.LatestPodHeight, decodedMaster)
-			return
+		if podState.MasterTrackAppHash != nil {
+			fmt.Println(TrackAppHash)
+			fmt.Println(tempMasterTrackAppHash)
+			currentPodData := shared.GetPodState()
+			if bytes.Equal(TrackAppHash, tempMasterTrackAppHash) {
+				SendValidProof(CTX, currentPodData.LatestPodHeight, decodedMaster)
+				return
+			} else {
+				SendInvalidProofError(CTX, currentPodData.LatestPodHeight, decodedMaster)
+				return
+			}
 		} else {
-			SendInvalidProofError(CTX, currentPodData.LatestPodHeight, decodedMaster)
-			return
+			// pod state is nil, means master track has not yet broadcasted the proof
+			// don't need to do anything..
 		}
 	}
 
