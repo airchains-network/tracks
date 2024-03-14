@@ -40,7 +40,7 @@ func InitBlockDb() bool {
 		log.Fatal("Failed to open block LevelDB:", err)
 		return false
 	}
-	fmt.Println("blockDB", blockDB)
+
 	blockDbInstance = blockDB
 
 	// get
@@ -226,8 +226,9 @@ func InitDb() bool {
 	publicWitnessStatus := InitPublicWitnessDb()
 	daDbInstanceStatus := InitDaDb()
 	mockDbInstanceStatus := InitMockDb()
+	stateDbInstanceStatus := InitStateDb()
 
-	if txStatus && blockStatus && staticStatus && batchesStatus && proofStatus && publicWitnessStatus && daDbInstanceStatus && mockDbInstanceStatus {
+	if txStatus && blockStatus && staticStatus && stateDbInstanceStatus && batchesStatus && proofStatus && publicWitnessStatus && daDbInstanceStatus && mockDbInstanceStatus {
 		return true
 	} else {
 		return false
