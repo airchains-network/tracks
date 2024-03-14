@@ -15,6 +15,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 )
 
 var (
@@ -191,8 +192,6 @@ func BroadcastMessage(ctx context.Context, host host.Host, message []byte) {
 
 func P2PConfiguration() {
 
-	// create state
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	CTX = ctx
@@ -226,6 +225,12 @@ func waitForShutdownSignal() {
 }
 
 func MasterTracksSelection(host host.Host) string {
+	a := host.Network()
+	fmt.Println(a)
+	if a == nil {
+		time.Sleep(2 * time.Second)
+		MasterTracksSelection(host)
+	}
 	for peerID := range ConnectedPeers {
 		if peerID == host.ID() {
 			continue

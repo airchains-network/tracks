@@ -2,12 +2,14 @@
 package shared
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/blocksync"
 	"github.com/airchains-network/decentralized-sequencer/config"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/syndtr/goleveldb/leveldb"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,8 +33,7 @@ type PodState struct {
 	Votes               map[string]Votes
 	TracksAppHash       []byte
 	Batch               *types.BatchStruct
-
-	MasterTrackAppHash []byte
+	MasterTrackAppHash  []byte
 }
 type Connections struct {
 	mu                                 sync.Mutex
@@ -41,6 +42,7 @@ type Connections struct {
 	PodsDatabaseConnection             *leveldb.DB
 	DataAvailabilityDatabaseConnection *leveldb.DB
 	StaticDatabaseConnection           *leveldb.DB
+	StateDatabaseConnection            *leveldb.DB
 }
 
 type NodeS struct {
@@ -49,20 +51,36 @@ type NodeS struct {
 	NodeConnections *Connections
 }
 
-func InitializePodState() *PodState {
+func InitializePodState(stateConnection *leveldb.DB) *PodState {
 
-	// TODO: sync pod state from database
-
-	return &PodState{
-		LatestPodHeight:     0,
-		LatestPodHash:       nil,
-		LatestPodProof:      nil,
-		LatestPublicWitness: nil,
-		Votes:               make(map[string]Votes),
-		TracksAppHash:       nil,
-		Batch:               nil,
-		MasterTrackAppHash:  nil,
+	// sync pod state from database
+	podStateByte, err := stateConnection.Get([]byte("podState"), nil)
+	if err != nil {
+		fmt.Println(err)
+		logs.Log.Error("Pod should be already initiated/updated by now")
+		os.Exit(0)
 	}
+
+	// unmarshal pod state
+	var podState *PodState
+	err = json.Unmarshal(podStateByte, &podState)
+	if err != nil {
+		logs.Log.Error("Error in unmarshal  pod state")
+		os.Exit(0)
+	}
+
+	return podState
+
+	//return &PodState{
+	//	LatestPodHeight:     0,
+	//	LatestPodHash:       nil,
+	//	LatestPodProof:      nil,
+	//	LatestPublicWitness: nil,
+	//	Votes:               make(map[string]Votes),
+	//	TracksAppHash:       nil,
+	//	Batch:               nil,
+	//	MasterTrackAppHash:  nil,
+	//}
 }
 func GetPodState() *PodState {
 	mu.Lock()
@@ -80,6 +98,7 @@ func SetPodState(podState *PodState) {
 func InitializeDatabaseConnections() *Connections {
 	return &Connections{
 		BlockDatabaseConnection:            blocksync.GetBlockDbInstance(),
+		StateDatabaseConnection:            blocksync.GetStateDbInstance(),
 		TxnDatabaseConnection:              blocksync.GetTxDbInstance(),
 		PodsDatabaseConnection:             blocksync.GetBatchesDbInstance(),
 		DataAvailabilityDatabaseConnection: blocksync.GetDaDbInstance(),
@@ -114,6 +133,12 @@ func (c *Connections) GetStaticDatabaseConnection() *leveldb.DB {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.StaticDatabaseConnection
+}
+
+func (c *Connections) GetStateDatabaseConnection() *leveldb.DB {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.StateDatabaseConnection
 }
 
 func CheckAndInitializeDBCounters(staticDB *leveldb.DB) {
@@ -154,14 +179,12 @@ func GetLatestBatchIndex(staticDB *leveldb.DB) []byte {
 }
 
 func NewNode(conf *config.Config) {
-	if !blocksync.InitDb() {
-		logs.Log.Error("Error in initializing db")
-		return
-	}
-	logs.Log.Info("Initialized the database")
 
 	NodeConnections := InitializeDatabaseConnections()
-	podState := InitializePodState()
+	stateConnection := NodeConnections.GetStateDatabaseConnection()
+
+	podState := InitializePodState(stateConnection)
+
 	Node = &NodeS{
 		config:          conf,
 		podState:        podState,
@@ -170,5 +193,3 @@ func NewNode(conf *config.Config) {
 }
 
 //func GetConfig() *config.Config {
-//	return Node.config
-//}

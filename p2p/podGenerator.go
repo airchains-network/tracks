@@ -285,5 +285,26 @@ func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uin
 		Batch:               batchInput,
 	}
 
+	// save pod state to database
 	shared.SetPodState(podState)
+
+	// save pod data in local state
+	updatePodStateInDatabase(podState)
+
+}
+
+func updatePodStateInDatabase(podState *shared.PodState) {
+	stateConnection := shared.Node.NodeConnections.GetStateDatabaseConnection()
+
+	podStateByte, err := json.Marshal(podState)
+	if err != nil {
+		logs.Log.Error(err.Error())
+		os.Exit(0)
+	}
+
+	err = stateConnection.Put([]byte("podState"), podStateByte, nil)
+	if err != nil {
+		logs.Log.Error(err.Error())
+		os.Exit(0)
+	}
 }

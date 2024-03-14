@@ -3,7 +3,9 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"os"
+	"time"
 
 	//"fmt"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
@@ -12,7 +14,6 @@ import (
 	"sync"
 
 	"github.com/airchains-network/decentralized-sequencer/blocksync"
-	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/airchains-network/decentralized-sequencer/p2p"
 	"github.com/ethereum/go-ethereum/ethclient"
 	//"github.com/syndtr/goleveldb/leveldb"
@@ -23,7 +24,9 @@ func Start() {
 	wg1.Add(2)
 
 	go configureP2P(&wg1)
-	go initializeDBAndStartIndexing(&wg1)
+	go time.AfterFunc(3*time.Second, func() {
+		initializeDBAndStartIndexing(&wg1)
+	})
 
 	wg1.Wait()
 }
@@ -64,6 +67,7 @@ func initializeDBAndStartIndexing(wg *sync.WaitGroup) {
 			os.Exit(0)
 		}
 	}
+
 	var ctx context.Context
 	ctx = context.Background()
 	var wgnm *sync.WaitGroup

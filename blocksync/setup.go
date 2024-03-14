@@ -13,6 +13,7 @@ import (
 var txDbInstance *leveldb.DB
 var blockDbInstance *leveldb.DB
 var staticDbInstance *leveldb.DB
+var stateDbInstance *leveldb.DB
 var batchesDbInstance *leveldb.DB
 var proofDbInstance *leveldb.DB
 var publicWitnessDbInstance *leveldb.DB
@@ -71,6 +72,76 @@ func InitStaticDb() bool {
 	return true
 }
 
+func InitStateDb() bool {
+	stateDB, err := leveldb.OpenFile("data/leveldb/state", nil)
+	if err != nil {
+		log.Fatal("Failed to open state LevelDB:", err)
+		return false
+	}
+
+	stateDbInstance = stateDB
+
+	podStateByte, err := stateDB.Get([]byte("podState"), nil)
+	if podStateByte == nil || err != nil {
+
+		emptyPodState := types.PodState{
+			LatestPodHeight:     0,
+			LatestPodHash:       nil,
+			LatestPodProof:      nil,
+			LatestPublicWitness: nil,
+			Votes:               make(map[string]types.Votes),
+			TracksAppHash:       nil,
+			Batch:               nil,
+			MasterTrackAppHash:  nil,
+		}
+		byteEmptyPodState, err := json.Marshal(emptyPodState)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in marshalling emptyPodState : %s", err.Error()))
+			return false
+		}
+
+		err = stateDB.Put([]byte("podState"), byteEmptyPodState, nil)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in saving podState in pod database : %s", err.Error()))
+			//return false
+			os.Exit(0)
+		}
+
+		byteTest, _ := stateDB.Get([]byte("podState"), nil)
+		fmt.Println("byteTest", byteTest)
+	}
+
+	// 1. Pod State Checking
+	// check in database if pod exists
+	//podBytes, err := stateDbInstance.Get([]byte("podState"), nil)
+	//if podBytes == nil || err != nil {
+	//	// insert empty pod state data in database.
+	//
+	//	emptyPodState := types.PodState{
+	//		LatestPodHeight:     0,
+	//		LatestPodHash:       nil,
+	//		LatestPodProof:      nil,
+	//		LatestPublicWitness: nil,
+	//		Votes:               make(map[string]types.Votes),
+	//		TracksAppHash:       nil,
+	//		Batch:               nil,
+	//		MasterTrackAppHash:  nil,
+	//	}
+	//	byteEmptyPodState, err := json.Marshal(emptyPodState)
+	//	if err != nil {
+	//		logs.Log.Error(fmt.Sprintf("Error in marshalling emptyPodState : %s", err.Error()))
+	//		return false
+	//	}
+	//	err = daDbInstance.Put([]byte("podState"), byteEmptyPodState, nil)
+	//	if err != nil {
+	//		logs.Log.Error(fmt.Sprintf("Error in saving byteEmptyPodState in state Database : %s", err.Error()))
+	//		return false
+	//	}
+	//}
+
+	return true
+}
+
 // InitBatchesDb This function initializes a batches LevelDB database and returns a boolean indicating whether the
 // initialization was successful or not.
 func InitBatchesDb() bool {
@@ -79,6 +150,7 @@ func InitBatchesDb() bool {
 		log.Fatal("Failed to open batches LevelDB:", err)
 		return false
 	}
+
 	batchesDbInstance = batchesDB
 	return true
 }
@@ -177,6 +249,10 @@ func GetBlockDbInstance() *leveldb.DB {
 // the LevelDB database instance for performing operations such as reading or writing data.
 func GetStaticDbInstance() *leveldb.DB {
 	return staticDbInstance
+}
+
+func GetStateDbInstance() *leveldb.DB {
+	return stateDbInstance
 }
 
 // GetBatchesDbInstance This function  is returning the instance of the LevelDB database that was

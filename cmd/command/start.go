@@ -1,7 +1,9 @@
 package command
 
 import (
+	"github.com/airchains-network/decentralized-sequencer/blocksync"
 	"github.com/airchains-network/decentralized-sequencer/config"
+	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/node"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/spf13/cobra"
@@ -14,10 +16,13 @@ var StationCmd = &cobra.Command{
 
 		// default values
 		conf := config.DefaultConfig()
-		shared.InitializePodState()
+		if !blocksync.InitDb() {
+			logs.Log.Error("Error in initializing db")
+			return
+		}
+		logs.Log.Info("Initialized the database")
 
-		// TODO: make changes in default values from config.yaml
-
+		//shared.InitializePodState()
 		// node config
 		shared.NewNode(conf)
 

@@ -11,3 +11,20 @@ type BatchStruct struct {
 	TransactionNonces []string `json:"tx_nonces"`
 	AccountNonces     []string `json:"account_nonces"`
 }
+
+type Votes struct {
+	PeerID string // TODO change this type to proper Peer ID Type
+	//Commitment string
+	Vote bool
+}
+type PodState struct {
+	LatestPodHeight     uint64
+	LatestPodHash       []byte
+	LatestPodProof      []byte
+	LatestPublicWitness []byte
+	Votes               map[string]Votes
+	TracksAppHash       []byte
+	Batch               *BatchStruct
+
+	MasterTrackAppHash []byte
+}
