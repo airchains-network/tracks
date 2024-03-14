@@ -125,7 +125,8 @@ func ProofResultHandler(node host.Host, ctx context.Context, dataByte []byte, me
 	var proofResult ProofResult
 	err := json.Unmarshal(dataByte, &proofResult)
 	if err != nil {
-		panic("error in unmarshling proof result")
+		log.Error().Msg("Error Unmarshalling Proof Result: %v")
+		return
 	}
 
 	// update pod state votes based on proof result
@@ -270,12 +271,11 @@ func calculateVotes() (voteResult, isVotesEnough bool) {
 	allVotes := podState.Votes
 
 	currentVotesCount := len(allVotes)
-	peerCount := len(ConnectedPeers)
-	peerCount += 1 // add master track also
+	peers := peerList.GetPeers()
 
 	// if all peers have voted
 	// TODO: do it even if all peers have not voted, and then also 2/3 returned `true`, then do this:
-	if currentVotesCount == peerCount {
+	if currentVotesCount == len(peers) {
 
 		// count votes of all nodes, if 2/3 votes are true
 
@@ -290,7 +290,8 @@ func calculateVotes() (voteResult, isVotesEnough bool) {
 			}
 		}
 
-		trueVotePercentage := (float64(trueVotes) / float64(peerCount)) * 100
+		peerLen := len(peers)
+		trueVotePercentage := (float64(trueVotes) / float64(peerLen)) * 100
 
 		voteResult := VoteResult{
 			TrueCount:          trueVotes,

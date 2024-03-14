@@ -1,7 +1,40 @@
+//package p2p
+//
+//import (
+//	"context"
+//	"fmt"
+//	"github.com/libp2p/go-libp2p"
+//	"github.com/libp2p/go-libp2p/core/crypto"
+//	"github.com/libp2p/go-libp2p/core/host"
+//	"github.com/libp2p/go-libp2p/core/network"
+//	"github.com/libp2p/go-libp2p/core/peer"
+//	"github.com/libp2p/go-libp2p/core/protocol"
+//	multiaddr "github.com/multiformats/go-multiaddr"
+//	"io"
+//	"os"
+//	"os/signal"
+//	"sync"
+//	"syscall"
+//	"time"
+//)
+//
+//var (
+//	ConnectedPeers = make(map[peer.ID]peer.AddrInfo)
+//	mutex          = &sync.Mutex{}
+//	Node           host.Host
+//	CTX            context.Context
+//)
+//
+//const (
+//	identityFilePath = "sequencer/identity.info"
+//	customProtocolID = "/station/tracks/0.0.1"
+//)
+
 package p2p
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -11,24 +44,75 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	multiaddr "github.com/multiformats/go-multiaddr"
 	"io"
+	"math/big"
 	"os"
 	"os/signal"
+	"sort"
 	"sync"
 	"syscall"
 	"time"
 )
 
+type PeerList struct {
+	peers []peer.AddrInfo
+}
+
+func (p *PeerList) AddPeer(peerInfo peer.AddrInfo) {
+	p.peers = append(p.peers, peerInfo)
+	sort.Slice(p.peers, func(i, j int) bool {
+		return p.peers[i].ID.String() < p.peers[j].ID.String()
+	})
+}
+
+func (p *PeerList) GetPeers() []peer.AddrInfo {
+	return p.peers
+}
+
+func NewPeerList() *PeerList {
+	return &PeerList{}
+}
+
 var (
-	ConnectedPeers = make(map[peer.ID]peer.AddrInfo)
-	mutex          = &sync.Mutex{}
-	Node           host.Host
-	CTX            context.Context
+	// ConnectedPeers = make(map[peer.ID]peer.AddrInfo) // Not used anymore
+	mutex    = &sync.Mutex{}
+	Node     host.Host
+	CTX      context.Context
+	peerList = NewPeerList()
 )
 
 const (
 	identityFilePath = "sequencer/identity.info"
 	customProtocolID = "/station/tracks/0.0.1"
 )
+
+// Your other functions...
+
+func onConnected(n network.Network, c network.Conn) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	peerInfo := peer.AddrInfo{ID: c.RemotePeer(), Addrs: []multiaddr.Multiaddr{c.RemoteMultiaddr()}}
+
+	// Add this peer to our global list of connected peers
+	peerList.AddPeer(peerInfo)
+
+	fmt.Printf("Connected to %s\n", c.RemotePeer())
+}
+
+func onDisconnected(n network.Network, c network.Conn) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	// delete(ConnectedPeers, c.RemotePeer()) // Not used anymore
+	fmt.Printf("Disconnected from %s\n", c.RemotePeer())
+}
+
+// Get all peers, including the current node
+func getAllPeers(node host.Host) []peer.AddrInfo {
+	peers := peerList.GetPeers()
+	ownPeerInfo := peer.AddrInfo{ID: node.ID(), Addrs: node.Addrs()}
+	peers = append(peers, ownPeerInfo)
+	return peers
+}
 
 func startNode(ctx context.Context) (host.Host, error) {
 	privKey, err := loadPrivateKey(identityFilePath)
@@ -62,21 +146,6 @@ func registerConnectionHandlers(node host.Host) {
 		ConnectedF:    onConnected,
 		DisconnectedF: onDisconnected,
 	})
-}
-
-func onConnected(n network.Network, c network.Conn) {
-	mutex.Lock()
-	defer mutex.Unlock()
-	peerInfo := peer.AddrInfo{ID: c.RemotePeer(), Addrs: []multiaddr.Multiaddr{c.RemoteMultiaddr()}}
-	ConnectedPeers[c.RemotePeer()] = peerInfo
-	fmt.Printf("Connected to %s\n", c.RemotePeer())
-}
-
-func onDisconnected(n network.Network, c network.Conn) {
-	mutex.Lock()
-	defer mutex.Unlock()
-	delete(ConnectedPeers, c.RemotePeer())
-	fmt.Printf("Disconnected from %s\n", c.RemotePeer())
 }
 
 func printNodeInfo(node host.Host) {
@@ -176,16 +245,36 @@ func sendMessage(ctx context.Context, node host.Host, peerID peer.ID, message []
 	return nil
 }
 
+//func BroadcastMessage(ctx context.Context, host host.Host, message []byte) {
+//	mutex.Lock()
+//	defer mutex.Unlock()
+//
+//	for peerID := range peerList.GetPeers() {
+//		if peerID == host.ID() {
+//			continue
+//		}
+//		if err := sendMessage(ctx, host, peerID, message); err != nil {
+//			fmt.Printf("Error broadcasting message to %s: %s\n", peerID, err)
+//		}
+//	}
+//}
+
 func BroadcastMessage(ctx context.Context, host host.Host, message []byte) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	for peerID := range ConnectedPeers {
-		if peerID == host.ID() {
+	peers := peerList.GetPeers()
+	if len(peers) == 0 {
+		fmt.Println("No connected peers to send the message to.")
+		return
+	}
+
+	for _, peerInfo := range peers {
+		if peerInfo.ID == host.ID() {
 			continue
 		}
-		if err := sendMessage(ctx, host, peerID, message); err != nil {
-			fmt.Printf("Error broadcasting message to %s: %s\n", peerID, err)
+		if err := sendMessage(ctx, host, peerInfo.ID, message); err != nil {
+			fmt.Printf("Error broadcasting message to %s: %s\n", peerInfo.ID, err)
 		}
 	}
 }
@@ -224,17 +313,43 @@ func waitForShutdownSignal() {
 	fmt.Println("Received signal, shutting down...")
 }
 
-func MasterTracksSelection(host host.Host) string {
-	a := host.Network()
-	fmt.Println(a)
-	if a == nil {
-		time.Sleep(2 * time.Second)
-		MasterTracksSelection(host)
+func MasterTracksSelection(host host.Host, sharedInput string) string {
+	peers := peerList.GetPeers()
+	numPeers := len(peers)
+	if numPeers == 0 {
+		fmt.Println("No peers available.")
+		return ""
 	}
-	for peerID := range ConnectedPeers {
-		if peerID == host.ID() {
-			continue
-		}
+
+	// Compute the SHA256 hash of the sharedInput
+	h := sha256.New()
+	h.Write([]byte(sharedInput))
+	hashed := h.Sum(nil)
+
+	// Convert the hash to a big.Int
+	hashedInt := new(big.Int)
+	hashedInt.SetBytes(hashed)
+
+	// Use modulus to get an index within the range of numPeers.
+	// randomIndex will always be in the range of 0 to numPeers-1 (inclusive).
+	randomIndex := hashedInt.Mod(hashedInt, big.NewInt(int64(numPeers)))
+
+	randomPeer := peers[int(randomIndex.Int64())]
+
+	for randomPeer.ID == host.ID() && numPeers > 1 {
+		// Need to re-compute hash and index if the randomly selected peer is the host itself
+		h = sha256.New()
+		h.Write([]byte(sharedInput + time.Now().String()))
+		hashed = h.Sum(nil)
+
+		hashedInt = new(big.Int)
+		hashedInt.SetBytes(hashed)
+
+		randomIndex = hashedInt.Mod(hashedInt, big.NewInt(int64(numPeers)))
+		randomPeer = peers[int(randomIndex.Int64())]
 	}
-	return "12D3KooWADvW4hXKZUG2RTzAivPFUrMLWz12b7QmFguWx4zsSsWQ"
+
+	fmt.Printf("Selected peer ID: %s\n", randomPeer.ID.String())
+
+	return randomPeer.ID.String()
 }

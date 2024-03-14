@@ -45,7 +45,15 @@ func GenerateUnverifiedPods() {
 		os.Exit(0)
 	}
 
-	SelectedMaster := MasterTracksSelection(Node)
+	// @aakash please passs here the Last TrackAppHash of the Pods
+	previousStateData, err := getPodStateFromDatabase()
+	if err != nil {
+		logs.Log.Error("Error in getting previous station data")
+		os.Exit(0)
+	}
+	PreviousTrackAppHash := previousStateData.TracksAppHash
+
+	SelectedMaster := MasterTracksSelection(Node, string(PreviousTrackAppHash))
 	decodedMaster, err := peer.Decode(SelectedMaster)
 
 	currentPodNumberInt, _ := strconv.Atoi(strings.TrimSpace(string(currentPodNumber)))
@@ -80,8 +88,8 @@ func GenerateUnverifiedPods() {
 		}
 		podState.Votes = currentVotes
 		shared.SetPodState(podState)
-
-		peerCount := len(ConnectedPeers)
+		Peers := peerList.GetPeers()
+		peerCount := len(Peers)
 		if peerCount == 0 {
 			// if (no peers connected): update database and make next pod without voting process
 			saveVerifiedPOD()        // save data to database
@@ -309,4 +317,20 @@ func updatePodStateInDatabase(podState *shared.PodState) {
 		logs.Log.Error(err.Error())
 		os.Exit(0)
 	}
+}
+
+func getPodStateFromDatabase() (podStateData *shared.PodState, err error) {
+	stateConnection := shared.Node.NodeConnections.GetStateDatabaseConnection()
+
+	podStateDataByte, err := stateConnection.Get([]byte("podState"), nil)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(podStateDataByte, podStateData)
+	if err != nil {
+		return nil, err
+	}
+
+	return podStateData, nil
+
 }
