@@ -271,10 +271,11 @@ func calculateVotes() (voteResult, isVotesEnough bool) {
 
 	currentVotesCount := len(allVotes)
 	peerCount := len(ConnectedPeers)
+	peerCount += 1 // add master track also
 
 	// if all peers have voted
 	// TODO: do it even if all peers have not voted, and then also 2/3 returned `true`, then do this:
-	if currentVotesCount == peerCount+1 {
+	if currentVotesCount == peerCount {
 
 		// count votes of all nodes, if 2/3 votes are true
 

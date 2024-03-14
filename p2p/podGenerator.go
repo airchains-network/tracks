@@ -89,7 +89,7 @@ func GenerateUnverifiedPods() {
 		} else {
 			// Preparing the Message that master track will gossip to the Network
 			proofData := ProofData{
-				PodNumber:    uint64(batchNumber + 1),
+				PodNumber:    uint64(batchNumber),
 				TrackAppHash: TrackAppHash,
 			}
 
