@@ -142,7 +142,15 @@ func ProofResultHandler(node host.Host, ctx context.Context, dataByte []byte, me
 			// TODO SubmitPodToDA()
 			// TODO SubmitPodToJunction()
 
-			saveVerifiedPOD()        // save data to database
+			saveVerifiedPOD()
+			peerListLocked = false
+			peerListLock.Unlock()
+
+			peerListLock.Lock()
+			for _, peerInfo := range incomingPeers.GetPeers() {
+				peerList.AddPeer(peerInfo)
+			}
+			peerListLock.Unlock()    // save data to database
 			GenerateUnverifiedPods() // generate next pod
 		} else {
 			// TODO: ?????????  what todo if verification failed: discuss with rahul and shubham
@@ -271,7 +279,7 @@ func calculateVotes() (voteResult, isVotesEnough bool) {
 	allVotes := podState.Votes
 
 	currentVotesCount := len(allVotes)
-	peers := peerList.GetPeers()
+	peers := getAllPeers(Node)
 
 	// if all peers have voted
 	// TODO: do it even if all peers have not voted, and then also 2/3 returned `true`, then do this:
@@ -355,7 +363,15 @@ func ProofVoteResultHandler(node host.Host, ctx context.Context, dataByte []byte
 		// TODO SubmitPodToDA()
 		// TODO SubmitPodToJunction()
 
-		saveVerifiedPOD()        // save data to database
+		saveVerifiedPOD() // save data to database
+		peerListLocked = false
+		peerListLock.Unlock()
+
+		peerListLock.Lock()
+		for _, peerInfo := range incomingPeers.GetPeers() {
+			peerList.AddPeer(peerInfo)
+		}
+		peerListLock.Unlock()
 		GenerateUnverifiedPods() // generate next pod
 	} else {
 		logs.Log.Error("Proof Validation Failed, I am stopping here.. dont know what to do ....")

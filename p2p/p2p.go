@@ -20,6 +20,12 @@ import (
 	"syscall"
 )
 
+var (
+	incomingPeers  = NewPeerList()
+	peerListLocked = false
+	peerListLock   = sync.Mutex{}
+)
+
 type PeerList struct {
 	peers []peer.AddrInfo
 }
@@ -53,19 +59,21 @@ const (
 )
 
 // Your other functions...
-
-func onConnected(n network.Network, c network.Conn) {
-	mutex.Lock()
-	defer mutex.Unlock()
+func onConnected(n network.
+	Network, c network.Conn) {
+	peerListLock.Lock()
+	defer peerListLock.Unlock()
 
 	peerInfo := peer.AddrInfo{ID: c.RemotePeer(), Addrs: []multiaddr.Multiaddr{c.RemoteMultiaddr()}}
 
-	// Add this peer to our global list of connected peers
-	peerList.AddPeer(peerInfo)
+	if peerListLocked {
+		incomingPeers.AddPeer(peerInfo)
+	} else {
+		peerList.AddPeer(peerInfo)
+	}
 
 	fmt.Printf("Connected to %s\n", c.RemotePeer())
 }
-
 func onDisconnected(n network.Network, c network.Conn) {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -300,6 +308,7 @@ func MasterTracksSelection(host host.Host, sharedInput string) string {
 		fmt.Println("No peers available.")
 		return ""
 	}
+	fmt.Printf(sharedInput)
 
 	// Compute the SHA256 hash of the sharedInput
 	h := sha256.New()

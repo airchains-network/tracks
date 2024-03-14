@@ -26,7 +26,9 @@ func BatchGeneration(wg *sync.WaitGroup) {
 }
 
 func GenerateUnverifiedPods() {
-
+	incomingPeers = NewPeerList() // reset the incoming peers
+	peerListLock.Lock()
+	peerListLocked = true
 	lds := shared.Node.NodeConnections.GetStaticDatabaseConnection()
 	ldt := shared.Node.NodeConnections.GetTxnDatabaseConnection()
 
@@ -53,6 +55,9 @@ func GenerateUnverifiedPods() {
 	}
 	//fmt.Println("get this data from database:", previousStateData)
 	PreviousTrackAppHash := previousStateData.TracksAppHash
+	if PreviousTrackAppHash == nil {
+		PreviousTrackAppHash = []byte("nil")
+	}
 
 	SelectedMaster := MasterTracksSelection(Node, string(PreviousTrackAppHash))
 	decodedMaster, err := peer.Decode(SelectedMaster)
@@ -77,7 +82,7 @@ func GenerateUnverifiedPods() {
 	// Here the MasterTrack Will Broadcast the uZKP in the Network
 
 	if decodedMaster == Node.ID() {
-
+		fmt.Println("I am Master")
 		// make master's vote true by default
 		podState := shared.GetPodState()
 		currentVotes := podState.Votes
@@ -87,12 +92,22 @@ func GenerateUnverifiedPods() {
 		}
 		podState.Votes = currentVotes
 		shared.SetPodState(podState)
-		Peers := peerList.GetPeers()
+		Peers := getAllPeers(Node)
 		peerCount := len(Peers)
-		if peerCount == 0 {
+		if peerCount == 1 {
 			// if (no peers connected): update database and make next pod without voting process
-			saveVerifiedPOD()        // save data to database
+			saveVerifiedPOD() // save data to database
+			peerListLocked = false
+			peerListLock.Unlock()
+
+			peerListLock.Lock()
+			for _, peerInfo := range incomingPeers.GetPeers() {
+				peerList.AddPeer(peerInfo)
+			}
+			peerListLock.Unlock()
+
 			GenerateUnverifiedPods() // generate next pod
+
 		} else {
 			// Preparing the Message that master track will gossip to the Network
 			proofData := ProofData{
