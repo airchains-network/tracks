@@ -50,7 +50,6 @@ import (
 	"sort"
 	"sync"
 	"syscall"
-	"time"
 )
 
 type PeerList struct {
@@ -339,7 +338,7 @@ func MasterTracksSelection(host host.Host, sharedInput string) string {
 	for randomPeer.ID == host.ID() && numPeers > 1 {
 		// Need to re-compute hash and index if the randomly selected peer is the host itself
 		h = sha256.New()
-		h.Write([]byte(sharedInput + time.Now().String()))
+		h.Write([]byte(sharedInput))
 		hashed = h.Sum(nil)
 
 		hashedInt = new(big.Int)
