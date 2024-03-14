@@ -103,41 +103,10 @@ func InitStateDb() bool {
 		err = stateDB.Put([]byte("podState"), byteEmptyPodState, nil)
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in saving podState in pod database : %s", err.Error()))
-			//return false
-			os.Exit(0)
+			return false
 		}
 
-		byteTest, _ := stateDB.Get([]byte("podState"), nil)
-		fmt.Println("byteTest", byteTest)
 	}
-
-	// 1. Pod State Checking
-	// check in database if pod exists
-	//podBytes, err := stateDbInstance.Get([]byte("podState"), nil)
-	//if podBytes == nil || err != nil {
-	//	// insert empty pod state data in database.
-	//
-	//	emptyPodState := types.PodState{
-	//		LatestPodHeight:     0,
-	//		LatestPodHash:       nil,
-	//		LatestPodProof:      nil,
-	//		LatestPublicWitness: nil,
-	//		Votes:               make(map[string]types.Votes),
-	//		TracksAppHash:       nil,
-	//		Batch:               nil,
-	//		MasterTrackAppHash:  nil,
-	//	}
-	//	byteEmptyPodState, err := json.Marshal(emptyPodState)
-	//	if err != nil {
-	//		logs.Log.Error(fmt.Sprintf("Error in marshalling emptyPodState : %s", err.Error()))
-	//		return false
-	//	}
-	//	err = daDbInstance.Put([]byte("podState"), byteEmptyPodState, nil)
-	//	if err != nil {
-	//		logs.Log.Error(fmt.Sprintf("Error in saving byteEmptyPodState in state Database : %s", err.Error()))
-	//		return false
-	//	}
-	//}
 
 	return true
 }

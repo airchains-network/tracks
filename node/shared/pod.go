@@ -35,7 +35,6 @@ type PodState struct {
 	Batch               *types.BatchStruct
 	MasterTrackAppHash  []byte
 }
-
 type Connections struct {
 	mu                                 sync.Mutex
 	BlockDatabaseConnection            *leveldb.DB
@@ -71,8 +70,8 @@ func InitializePodState(stateConnection *leveldb.DB) *PodState {
 	}
 
 	return podState
-}
 
+}
 func GetPodState() *PodState {
 	mu.Lock()
 	defer mu.Unlock()
@@ -96,7 +95,6 @@ func InitializeDatabaseConnections() *Connections {
 		StaticDatabaseConnection:           blocksync.GetStaticDbInstance(),
 	}
 }
-
 func (c *Connections) GetBlockDatabaseConnection() *leveldb.DB {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -183,3 +181,5 @@ func NewNode(conf *config.Config) {
 		NodeConnections: NodeConnections,
 	}
 }
+
+//func GetConfig() *config.Config {

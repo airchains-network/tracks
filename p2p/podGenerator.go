@@ -51,6 +51,7 @@ func GenerateUnverifiedPods() {
 		logs.Log.Error("Error in getting previous station data")
 		os.Exit(0)
 	}
+	//fmt.Println("get this data from database:", previousStateData)
 	PreviousTrackAppHash := previousStateData.TracksAppHash
 
 	SelectedMaster := MasterTracksSelection(Node, string(PreviousTrackAppHash))
@@ -324,15 +325,18 @@ func updatePodStateInDatabase(podState *shared.PodState) {
 	}
 }
 
-func getPodStateFromDatabase() (podStateData *shared.PodState, err error) {
+func getPodStateFromDatabase() (*types.PodState, error) {
+	var podStateData *types.PodState
 	stateConnection := shared.Node.NodeConnections.GetStateDatabaseConnection()
 
 	podStateDataByte, err := stateConnection.Get([]byte("podState"), nil)
 	if err != nil {
+		logs.Log.Error("error in getting pod state data from database")
 		return nil, err
 	}
-	err = json.Unmarshal(podStateDataByte, podStateData)
+	err = json.Unmarshal(podStateDataByte, &podStateData)
 	if err != nil {
+		logs.Log.Error("error in unmarshal pod state data")
 		return nil, err
 	}
 

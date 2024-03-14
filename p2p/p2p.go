@@ -1,35 +1,3 @@
-//package p2p
-//
-//import (
-//	"context"
-//	"fmt"
-//	"github.com/libp2p/go-libp2p"
-//	"github.com/libp2p/go-libp2p/core/crypto"
-//	"github.com/libp2p/go-libp2p/core/host"
-//	"github.com/libp2p/go-libp2p/core/network"
-//	"github.com/libp2p/go-libp2p/core/peer"
-//	"github.com/libp2p/go-libp2p/core/protocol"
-//	multiaddr "github.com/multiformats/go-multiaddr"
-//	"io"
-//	"os"
-//	"os/signal"
-//	"sync"
-//	"syscall"
-//	"time"
-//)
-//
-//var (
-//	ConnectedPeers = make(map[peer.ID]peer.AddrInfo)
-//	mutex          = &sync.Mutex{}
-//	Node           host.Host
-//	CTX            context.Context
-//)
-//
-//const (
-//	identityFilePath = "sequencer/identity.info"
-//	customProtocolID = "/station/tracks/0.0.1"
-//)
-
 package p2p
 
 import (
@@ -105,11 +73,24 @@ func onDisconnected(n network.Network, c network.Conn) {
 	fmt.Printf("Disconnected from %s\n", c.RemotePeer())
 }
 
-// Get all peers, including the current node
+//// Get all peers, including the current node
+//func getAllPeers(node host.Host) []peer.AddrInfo {
+//	peers := peerList.GetPeers()
+//	ownPeerInfo := peer.AddrInfo{ID: node.ID(), Addrs: node.Addrs()}
+//	peers = append(peers, ownPeerInfo)
+//	return peers
+//}
+
 func getAllPeers(node host.Host) []peer.AddrInfo {
 	peers := peerList.GetPeers()
 	ownPeerInfo := peer.AddrInfo{ID: node.ID(), Addrs: node.Addrs()}
 	peers = append(peers, ownPeerInfo)
+
+	// Sort peers by ID
+	sort.Slice(peers, func(i, j int) bool {
+		return peers[i].ID.String() < peers[j].ID.String()
+	})
+
 	return peers
 }
 
@@ -196,7 +177,7 @@ func handleStreamData(s network.Stream) {
 	const initialBufSize = 8192
 	buf := make([]byte, initialBufSize)
 	messageBroadcaster := s.Conn().RemotePeer()
-	fmt.Println(messageBroadcaster)
+	//fmt.Println(messageBroadcaster)
 	for {
 		n, err := s.Read(buf)
 		if err != nil {
@@ -313,7 +294,7 @@ func waitForShutdownSignal() {
 }
 
 func MasterTracksSelection(host host.Host, sharedInput string) string {
-	peers := peerList.GetPeers()
+	peers := getAllPeers(host)
 	numPeers := len(peers)
 	if numPeers == 0 {
 		fmt.Println("No peers available.")
@@ -347,7 +328,7 @@ func MasterTracksSelection(host host.Host, sharedInput string) string {
 		randomIndex = hashedInt.Mod(hashedInt, big.NewInt(int64(numPeers)))
 		randomPeer = peers[int(randomIndex.Int64())]
 	}
-
+	//
 	fmt.Printf("Selected peer ID: %s\n", randomPeer.ID.String())
 
 	return randomPeer.ID.String()
