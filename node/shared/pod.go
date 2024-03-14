@@ -50,6 +50,9 @@ type NodeS struct {
 }
 
 func InitializePodState() *PodState {
+
+	// TODO: sync pod state from database
+
 	return &PodState{
 		LatestPodHeight:     0,
 		LatestPodHash:       nil,
@@ -119,7 +122,7 @@ func CheckAndInitializeDBCounters(staticDB *leveldb.DB) {
 }
 
 func ensureCounter(db *leveldb.DB, counterKey string) {
-	fmt.Println(db)
+	//fmt.Println(db)
 	if _, err := db.Get([]byte(counterKey), nil); err != nil {
 		if err = db.Put([]byte(counterKey), []byte("0"), nil); err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in saving %s in static db: %s", counterKey, err.Error()))

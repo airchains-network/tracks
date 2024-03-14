@@ -2,6 +2,9 @@ package node
 
 import (
 	"context"
+	"fmt"
+	"os"
+
 	//"fmt"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	//"strconv"
@@ -43,6 +46,24 @@ func initializeDBAndStartIndexing(wg *sync.WaitGroup) {
 		return
 	}
 
+	_, err = staticDB.Get([]byte("batchCount"), nil)
+	if err != nil {
+		err = staticDB.Put([]byte("batchCount"), []byte("0"), nil)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in saving batchCount in static db : %s", err.Error()))
+			os.Exit(0)
+		}
+	}
+
+	_, err = staticDB.Get([]byte("batchStartIndex"), nil)
+	if err != nil {
+		fmt.Println("batchStartIndex not found")
+		err = staticDB.Put([]byte("batchStartIndex"), []byte("0"), nil)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in saving batchStartIndex in static db : %s", err.Error()))
+			os.Exit(0)
+		}
+	}
 	var ctx context.Context
 	ctx = context.Background()
 	var wgnm *sync.WaitGroup

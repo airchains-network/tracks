@@ -47,7 +47,6 @@ func ProofHandler(node host.Host, ctx context.Context, dataByte []byte, messageB
 
 	// match pod numbers
 	if currentPodData.LatestPodHeight != receivedPodNumber {
-		fmt.Println("madarcvhod")
 		// maybe proof may not be generated and its still in previous pod
 		if currentPodData.LatestPodHeight+1 == receivedPodNumber {
 			// insert it in MasterTrackAppHash
@@ -275,7 +274,7 @@ func calculateVotes() (voteResult, isVotesEnough bool) {
 
 	// if all peers have voted
 	// TODO: do it even if all peers have not voted, and then also 2/3 returned `true`, then do this:
-	if currentVotesCount == peerCount {
+	if currentVotesCount == peerCount+1 {
 
 		// count votes of all nodes, if 2/3 votes are true
 
