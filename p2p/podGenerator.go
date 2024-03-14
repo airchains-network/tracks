@@ -262,6 +262,8 @@ func saveVerifiedPOD() {
 		panic("Failed to update batch number: " + err.Error())
 	}
 
+	podState.MasterTrackAppHash = nil
+	shared.SetPodState(podState)
 }
 
 func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
