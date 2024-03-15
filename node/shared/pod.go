@@ -95,6 +95,7 @@ func InitializeDatabaseConnections() *Connections {
 		StaticDatabaseConnection:           blocksync.GetStaticDbInstance(),
 	}
 }
+
 func (c *Connections) GetBlockDatabaseConnection() *leveldb.DB {
 	c.mu.Lock()
 	defer c.mu.Unlock()

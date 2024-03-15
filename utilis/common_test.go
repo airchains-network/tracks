@@ -21,7 +21,7 @@ func TestGetBalance(t *testing.T) {
 		"id": 1
 	}`, address, "0x"+strconv.FormatUint(blockNumber, 16))
 
-	resp, err := http.Post("http://192.168.1.106:8545", "application/json", strings.NewReader(payload))
+	resp, err := http.Post("http://0.0.0.0:8545", "application/json", strings.NewReader(payload))
 	if err != nil {
 	}
 	defer resp.Body.Close()

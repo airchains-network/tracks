@@ -34,6 +34,8 @@ func RouterHandler(c *gin.Context) {
 		HandleGetLatestPod(c, Params)
 	case "tracks_batchCount":
 		HandleGetBatchCount(c, Params)
+	case "tracks_getPodByNumber":
+		HandleGetPodByNumber(c, Params)
 	default:
 
 		respondWithError(c, "No method exists with name "+Method)
@@ -42,7 +44,7 @@ func RouterHandler(c *gin.Context) {
 	// POST Request's:-
 	//DONE: '{"jsonrpc":"2.0","method":"tracks_getLatestPod","params":[],"id":1}'
 	//DONE: '{"jsonrpc":"2.0","method":"tracks_batchCount","params":[],"id":1}'
-	//! next: '{"jsonrpc":"2.0","method":"tracks_getPodByNumber","params":[],"id":1}'
+	//DONE: '{"jsonrpc":"2.0","method":"tracks_getPodByNumber","params":["0x123ab"],"id":1}'
 
 	// ! ???????????????????
 	//'{"jsonrpc":"2.0","method":"tracks_getPodMaster","params":["0x2"],"id":1}'

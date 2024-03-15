@@ -38,7 +38,7 @@ func initializeDBAndStartIndexing(wg *sync.WaitGroup) {
 	shared.CheckAndInitializeDBCounters(staticDB)
 
 	latestBlock := shared.GetLatestBlock(shared.Node.NodeConnections.BlockDatabaseConnection)
-	client, err := ethclient.Dial("http://192.168.1.106:8545")
+	client, err := ethclient.Dial("http://0.0.0.0:8545")
 	if err != nil {
 		logs.Log.Error("Error in connecting to the network")
 		return

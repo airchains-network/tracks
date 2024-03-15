@@ -16,8 +16,12 @@ import (
 )
 
 func StoreEVMBlock(client *ethclient.Client, ctx context.Context, blockIndex int, ldb *leveldb.DB, ldt *leveldb.DB) {
+
+	fmt.Println("block number: ", blockIndex)
+
 	blockData, err := client.BlockByNumber(ctx, big.NewInt(int64(blockIndex)))
 	if err != nil {
+		fmt.Println(err)
 		//errMessage := fmt.Sprintf("Failed to get block data for block number %d: %s", blockIndex, err)
 		//logs.Log.Error(errMessage)
 		logs.Log.Info("Waiting for the next station block..")

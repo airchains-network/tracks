@@ -263,15 +263,24 @@ func saveVerifiedPOD() {
 	batchInput := podState.Batch
 	currentPodNumber := podState.LatestPodHeight
 	currentPodNumberInt := int(currentPodNumber)
-	batchJSON, err := json.Marshal(batchInput)
+
+	batchByte, err := json.Marshal(batchInput)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in marshalling batch data : %s", err.Error()))
 		os.Exit(0)
 	}
+
+	podByte, err := json.Marshal(podState)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in marshalling pod data : %s", err.Error()))
+		os.Exit(0)
+	}
+
 	ldbatch := shared.Node.NodeConnections.GetDataAvailabilityDatabaseConnection()
 	lds := shared.Node.NodeConnections.GetStaticDatabaseConnection()
+
 	batchKey := fmt.Sprintf("batch-%d", currentPodNumberInt)
-	err = ldbatch.Put([]byte(batchKey), batchJSON, nil)
+	err = ldbatch.Put([]byte(batchKey), batchByte, nil)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in writing batch data to file : %s", err.Error()))
 		os.Exit(0)
@@ -286,6 +295,13 @@ func saveVerifiedPOD() {
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in updating batchCount in static db : %s", err.Error()))
 		os.Exit(0)
+	}
+
+	batchDB := shared.Node.NodeConnections.GetPodsDatabaseConnection()
+	podKey := fmt.Sprintf("pod-%d", currentPodNumberInt)
+	err = batchDB.Put([]byte(podKey), podByte, nil)
+	if err != nil {
+		panic("Failed to update pod data: " + err.Error())
 	}
 
 	err = os.WriteFile("data/batchCount.txt", []byte(strconv.Itoa(currentPodNumberInt)), 0666)
