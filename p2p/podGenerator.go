@@ -23,9 +23,11 @@ import (
 func BatchGeneration(wg *sync.WaitGroup) {
 	defer wg.Done()
 	GenerateUnverifiedPods()
+	//MasterTracksSelection(Node, "nil")
 }
 
 func GenerateUnverifiedPods() {
+
 	incomingPeers = NewPeerList() // reset the incoming peers
 	peerListLock.Lock()
 	peerListLocked = true

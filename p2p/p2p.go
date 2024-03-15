@@ -3,7 +3,9 @@ package p2p
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/gob"
 	"fmt"
+	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -20,6 +22,13 @@ import (
 	"syscall"
 )
 
+const (
+	identityFilePath         = "sequencer/identity.info"
+	customProtocolID         = "/station/tracks/0.0.1"
+	customDataSyncProtocolID = "/tracks/dataSync/0.0.1"
+	MaxChunkSize             = 100
+)
+
 var (
 	incomingPeers  = NewPeerList()
 	peerListLocked = false
@@ -28,6 +37,15 @@ var (
 
 type PeerList struct {
 	peers []peer.AddrInfo
+}
+
+type NodeStateSync struct {
+	TrackAppHash string
+	PODNumber    int
+}
+
+type PodData struct {
+	PODs []*PodData
 }
 
 func (p *PeerList) AddPeer(peerInfo peer.AddrInfo) {
@@ -53,11 +71,6 @@ var (
 	peerList = NewPeerList()
 )
 
-const (
-	identityFilePath = "sequencer/identity.info"
-	customProtocolID = "/station/tracks/0.0.1"
-)
-
 // Your other functions...
 func onConnected(n network.
 	Network, c network.Conn) {
@@ -73,6 +86,9 @@ func onConnected(n network.
 	}
 
 	fmt.Printf("Connected to %s\n", c.RemotePeer())
+
+	// Send a data sync request to the newly connected peer
+	sendDataSyncRequest(Node, CTX, c.RemotePeer())
 }
 func onDisconnected(n network.Network, c network.Conn) {
 	mutex.Lock()
@@ -174,10 +190,21 @@ func parseAddrToPeerInfo(addrStr string) (peer.AddrInfo, error) {
 
 func setupStreamHandler(node host.Host) {
 	node.SetStreamHandler(protocol.ID(customProtocolID), streamHandler)
+	node.SetStreamHandler(protocol.ID(customDataSyncProtocolID), dataSyncHandler) // Data Sync handler
 }
 
 func streamHandler(s network.Stream) {
 	defer s.Close()
+	if s.Protocol() == protocol.ID(customDataSyncProtocolID) {
+		// Handle block data message
+		blockData := "sdsd"
+		gobDecoder := gob.NewDecoder(s)
+		err := gobDecoder.Decode(&blockData)
+		if err != nil {
+			logs.Log.Error("Failed to decode data")
+		}
+		return
+	}
 	handleStreamData(s)
 }
 
@@ -322,7 +349,6 @@ func MasterTracksSelection(host host.Host, sharedInput string) string {
 	// Use modulus to get an index within the range of numPeers.
 	// randomIndex will always be in the range of 0 to numPeers-1 (inclusive).
 	randomIndex := hashedInt.Mod(hashedInt, big.NewInt(int64(numPeers)))
-
 	randomPeer := peers[int(randomIndex.Int64())]
 
 	// Need to re-compute hash and index if the randomly selected peer is the host itself
@@ -339,4 +365,37 @@ func MasterTracksSelection(host host.Host, sharedInput string) string {
 	fmt.Printf("Selected peer ID: %s\n", randomPeer.ID.String())
 
 	return randomPeer.ID.String()
+}
+
+func sendDataSyncRequest(node host.Host, ctx context.Context, peerID peer.ID) {
+	s, err := node.NewStream(ctx, peerID, protocol.ID(customDataSyncProtocolID))
+	if err != nil {
+		logs.Log.Error("Failed to open stream")
+	}
+	defer s.Close()
+
+	_, err = s.Write([]byte("SYNC_REQUEST"))
+	if err != nil {
+		logs.Log.Error("Failed to write to stream")
+	}
+}
+
+func dataSyncHandler(s network.Stream) {
+	defer s.Close()
+
+	buf := make([]byte, 256)
+	n, err := s.Read(buf)
+	if err != nil {
+		logs.Log.Error("Failed to read from stream")
+	}
+
+	if string(buf[:n]) == "SYNC_REQUEST" {
+		// If it's a sync request, fetch data and send it
+		data := "sds" // TODO: Implement this function
+		gobEncoder := gob.NewEncoder(s)
+		err := gobEncoder.Encode(data)
+		if err != nil {
+			logs.Log.Error("Failed to encode data")
+		}
+	}
 }

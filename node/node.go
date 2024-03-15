@@ -3,20 +3,15 @@ package node
 import (
 	"context"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/node/shared"
-	"os"
-	"time"
-
-	//"fmt"
-	logs "github.com/airchains-network/decentralized-sequencer/log"
-	//"strconv"
-	//"strings"
-	"sync"
-
 	"github.com/airchains-network/decentralized-sequencer/blocksync"
+	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/airchains-network/decentralized-sequencer/p2p"
+	"github.com/airchains-network/decentralized-sequencer/rpc"
 	"github.com/ethereum/go-ethereum/ethclient"
-	//"github.com/syndtr/goleveldb/leveldb"
+	"os"
+	"sync"
+	"time"
 )
 
 func Start() {
@@ -72,11 +67,12 @@ func initializeDBAndStartIndexing(wg *sync.WaitGroup) {
 	ctx = context.Background()
 	var wgnm *sync.WaitGroup
 	wgnm = &sync.WaitGroup{}
-	wgnm.Add(2)
+	wgnm.Add(3)
 
 	//go configureP2P(wgnm)
 	go blocksync.StartIndexer(wgnm, client, ctx, shared.Node.NodeConnections.BlockDatabaseConnection, shared.Node.NodeConnections.TxnDatabaseConnection, latestBlock)
 	go p2p.BatchGeneration(wgnm)
+	go rpc.StartRPC(wgnm)
 
 	wgnm.Wait()
 }

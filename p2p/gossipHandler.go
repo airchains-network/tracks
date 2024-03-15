@@ -119,7 +119,80 @@ func sendProofResult(ctx context.Context, node host.Host, proofResult ProofResul
 	BroadcastMessage(ctx, node, gossipMsgByte)
 }
 
-// ProofResultHandler processes the proof result received in a P2P message.
+// ProofResultHandler is a function that handles the proof result received from a peer.
+// It updates the pod state votes based on the proof result and calculates the vote result.
+// If 2/3 of the votes are true, it performs certain actions and generates the next pod.
+// Otherwise, it may take some alternative action.
+//
+// Parameters:
+// - node: The host node.
+// - ctx: The context.
+// - dataByte: The data received as bytes.
+// - messageBroadcaster: The ID of the message broadcaster peer.
+//
+// ProofResult struct:
+//
+//	type ProofResult struct {
+//		PodNumber uint64 `json:"podnumber"`
+//		Success   bool   `json:"success"`
+//	}
+//
+// updatePodStateVotes function:
+//
+//	func updatePodStateVotes(proofResult ProofResult, nodeId peer.ID) {
+//		// Logic to update the pod state votes based on the proof result
+//		...
+//	}
+//
+// calculateVotes function:
+//
+//	func calculateVotes() (voteResult, isVotesEnough bool) {
+//		// Logic to count votes and determine if 2/3 of the votes are true
+//		...
+//	}
+//
+// saveVerifiedPOD function:
+//
+//	func saveVerifiedPOD() {
+//		// Logic to save verified POD data
+//		...
+//	}
+//
+// peerListLocked declaration:
+//
+//	var peerListLocked = false
+//
+// peerListLock declaration:
+//
+//	var peerListLock = sync.Mutex{}
+//
+// PeerList struct:
+//
+//	type PeerList struct {
+//		peers []peer.AddrInfo
+//	}
+//
+// AddPeer method:
+//
+//	func (p *PeerList) AddPeer(peerInfo peer.AddrInfo) {
+//		// Logic to add a peer to the peer list
+//		...
+//	}
+//
+// GetPeers method:
+//
+//	func (p *PeerList) GetPeers() []peer.AddrInfo {
+//		// Logic to get the list of peers
+//		...
+//	}
+//
+// incomingPeers declaration:
+//
+//	var incomingPeers = NewPeerList()
+//
+// peerList declaration:
+//
+//	var peerList = NewPeerList()
 func ProofResultHandler(node host.Host, ctx context.Context, dataByte []byte, messageBroadcaster peer.ID) {
 
 	var proofResult ProofResult
