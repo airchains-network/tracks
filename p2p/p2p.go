@@ -1,11 +1,13 @@
 package p2p
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -14,6 +16,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	multiaddr "github.com/multiformats/go-multiaddr"
 	"io"
+	"log"
 	"math/big"
 	"os"
 	"os/signal"
@@ -23,10 +26,11 @@ import (
 )
 
 const (
-	identityFilePath         = "sequencer/identity.info"
-	customProtocolID         = "/station/tracks/0.0.1"
-	customDataSyncProtocolID = "/tracks/dataSync/0.0.1"
-	MaxChunkSize             = 100
+	identityFilePath           = "sequencer/identity.info"
+	customProtocolID           = "/station/tracks/0.0.1"
+	customDataSyncProtocolID   = "/tracks/dataSync/0.0.1"
+	customStateCheckProtocolID = "/tracks/stateCheck/0.0.1" // You could add a new protocol for state checking
+	MaxChunkSize               = 100
 )
 
 var (
@@ -74,6 +78,12 @@ var (
 // Your other functions...
 func onConnected(n network.
 	Network, c network.Conn) {
+
+	if !checkStateSync(CTX, Node, c.RemotePeer()) {
+		fmt.Println("State is not in sync!")
+		_ = n.ClosePeer(c.RemotePeer()) // you may change this depending on your needs
+	}
+
 	peerListLock.Lock()
 	defer peerListLock.Unlock()
 
@@ -87,8 +97,8 @@ func onConnected(n network.
 
 	fmt.Printf("Connected to %s\n", c.RemotePeer())
 
-	// Send a data sync request to the newly connected peer
-	sendDataSyncRequest(Node, CTX, c.RemotePeer())
+	//// Send a data sync request to the newly connected peer
+	//sendDataSyncRequest(Node, CTX, c.RemotePeer())
 }
 func onDisconnected(n network.Network, c network.Conn) {
 	mutex.Lock()
@@ -190,7 +200,8 @@ func parseAddrToPeerInfo(addrStr string) (peer.AddrInfo, error) {
 
 func setupStreamHandler(node host.Host) {
 	node.SetStreamHandler(protocol.ID(customProtocolID), streamHandler)
-	node.SetStreamHandler(protocol.ID(customDataSyncProtocolID), dataSyncHandler) // Data Sync handler
+	node.SetStreamHandler(protocol.ID(customDataSyncProtocolID), dataSyncHandler)    // Data Sync handler
+	node.SetStreamHandler(protocol.ID(customStateCheckProtocolID), handleStateCheck) // Add a handler for state checking
 }
 
 func streamHandler(s network.Stream) {
@@ -398,4 +409,60 @@ func dataSyncHandler(s network.Stream) {
 			logs.Log.Error("Failed to encode data")
 		}
 	}
+}
+
+func checkStateSync(ctx context.Context, node host.Host, peerID peer.ID) bool {
+	s, err := node.NewStream(ctx, peerID, protocol.ID(customStateCheckProtocolID))
+	if err != nil {
+		log.Fatalf("Failed to open stream: %v", err)
+	}
+	defer s.Close()
+
+	// Send your state
+	nodeState := getNodeState()
+	err = gob.NewEncoder(s).Encode(nodeState)
+	if err != nil {
+		log.Fatalf("Failed to send state: %v", err)
+	}
+
+	// Receive peer's state
+	var peerState shared.PodState
+	err = gob.NewDecoder(s).Decode(&peerState)
+	if err != nil {
+		log.Fatalf("Failed to decode peer state: %v", err)
+	}
+
+	// Compare your state to the peer's
+	return compareStates(nodeState, peerState)
+}
+
+func handleStateCheck(s network.Stream) {
+	defer s.Close()
+	// Receive peer's state
+	var peerState shared.PodState
+	_ = gob.NewDecoder(s).Decode(&peerState)
+
+	// Send your state
+	nodeState := getNodeState()
+	_ = gob.NewEncoder(s).Encode(nodeState)
+}
+
+func getNodeState() shared.PodState {
+	// return your current state
+	return shared.PodState{}
+}
+
+func compareStates(s1, s2 shared.PodState) bool {
+	if s1.LatestPodHeight != s2.LatestPodHeight {
+		return false
+	}
+	if s1.LatestPodHash != nil && s2.LatestPodHash != nil {
+		if !bytes.Equal(s1.LatestPodHash, s2.LatestPodHash) {
+			return false
+		} else {
+			return true
+		}
+	}
+
+	return true
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/rpc/model"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -15,8 +16,10 @@ func respondWithError(c *gin.Context, errorMsg string) {
 			Code:    500,
 			Message: errorMsg,
 		},
+
 		Result: nil,
 	}
+	fmt.Println("Error: ", errorMsg)
 
 	c.JSON(http.StatusBadRequest, response)
 	return

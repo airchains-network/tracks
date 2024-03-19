@@ -17,8 +17,6 @@ import (
 
 func StoreEVMBlock(client *ethclient.Client, ctx context.Context, blockIndex int, ldb *leveldb.DB, ldt *leveldb.DB) {
 
-	fmt.Println("block number: ", blockIndex)
-
 	blockData, err := client.BlockByNumber(ctx, big.NewInt(int64(blockIndex)))
 	if err != nil {
 		fmt.Println(err)
