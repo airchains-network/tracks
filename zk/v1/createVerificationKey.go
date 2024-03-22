@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
 	"os"
 )
 
+// Deprecated
 func CreateVkPk() {
 	verificationKeyFile := "verificationKey.json"
 	provingKeyFile := "provingKey.txt"
@@ -121,39 +123,67 @@ func CreateVkPkNew() {
 }
 
 func GetVkPk() (groth16.ProvingKey, groth16.VerifyingKey, error) {
-	var pk groth16.ProvingKey
-	var vk groth16.VerifyingKey
-
 	provingKeyFile := "provingKey.txt"
 	verificationKeyFile := "verificationKey.json"
 
-	data, err := pk.ReadFrom(provingKeyFile)
-	// Path to the key files
-
-	// Check and read the Proving Key file
-	pkData, err := os.ReadFile(provingKeyFile)
+	// Read Proving Key
+	pk, err := ReadProvingKeyFromFile2(provingKeyFile)
 	if err != nil {
-		logs.Log.Error("Failed to read the Proving Key file: :" + err.Error())
-		return pk, vk, err
+		logs.Log.Error("Failed to read Proving Key")
+		return nil, nil, err
 	}
 
-	err = json.Unmarshal(pkData, pk)
+	vk, err := ReadVerificationKeyFromFile(verificationKeyFile)
 	if err != nil {
-		logs.Log.Error("Failed to read the Proving Key file: :" + err.Error())
-		return pk, vk, err
-	}
-
-	// Check and read the Verification Key file
-	vkData, err := os.ReadFile(verificationKeyFile)
-	if err != nil {
-		logs.Log.Error("Failed to read the Verification Key file:" + err.Error())
-		return pk, vk, err
-	}
-	err = json.Unmarshal(vkData, &vk)
-	if err != nil {
-		logs.Log.Error("Failed to unmarshal the Verification Key:" + err.Error())
-		return pk, vk, err
+		logs.Log.Error("Failed to read Verification Key")
+		return nil, nil, err
 	}
 
 	return pk, vk, nil
 }
+
+func ReadProvingKeyFromFile2(filename string) (groth16.ProvingKey, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	pk := groth16.NewProvingKey(ecc.BLS12_381)
+	_, err = pk.ReadFrom(file)
+	if err != nil {
+		return nil, err
+	}
+
+	return pk, nil
+}
+func ReadVerificationKeyFromFile(filename string) (groth16.VerifyingKey, error) {
+	file, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	vk := groth16.NewVerifyingKey(ecc.BLS12_381)
+	err = json.Unmarshal(file, vk)
+	if err != nil {
+		return nil, err
+	}
+
+	return vk, nil
+}
+
+//func ReadVerificationKeyFromFile(filename string) (groth16.VerifyingKey, error) {
+//	file, err := os.Open(filename)
+//	if err != nil {
+//		return nil, err
+//	}
+//	defer file.Close()
+//
+//	vk := groth16.NewVerifyingKey(ecc.BLS12_381)
+//	_, err = vk.ReadFrom(file)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	return vk, nil
+//}

@@ -22,15 +22,17 @@ var CreateStation = &cobra.Command{
 		provingKey, verificationKey, err := v1.GetVkPk()
 		_ = provingKey // currently unused here
 		if err != nil {
-			logs.Log.Error("Failed to read Proving Key & Verification key")
+			logs.Log.Error("Failed to read Proving Key & Verification key" + err.Error())
 			return
 		}
 		verificationKeyByte, err := json.Marshal(verificationKey)
 		if err != nil {
-			logs.Log.Error("Failed to unmarshal Verification key")
+			logs.Log.Error("Failed to unmarshal Verification key" + err.Error())
 			return
 		}
 
 		junction.CreateStation(stationId, stationInfo, accountName, accountPath, jsonRPC, verificationKeyByte)
 	},
 }
+
+// go run cmd/main.go create-station --accountName alice --accountPath ./accounts/junction --info "information" --jsonRPC "http://34.131.189.98:26657"

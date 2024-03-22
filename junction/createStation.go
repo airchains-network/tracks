@@ -44,8 +44,19 @@ func CreateStation(stationId, stationInfo, accountName, accountPath, jsonRPC str
 		logs.Log.Error(fmt.Sprintf("Error getting address: %v", err))
 		return false
 	}
-	fmt.Println(newTempAddr)
-	os.Exit(0)
+	logs.Log.Info("admin address: " + newTempAddr)
+
+	success, amount, err := CheckBalance(jsonRPC, newTempAddr)
+	if err != nil || !success {
+		logs.Log.Error("Error checking balance")
+		return false
+	}
+	if amount < 100 {
+		logs.Log.Error("Not enough balance on " + newTempAddr + " to create station")
+		return false
+	}
+	amountStr := fmt.Sprintf("%damf", amount)
+	logs.Log.Info("Currently user have " + amountStr)
 
 	var tracksVotingPower []uint64
 	power := uint64(100)
@@ -82,5 +93,7 @@ func CreateStation(stationId, stationInfo, accountName, accountPath, jsonRPC str
 	}
 
 	logs.Log.Info(txResp.TxHash)
+	os.Exit(0)
+
 	return true
 }
