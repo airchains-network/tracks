@@ -12,6 +12,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type FinalizeDA struct {
+	CompressedHash []string
+	Proof          []byte
+	PodNumber      int
+}
+
 // podStateManager shared.PodStateManager,
 func ProcessGossipMessage(node host.Host, ctx context.Context, dataType string, dataByte []byte, messageBroadcaster peer.ID) {
 	fmt.Println("Processing gossip message")
@@ -119,80 +125,6 @@ func sendProofResult(ctx context.Context, node host.Host, proofResult ProofResul
 	BroadcastMessage(ctx, node, gossipMsgByte)
 }
 
-// ProofResultHandler is a function that handles the proof result received from a peer.
-// It updates the pod state votes based on the proof result and calculates the vote result.
-// If 2/3 of the votes are true, it performs certain actions and generates the next pod.
-// Otherwise, it may take some alternative action.
-//
-// Parameters:
-// - node: The host node.
-// - ctx: The context.
-// - dataByte: The data received as bytes.
-// - messageBroadcaster: The ID of the message broadcaster peer.
-//
-// ProofResult struct:
-//
-//	type ProofResult struct {
-//		PodNumber uint64 `json:"podnumber"`
-//		Success   bool   `json:"success"`
-//	}
-//
-// updatePodStateVotes function:
-//
-//	func updatePodStateVotes(proofResult ProofResult, nodeId peer.ID) {
-//		// Logic to update the pod state votes based on the proof result
-//		...
-//	}
-//
-// calculateVotes function:
-//
-//	func calculateVotes() (voteResult, isVotesEnough bool) {
-//		// Logic to count votes and determine if 2/3 of the votes are true
-//		...
-//	}
-//
-// saveVerifiedPOD function:
-//
-//	func saveVerifiedPOD() {
-//		// Logic to save verified POD data
-//		...
-//	}
-//
-// peerListLocked declaration:
-//
-//	var peerListLocked = false
-//
-// peerListLock declaration:
-//
-//	var peerListLock = sync.Mutex{}
-//
-// PeerList struct:
-//
-//	type PeerList struct {
-//		peers []peer.AddrInfo
-//	}
-//
-// AddPeer method:
-//
-//	func (p *PeerList) AddPeer(peerInfo peer.AddrInfo) {
-//		// Logic to add a peer to the peer list
-//		...
-//	}
-//
-// GetPeers method:
-//
-//	func (p *PeerList) GetPeers() []peer.AddrInfo {
-//		// Logic to get the list of peers
-//		...
-//	}
-//
-// incomingPeers declaration:
-//
-//	var incomingPeers = NewPeerList()
-//
-// peerList declaration:
-//
-//	var peerList = NewPeerList()
 func ProofResultHandler(node host.Host, ctx context.Context, dataByte []byte, messageBroadcaster peer.ID) {
 
 	var proofResult ProofResult
@@ -212,9 +144,28 @@ func ProofResultHandler(node host.Host, ctx context.Context, dataByte []byte, me
 	if isVotesEnough {
 		// if votes are enough and 2/3 votes are true
 		if voteResult {
-			// TODO SubmitPodToDA()
-			// TODO SubmitPodToJunction()
+			DaData := shared.GetPodState().Batch.TransactionHash
+			ZkProof := shared.GetPodState().LatestPodProof
+			PodNumber := int(shared.GetPodState().LatestPodHeight)
 
+			finalizeDA := FinalizeDA{
+				CompressedHash: DaData,
+				Proof:          ZkProof,
+				PodNumber:      PodNumber,
+			}
+			_, err := json.Marshal(finalizeDA)
+			if err != nil {
+				log.Printf("Error marshaling da data: %v", err)
+			}
+
+			//
+			//DaBlockHash, err := da.DALayer(finalizeDAbytes, PodNumber)
+			//if err != nil {
+			//	log.Printf("Error in DA Layer: %v", err)
+			//}
+			//fmt.Println("DaBlockHash : ", DaBlockHash)
+			// TODO SubmitPodToJunction()
+			// Send Message containing the Da Hash and Junction Hash to the respective nodes
 			saveVerifiedPOD()
 			peerListLocked = false
 			peerListLock.Unlock()
@@ -226,10 +177,9 @@ func ProofResultHandler(node host.Host, ctx context.Context, dataByte []byte, me
 			peerListLock.Unlock()    // save data to database
 			GenerateUnverifiedPods() // generate next pod
 		} else {
-			// TODO: ?????????  what todo if verification failed: discuss with rahul and shubham
+			// TODO
 		}
 	}
-	// else: votes are not enough yet, so do nothing....
 }
 
 func SendWrongPodNumberError(ctx context.Context, podNumber uint64, messageBroadcaster peer.ID) {
@@ -433,8 +383,6 @@ func ProofVoteResultHandler(node host.Host, ctx context.Context, dataByte []byte
 	fmt.Println("Proof Vote Result Received: ", voteResult)
 
 	if voteResult.Success {
-		// TODO SubmitPodToDA()
-		// TODO SubmitPodToJunction()
 
 		saveVerifiedPOD() // save data to database
 		peerListLocked = false

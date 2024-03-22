@@ -26,7 +26,7 @@ func ToString(value interface{}) string {
 	}
 }
 
-func GetBalance(address string, blockNumber uint64) (string, error) {
+func GetBalance(address string, blockNumber uint64, stationRPC string) (string, error) {
 	payload := fmt.Sprintf(`{
 		"jsonrpc": "2.0",
 		"method": "eth_getBalance",
@@ -34,7 +34,7 @@ func GetBalance(address string, blockNumber uint64) (string, error) {
 		"id": 1
 	}`, address, "0x"+strconv.FormatUint(blockNumber, 16))
 
-	resp, err := http.Post("http://localhost:8545", "application/json", strings.NewReader(payload))
+	resp, err := http.Post(stationRPC, "application/json", strings.NewReader(payload))
 	if err != nil {
 		return "", err
 	}

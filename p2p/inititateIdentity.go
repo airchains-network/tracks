@@ -16,11 +16,14 @@ func InititateIdentity(daType string, moniker string, stationType string) {
 		libp2p.Ping(false), // Disable the built-in ping protocol
 	)
 	if err != nil {
+		panic(err)
 	}
+
 	publicID := node.ID()
 	fmt.Println("Node's public ID: ", publicID)
 	privBytes, err := crypto.MarshalPrivateKey(node.Peerstore().PrivKey(node.ID()))
 	if err != nil {
+		panic(err)
 	}
 
 	fmt.Printf("Node's Secret Key: %x\n", privBytes)

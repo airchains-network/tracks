@@ -20,10 +20,15 @@ import (
 	"time"
 )
 
+var (
+	StationRPC string
+)
+
 func BatchGeneration(wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	GenerateUnverifiedPods()
-	//MasterTracksSelection(Node, "nil")
+
 }
 
 func GenerateUnverifiedPods() {
@@ -159,7 +164,10 @@ func GenerateUnverifiedPods() {
 }
 
 func createPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
-
+	baseConfig, err := shared.LoadConfig()
+	if err != nil {
+		return
+	}
 	limitInt, _ := strconv.Atoi(strings.TrimSpace(string(limit)))
 
 	batchStartIndexInt, _ := strconv.Atoi(strings.TrimSpace(string(batchStartIndex)))
@@ -195,13 +203,13 @@ func createPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness [
 			os.Exit(0)
 		}
 
-		senderBalancesCheck, err := utilis.GetBalance(tx.From, (tx.BlockNumber - 1))
+		senderBalancesCheck, err := utilis.GetBalance(tx.From, tx.BlockNumber-1, baseConfig.Station.StationRPC)
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in getting sender balance : %s", err.Error()))
 			os.Exit(0)
 		}
 
-		receiverBalancesCheck, err := utilis.GetBalance(tx.To, (tx.BlockNumber - 1))
+		receiverBalancesCheck, err := utilis.GetBalance(tx.To, tx.BlockNumber-1, baseConfig.Station.StationRPC)
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in getting reciver balance : %s", err.Error()))
 			os.Exit(0)

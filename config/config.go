@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"github.com/cometbft/cometbft/version"
 	"net/http"
 	"path/filepath"
@@ -62,12 +61,10 @@ func DefaultConfig() *Config {
 
 // SetRoot sets the RootDir for all Config structs
 func (cfg *Config) SetRoot(root string) *Config {
-	fmt.Println("sddsd", root)
 	cfg.BaseConfig.RootDir = root
 	cfg.RPC.RootDir = root
 	cfg.P2P.RootDir = root
 	cfg.Consensus.RootDir = root
-	fmt.Println(cfg)
 	return cfg
 }
 
@@ -85,7 +82,6 @@ func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
 		Version:     version.TMCoreSemVer,
 		Moniker:     defaultMoniker,
-		ProxyApp:    "tcp://127.0.0.1:26658",
 		FilterPeers: false,
 		DBBackend:   "goleveldb",
 		DBPath:      DefaultDataDir,
@@ -119,7 +115,7 @@ type RPCConfig struct {
 // DefaultRPCConfig returns a default configuration for the RPC server
 func DefaultRPCConfig() *RPCConfig {
 	return &RPCConfig{
-		ListenAddress:          "tcp://127.0.0.1:26657",
+		ListenAddress:          "tcp://127.0.0.1:2322",
 		CORSAllowedOrigins:     []string{},
 		CORSAllowedMethods:     []string{http.MethodHead, http.MethodGet, http.MethodPost},
 		CORSAllowedHeaders:     []string{"Origin", "Accept", "Content-Type", "X-Requested-With", "X-Server-Time"},
@@ -216,8 +212,6 @@ func NewStateSyncConfig() *StateSyncConfig {
 // ConsensusConfig holds the configuration options for the consensus layer.
 type ConsensusConfig struct {
 	RootDir string `mapstructure:"home"`
-	WalPath string `mapstructure:"wal_file"`
-	walFile string // unexported, overrides WalPath if set
 
 	// Timing configurations for the pod consensus process
 	TimeoutPropose        time.Duration `mapstructure:"timeout_propose"`
@@ -242,7 +236,6 @@ type ConsensusConfig struct {
 func DefaultConsensusConfig() *ConsensusConfig {
 
 	return &ConsensusConfig{
-		WalPath:                    filepath.Join(DefaultDataDir, "pods.wal", "wal"),
 		TimeoutPropose:             3 * time.Second,
 		TimeoutProposeDelta:        500 * time.Millisecond,
 		TimeoutPrevote:             1 * time.Second,
@@ -258,25 +251,39 @@ func DefaultConsensusConfig() *ConsensusConfig {
 }
 
 type DAConfig struct {
+	DaType string
+	DaRPC  string
 }
 
-// DefaultDAConfig returns a default configuration for the data availability layer.
 func DefaultDAConfig() *DAConfig {
-	return &DAConfig{}
+	return &DAConfig{
+		DaType: "mockDa",
+		DaRPC:  "",
+	}
 }
 
 type StationConfig struct {
+	StationType string `mapstructure:"station_type"`
+	StationRPC  string `mapstructure:"station_rpc"`
 }
 
 // DefaultStationConfig returns a default configuration for the station.
 func DefaultStationConfig() *StationConfig {
-	return &StationConfig{}
+	return &StationConfig{
+		StationType: "",
+		StationRPC:  "",
+	}
 }
 
 type JunctionConfig struct {
+	JunctionRPC string
+	JunctionAPI string
 }
 
 // DefaultJunctionConfig returns a default configuration for the junction.
 func DefaultJunctionConfig() *JunctionConfig {
-	return &JunctionConfig{}
+	return &JunctionConfig{
+		JunctionRPC: "http://localhost:26657",
+		JunctionAPI: "http://localhost:1317",
+	}
 }

@@ -1,0 +1,5 @@
+package junction
+
+func CheckBalance() {}
+
+//

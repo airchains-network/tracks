@@ -28,7 +28,7 @@ func init() {
 
 // EnsureRoot creates the root, config, and data directories if they don't exist,
 // and panics if it fails.
-func EnsureRoot(rootDir string) {
+func EnsureRoot(rootDir string, config *Config) {
 	fmt.Println(rootDir)
 	if err := utilis.EnsureDir(rootDir, DefaultDirPerm); err != nil {
 		panic(err.Error())
@@ -44,12 +44,12 @@ func EnsureRoot(rootDir string) {
 
 	// Write default config file if missing.
 	if !utilis.FileExists(configFilePath) {
-		writeDefaultConfigFile(configFilePath)
+		writeDefaultConfigFile(configFilePath, config)
 	}
 }
 
-func writeDefaultConfigFile(configFilePath string) {
-	WriteConfigFile(configFilePath, DefaultConfig())
+func writeDefaultConfigFile(configFilePath string, config *Config) {
+	WriteConfigFile(configFilePath, config)
 }
 
 func WriteConfigFile(configFilePath string, config *Config) {
@@ -120,7 +120,6 @@ pod_request_timeout = "{{ .StateSync.PodRequestTimeout }}"
 pod_chunk_fetchers = {{ .StateSync.PodChunkFetchers }}
 
 [consensus]
-wal_file = "{{ .Consensus.WalPath }}"
 timeout_propose = "{{ .Consensus.TimeoutPropose }}"
 timeout_propose_delta = "{{ .Consensus.TimeoutProposeDelta }}"
 timeout_prevote = "{{ .Consensus.TimeoutPrevote }}"
@@ -134,16 +133,18 @@ double_sign_check_height = {{ .Consensus.DoubleSignCheckHeight }}
 
 # Data Availability Layer Configuration
 [da]
-# Add specific configuration keys and values for DA here
-
+daType = "{{ .DA.DaType }}"
+daRPC = "{{ .DA.DaRPC }}"
 
 # Station Configuration
 [station]
-# Add specific configuration keys and values for Station here
-
+stationType = "{{ .Station.StationType }}"
+stationRPC = "{{ .Station.StationRPC }}"
 
 # Junction Configuration
 [junction]
+junctionRPC =  "{{ .Junction.JunctionRPC }}"
+junctionAPI =  "{{ .Junction.JunctionAPI }}"
 # Add specific configuration keys and values for Junction here
 
 `

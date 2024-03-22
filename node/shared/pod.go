@@ -8,8 +8,10 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/config"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/types"
+	"github.com/spf13/viper"
 	"github.com/syndtr/goleveldb/leveldb"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -184,3 +186,26 @@ func NewNode(conf *config.Config) {
 }
 
 //func GetConfig() *config.Config {
+
+var (
+	DaType      string
+	DaRPC       string
+	StationType string
+	StationRPC  string
+)
+
+func LoadConfig() (config config.Config, err error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		panic(err) // Handle error appropriately
+	}
+	tracksDir := filepath.Join(homeDir, ".tracks/config") //TODO make this dynamic
+	viper.AddConfigPath(tracksDir)
+	viper.SetConfigName("sequencer")
+	viper.SetConfigType("toml") // explicitly define the config type
+
+	if err = viper.ReadInConfig(); err != nil {
+		return
+	}
+	return
+}
