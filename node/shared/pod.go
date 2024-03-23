@@ -199,11 +199,7 @@ func LoadConfig() (config config.Config, err error) {
 	if err != nil {
 		return config, err // Return error, perhaps log it as well
 	}
-
-	//configDir := os.Getenv("TRACKS_CONFIG_DIR") // Check for an environment variable
-	//if configDir == "" {
 	configDir := filepath.Join(homeDir, ".tracks/config")
-	//}
 
 	_, err = os.Stat(configDir)
 	if os.IsNotExist(err) {

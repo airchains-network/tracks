@@ -31,7 +31,7 @@ func CreateGenesisJson(stationInfo types.StationInfo, verificationKey groth16.Ve
 	// Marshal the data into JSON
 	jsonBytes, err := json.MarshalIndent(genesisData, "", "    ")
 	if err != nil {
-		logs.Log.Error("Error marshaling to JSON:" + err.Error())
+		//logs.Log.Error("Error marshaling to JSON:" + err.Error())
 		return false
 	}
 
@@ -41,7 +41,7 @@ func CreateGenesisJson(stationInfo types.StationInfo, verificationKey groth16.Ve
 	// Write the JSON data to a file
 	err = os.WriteFile(filePath, jsonBytes, 0644)
 	if err != nil {
-		logs.Log.Error("Error writing JSON to file:" + err.Error())
+		//logs.Log.Error("Error writing JSON to file:" + err.Error())
 		return false
 	} else {
 		logs.Log.Info(filePath + " created")

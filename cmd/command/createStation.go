@@ -62,3 +62,4 @@ var CreateStation = &cobra.Command{
 }
 
 // go run cmd/main.go create-station --accountName noob --accountPath ./accounts/keys --jsonRPC "http://34.131.189.98:26657"
+// go run cmd/main.go init --daRpc "mock-rpc" --daType "mock"  --moniker "monkey" --stationRpc "http://34.131.189.98:26657" --stationType "evm"
