@@ -1,9 +1,12 @@
 package command
 
 import (
-	"encoding/json"
+	"github.com/airchains-network/decentralized-sequencer/config"
 	"github.com/airchains-network/decentralized-sequencer/junction"
+	junctionTypes "github.com/airchains-network/decentralized-sequencer/junction/types"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/airchains-network/decentralized-sequencer/node/shared"
+	"github.com/airchains-network/decentralized-sequencer/types"
 	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
@@ -14,7 +17,28 @@ var CreateStation = &cobra.Command{
 	Short: "Create station from generated wallet",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		stationInfo, _ := cmd.Flags().GetString("info")
+		var conf config.Config
+		var err error
+
+		conf, err = shared.LoadConfig()
+		if err != nil {
+			logs.Log.Error("Failed to load conf info")
+			return
+		}
+
+		// station info
+		// todo change station info. types and inputs both.
+		stationInfo := types.StationInfo{
+			StationType: conf.Station.StationType,
+		}
+
+		// extra args
+		extraArg := junctionTypes.StationArg{
+			TrackType: "Airchains Sequencer",
+			DaType:    conf.DA.DaType,
+			Prover:    "Airchains",
+		}
+
 		accountName := cmd.Flag("accountName").Value.String()
 		accountPath := cmd.Flag("accountPath").Value.String()
 		jsonRPC := cmd.Flag("jsonRPC").Value.String()
@@ -25,14 +49,16 @@ var CreateStation = &cobra.Command{
 			logs.Log.Error("Failed to read Proving Key & Verification key" + err.Error())
 			return
 		}
-		verificationKeyByte, err := json.Marshal(verificationKey)
-		if err != nil {
-			logs.Log.Error("Failed to unmarshal Verification key" + err.Error())
+
+		success := junction.CreateStation(extraArg, stationId, stationInfo, accountName, accountPath, jsonRPC, verificationKey)
+		if !success {
+			logs.Log.Error("Failed to create new station due to above error")
+			return
+		} else {
+			logs.Log.Info("Successfully created station")
 			return
 		}
-
-		junction.CreateStation(stationId, stationInfo, accountName, accountPath, jsonRPC, verificationKeyByte)
 	},
 }
 
-// go run cmd/main.go create-station --accountName alice --accountPath ./accounts/junction --info "information" --jsonRPC "http://34.131.189.98:26657"
+// go run cmd/main.go create-station --accountName noob --accountPath ./accounts/keys --jsonRPC "http://34.131.189.98:26657"

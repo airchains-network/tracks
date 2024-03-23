@@ -16,17 +16,24 @@ var StationCmd = &cobra.Command{
 
 		// default values
 		conf := config.DefaultConfig()
+
 		if !blocksync.InitDb() {
 			logs.Log.Error("Error in initializing db")
 			return
 		}
-		logs.Log.Info("Initialized the database")
+		logs.Log.Info("Database Initialized")
 
-		//shared.InitializePodState()
-		// node config
+		// check junction
+		if conf.Junction.StationId == "" {
+			logs.Log.Error("create station before stating sequencer")
+			return
+		}
+		if conf.Junction.VRFPublicKey == "" || conf.Junction.VRFPrivateKey == "" {
+			logs.Log.Error("VRF keys not setup properly")
+			return
+		}
+
 		shared.NewNode(conf)
-
-		// start node
 		node.Start()
 	},
 }

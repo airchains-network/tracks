@@ -42,13 +42,7 @@ func RouterHandler(c *gin.Context) {
 	}
 
 	// POST Request's:-
-	//DONE: '{"jsonrpc":"2.0","method":"tracks_getLatestPod","params":[],"id":1}'
-	//DONE: '{"jsonrpc":"2.0","method":"tracks_batchCount","params":[],"id":1}'
-	//DONE: '{"jsonrpc":"2.0","method":"tracks_getPodByNumber","params":["0x123ab"],"id":1}'
-
-	// ! ???????????????????
-	//'{"jsonrpc":"2.0","method":"tracks_getPodMaster","params":["0x2"],"id":1}'
-	// '{"jsonrpc":"2.0","method":"tracks_getPodsJunctionDetails","params":["0x2"],"id":1}'
-	// '{"jsonrpc":"2.0","method":"tracks_getPodsDataAvailibiltyDetails","params":["0x2"],"id":1}'
-
+	// '{"jsonrpc":"2.0","method":"tracks_getLatestPod","params":[],"id":1}'
+	// '{"jsonrpc":"2.0","method":"tracks_batchCount","params":[],"id":1}'
+	// '{"jsonrpc":"2.0","method":"tracks_getPodByNumber","params":["0x123ab"],"id":1}'
 }

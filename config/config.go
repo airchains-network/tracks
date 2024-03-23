@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/airchains-network/decentralized-sequencer/utilis"
 	"github.com/cometbft/cometbft/version"
 	"net/http"
 	"path/filepath"
@@ -263,8 +264,8 @@ func DefaultDAConfig() *DAConfig {
 }
 
 type StationConfig struct {
-	StationType string `mapstructure:"station_type"`
-	StationRPC  string `mapstructure:"station_rpc"`
+	StationType string
+	StationRPC  string
 }
 
 // DefaultStationConfig returns a default configuration for the station.
@@ -276,14 +277,26 @@ func DefaultStationConfig() *StationConfig {
 }
 
 type JunctionConfig struct {
-	JunctionRPC string
-	JunctionAPI string
+	JunctionRPC   string
+	JunctionAPI   string
+	StationId     string
+	VRFPrivateKey string
+	VRFPublicKey  string
 }
 
 // DefaultJunctionConfig returns a default configuration for the junction.
 func DefaultJunctionConfig() *JunctionConfig {
+
+	stationId := utilis.GetStationIdFromGenesis() // return "" if error
+	VRFPrivateKey := utilis.GetVRFPrivateKey()
+	VRFPublicKey := utilis.GetVRFPubKey()
+
 	return &JunctionConfig{
-		JunctionRPC: "http://localhost:26657",
-		JunctionAPI: "http://localhost:1317",
+		JunctionRPC:   "http://localhost:26657",
+		JunctionAPI:   "http://localhost:1317",
+		StationId:     stationId,
+		VRFPrivateKey: VRFPrivateKey,
+		VRFPublicKey:  VRFPublicKey,
 	}
+
 }

@@ -197,15 +197,44 @@ var (
 func LoadConfig() (config config.Config, err error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		panic(err) // Handle error appropriately
+		return config, err // Return error, perhaps log it as well
 	}
-	tracksDir := filepath.Join(homeDir, ".tracks/config") //TODO make this dynamic
-	viper.AddConfigPath(tracksDir)
+
+	//configDir := os.Getenv("TRACKS_CONFIG_DIR") // Check for an environment variable
+	//if configDir == "" {
+	configDir := filepath.Join(homeDir, ".tracks/config")
+	//}
+
+	_, err = os.Stat(configDir)
+	if os.IsNotExist(err) {
+		return config, fmt.Errorf("config directory not found: %s", configDir)
+	}
+
+	viper.AddConfigPath(configDir)
 	viper.SetConfigName("sequencer")
-	viper.SetConfigType("toml") // explicitly define the config type
+	viper.SetConfigType("toml")
 
 	if err = viper.ReadInConfig(); err != nil {
-		return
+		return config, err
 	}
-	return
+
+	err = viper.Unmarshal(&config)
+	return config, err
 }
+
+//func LoadConfig() (config config.Config, err error) {
+//	homeDir, err := os.UserHomeDir()
+//	if err != nil {
+//		panic(err) // Handle error appropriately
+//	}
+//	tracksDir := filepath.Join(homeDir, ".tracks/config") //TODO make this dynamic
+//
+//	viper.AddConfigPath(tracksDir)
+//	viper.SetConfigName("sequencer")
+//	viper.SetConfigType("toml") // explicitly define the config type
+//
+//	if err = viper.ReadInConfig(); err != nil {
+//		return
+//	}
+//	return
+//}

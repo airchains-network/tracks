@@ -158,13 +158,27 @@ func ProofResultHandler(node host.Host, ctx context.Context, dataByte []byte, me
 				log.Printf("Error marshaling da data: %v", err)
 			}
 
-			//
 			//DaBlockHash, err := da.DALayer(finalizeDAbytes, PodNumber)
-			//if err != nil {
-			//	log.Printf("Error in DA Layer: %v", err)
-			//}
+			//if err != nil {log.Printf("Error in DA Layer: %v", err)}
 			//fmt.Println("DaBlockHash : ", DaBlockHash)
-			// TODO SubmitPodToJunction()
+
+			// Junction calls
+			//var funcLevelSerializedRc []byte
+			//for {
+			//	initVRFResponse, serializedRc := junction.InitVRF()
+			//	if !initVRFResponse {
+			//		time.Sleep(5 * time.Second)
+			//	} else {
+			//		funcLevelSerializedRc = serializedRc
+			//		break
+			//	}
+			//}
+			//_ = funcLevelSerializedRc
+
+			//junction.VerifyVRF()
+			//junction.SubmitCurrentPod()
+			//junction.VerifyCurrentPod()
+
 			// Send Message containing the Da Hash and Junction Hash to the respective nodes
 			saveVerifiedPOD()
 			peerListLocked = false

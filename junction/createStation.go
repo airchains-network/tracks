@@ -4,22 +4,32 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/junction/types"
+	junctionTypes "github.com/airchains-network/decentralized-sequencer/junction/types"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/airchains-network/decentralized-sequencer/utilis"
+	"github.com/consensys/gnark/backend/groth16"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
-	"os"
+	"time"
 )
 
-func CreateStation(stationId, stationInfo, accountName, accountPath, jsonRPC string, verificationKey []byte) bool {
+func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationInfo types.StationInfo, accountName, accountPath, jsonRPC string, verificationKey groth16.VerifyingKey) bool {
 
-	// extra args
-	extraArg := types.StationArg{
-		TrackType: "Airchains Sequencer",
-		DaType:    "Eigen",
-		Prover:    "Airchains",
+	// convert station info to string
+	stationJsonBytes, err := json.Marshal(stationInfo)
+	if err != nil {
+		logs.Log.Error("Error marshaling to JSON: " + err.Error())
+		return false
 	}
+	stationInfoStr := string(stationJsonBytes)
+
+	verificationKeyByte, err := json.Marshal(verificationKey)
+	if err != nil {
+		logs.Log.Error("Failed to unmarshal Verification key" + err.Error())
+		return false
+	}
+
 	extraArgBytes, err := json.Marshal(extraArg)
 	if err != nil {
 		logs.Log.Error("Error marshalling extra arg")
@@ -44,7 +54,7 @@ func CreateStation(stationId, stationInfo, accountName, accountPath, jsonRPC str
 		logs.Log.Error(fmt.Sprintf("Error getting address: %v", err))
 		return false
 	}
-	logs.Log.Info("admin address: " + newTempAddr)
+	logs.Log.Info("tracks address: " + newTempAddr)
 
 	success, amount, err := CheckBalance(jsonRPC, newTempAddr)
 	if err != nil || !success {
@@ -69,31 +79,52 @@ func CreateStation(stationId, stationInfo, accountName, accountPath, jsonRPC str
 	ctx := context.Background()
 	gas := utilis.GenerateRandomWithFavour(611, 1200, [2]int{612, 1000}, 0.7)
 	gasFees := fmt.Sprintf("%damf", gas)
-	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix("air"), cosmosclient.WithNodeAddress(jsonRPC), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
+	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRPC), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
 		logs.Log.Error("Error creating account client")
 		return false
 	}
 
-	newStationData := types.MsgInitStation{
+	stationData := junctionTypes.MsgInitStation{
 		Creator:           newTempAddr,
 		Tracks:            tracks,
-		VerificationKey:   verificationKey,
+		VerificationKey:   verificationKeyByte,
 		StationId:         stationId,
-		StationInfo:       stationInfo,
+		StationInfo:       stationInfoStr,
 		TracksVotingPower: tracksVotingPower,
 		ExtraArg:          extraArgBytes,
 	}
 
-	txResp, err := accountClient.BroadcastTx(ctx, newTempAccount, &newStationData)
+	txResp, err := accountClient.BroadcastTx(ctx, newTempAccount, &stationData)
 	if err != nil {
 		logs.Log.Error("Error in broadcasting transaction")
 		logs.Log.Error(err.Error())
 		return false
 	}
 
-	logs.Log.Info(txResp.TxHash)
-	os.Exit(0)
+	timestamp := time.Now().String()
+	successGenesis := utilis.CreateGenesisJson(stationInfo, verificationKey, stationId, tracks, tracksVotingPower, txResp.TxHash, timestamp, extraArg, newTempAddr)
+	if !successGenesis {
+		return false
+	}
+
+	// create VRF Keys
+	vrfPrivateKey, vrfPublicKey := utilis.NewKeyPair()
+	vrfPrivateKeyHex := vrfPrivateKey.String()
+	vrfPublicKeyHex := vrfPublicKey.String()
+	if vrfPrivateKeyHex != "" {
+		utilis.SetVRFPrivKey(vrfPrivateKeyHex)
+	} else {
+		logs.Log.Error("Error saving VRF private key")
+	}
+	if vrfPublicKeyHex != "" {
+		utilis.SetVRFPubKey(vrfPublicKeyHex)
+	} else {
+		logs.Log.Error("Error saving VRF public key")
+	}
+	logs.Log.Info("Successfully Created VRF public and private Keys")
 
 	return true
 }
+
+//  go run cmd/main.go create-station --accountName noob --accountPath ./accounts/keys --jsonRPC "http://34.131.189.98:26657"

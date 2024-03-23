@@ -12,7 +12,7 @@ func CheckBalance(jsonRPC string, accountAddress string) (bool, int64, error) {
 	ctx := context.Background()
 	client, err := cosmosclient.New(ctx, cosmosclient.WithNodeAddress(jsonRPC))
 	pageRequest := &query.PageRequest{} // Add this line to create a new PageRequest
-
+	fmt.Printf("accountAddress: %v\n", accountAddress)
 	balances, err := client.BankBalances(ctx, accountAddress, pageRequest) // Add pageRequest as the third argument
 	if err != nil {
 		fmt.Printf("Error querying bank balances: %v\n", err)
