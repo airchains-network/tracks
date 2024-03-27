@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/config"
+	mock "github.com/airchains-network/decentralized-sequencer/da/mockda"
+	"github.com/airchains-network/decentralized-sequencer/junction"
+	junctionTypes "github.com/airchains-network/decentralized-sequencer/junction/types"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/airchains-network/decentralized-sequencer/types"
@@ -26,13 +29,10 @@ var (
 
 func BatchGeneration(wg *sync.WaitGroup) {
 	defer wg.Done()
-
 	GenerateUnverifiedPods()
-
 }
 
 func GenerateUnverifiedPods() {
-
 	incomingPeers = NewPeerList() // reset the incoming peers
 	peerListLock.Lock()
 	peerListLocked = true
@@ -54,7 +54,6 @@ func GenerateUnverifiedPods() {
 		os.Exit(0)
 	}
 
-	// @aakash please passs here the Last TrackAppHash of the Pods
 	previousStateData, err := getPodStateFromDatabase()
 	if err != nil {
 		logs.Log.Error("Error in getting previous station data")
@@ -87,7 +86,6 @@ func GenerateUnverifiedPods() {
 	updateNewPodState(TrackAppHash, Witness, uZKP, MRH, uint64(batchNumber), batchInput)
 
 	// Here the MasterTrack Will Broadcast the uZKP in the Network
-
 	if decodedMaster == Node.ID() {
 		fmt.Println("I am Master")
 		// make master's vote true by default
@@ -102,11 +100,86 @@ func GenerateUnverifiedPods() {
 		Peers := getAllPeers(Node)
 		peerCount := len(Peers)
 		if peerCount == 1 {
+
+			DaData := shared.GetPodState().Batch.TransactionHash
+			daDataByte := []byte{}
+			for _, str := range DaData {
+				daDataByte = append(daDataByte, []byte(str)...)
+			}
+			ZkProof := shared.GetPodState().LatestPodProof
+			PodNumber := int(shared.GetPodState().LatestPodHeight)
+
+			finalizeDA := types.FinalizeDA{
+				CompressedHash: DaData,
+				Proof:          ZkProof,
+				PodNumber:      PodNumber,
+			}
+			_, err := json.Marshal(finalizeDA)
+			if err != nil {
+				logs.Log.Error("Error marshaling da data: " + err.Error())
+				return
+			}
+
+			// todo: handle all below error's
+			success, serializedRC := junction.InitVRF()
+			if !success {
+				logs.Log.Error("Failed to Init VRF")
+				return
+			}
+			logs.Log.Info("VRF initiated")
+
+			success = junction.ValidateVRF(serializedRC)
+			if !success {
+				logs.Log.Error("Failed to Init VRF")
+				return
+			}
+			logs.Log.Info("validate vrf success")
+
+			// check if VRF is successfully validated
+			var vrfRecord *junctionTypes.VrfRecord
+			vrfRecord = junction.QueryVRF()
+			if vrfRecord == nil {
+				logs.Log.Error("VRF record is nil")
+				return
+			}
+			if !vrfRecord.IsVerified {
+				logs.Log.Error("Verification of VRF is failed, need Voting for correct VRN")
+				return
+			}
+
+			// DA submit
+			connection := shared.Node.NodeConnections
+			mdb := connection.GetDataAvailabilityDatabaseConnection()
+			dbName, err := mock.MockDA(mdb, daDataByte, PodNumber) // (mockda-%d", batchNumber), nil
+			if err != nil {
+				logs.Log.Error("Error in submitting data to DA")
+				return
+			}
+			_ = dbName
+			logs.Log.Info("data in DA submitted")
+
+			// submit pod
+			success = junction.SubmitCurrentPod()
+			if !success {
+				logs.Log.Error("Failed to submit pod")
+				return
+			}
+			logs.Log.Info("pod submitted")
+
+			// verify pod
+			junction.VerifyCurrentPod()
+			if !success {
+				logs.Log.Error("Failed to Transact Verify pod")
+				return
+			}
+			logs.Log.Info("pod verification transaction done")
+			// todo : query if verification return true or false...
+
 			// if (no peers connected): update database and make next pod without voting process
 			saveVerifiedPOD() // save data to database
+
 			peerListLocked = false
 			peerListLock.Unlock()
-
 			peerListLock.Lock()
 			for _, peerInfo := range incomingPeers.GetPeers() {
 				peerList.AddPeer(peerInfo)
@@ -116,6 +189,7 @@ func GenerateUnverifiedPods() {
 			GenerateUnverifiedPods() // generate next pod
 
 		} else {
+
 			// Preparing the Message that master track will gossip to the Network
 			proofData := ProofData{
 				PodNumber:    uint64(batchNumber),
@@ -335,6 +409,7 @@ func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uin
 	podState = &shared.PodState{
 		LatestPodHeight:     podNumber,
 		LatestPodHash:       MRH,
+		PreviousPodHash:     shared.GetPodState().LatestPodHash,
 		LatestPodProof:      uZKP,
 		LatestPublicWitness: Witness,
 		Votes:               votes,

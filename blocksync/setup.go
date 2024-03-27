@@ -87,6 +87,7 @@ func InitStateDb() bool {
 		emptyPodState := types.PodState{
 			LatestPodHeight:     0,
 			LatestPodHash:       nil,
+			PreviousPodHash:     nil,
 			LatestPodProof:      nil,
 			LatestPublicWitness: nil,
 			Votes:               make(map[string]types.Votes),

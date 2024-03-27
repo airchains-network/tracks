@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationInfo types.StationInfo, accountName, accountPath, jsonRPC string, verificationKey groth16.VerifyingKey) bool {
+func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationInfo types.StationInfo, accountName, accountPath, jsonRPC string, verificationKey groth16.VerifyingKey, addressPrefix string) bool {
 
 	// convert station info to string
 	stationJsonBytes, err := json.Marshal(stationInfo)
@@ -36,7 +36,6 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 		return false
 	}
 
-	addressPrefix := "air"
 	registry, err := cosmosaccount.New(cosmosaccount.WithHome(accountPath))
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error creating account registry: %v", err))
@@ -124,7 +123,12 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 	}
 	logs.Log.Info("Successfully Created VRF public and private Keys")
 
+	success = utilis.SetJunctionDetails(jsonRPC, stationId, accountPath, accountName, addressPrefix)
+	if !success {
+		logs.Log.Error("Failed to create data/vrfPubKey.txt properly")
+		return false
+	}
+	logs.Log.Info("data/vrfPubKey.txt Created")
+
 	return true
 }
-
-//  go run cmd/main.go create-station --accountName noob --accountPath ./accounts/keys --jsonRPC "http://34.131.189.98:26657"

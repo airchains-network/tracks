@@ -42,3 +42,9 @@ type DAStruct struct {
 	PreviousStateHash string `json:"previous_state_hash"`
 	CurrentStateHash  string `json:"current_state_hash"`
 }
+
+type FinalizeDA struct {
+	CompressedHash []string
+	Proof          []byte
+	PodNumber      int
+}

@@ -20,6 +20,7 @@ type Votes struct {
 type PodState struct {
 	LatestPodHeight     uint64
 	LatestPodHash       []byte
+	PreviousPodHash     []byte
 	LatestPodProof      []byte
 	LatestPublicWitness []byte
 	Votes               map[string]Votes

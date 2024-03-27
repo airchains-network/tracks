@@ -50,7 +50,8 @@ var CreateStation = &cobra.Command{
 			return
 		}
 
-		success := junction.CreateStation(extraArg, stationId, stationInfo, accountName, accountPath, jsonRPC, verificationKey)
+		addressPrefix := "air"
+		success := junction.CreateStation(extraArg, stationId, stationInfo, accountName, accountPath, jsonRPC, verificationKey, addressPrefix)
 		if !success {
 			logs.Log.Error("Failed to create new station due to above error")
 			return

@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	mock "github.com/airchains-network/decentralized-sequencer/da/mockda"
+	"github.com/airchains-network/decentralized-sequencer/junction"
+	junctionTypes "github.com/airchains-network/decentralized-sequencer/junction/types"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/airchains-network/decentralized-sequencer/types"
@@ -12,24 +15,22 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type FinalizeDA struct {
-	CompressedHash []string
-	Proof          []byte
-	PodNumber      int
-}
-
-// podStateManager shared.PodStateManager,
 func ProcessGossipMessage(node host.Host, ctx context.Context, dataType string, dataByte []byte, messageBroadcaster peer.ID) {
+	_ = node
+
 	fmt.Println("Processing gossip message")
 	switch dataType {
 	case "proof":
-		ProofHandler(node, ctx, dataByte, messageBroadcaster)
+		ProofHandler(ctx, dataByte, messageBroadcaster)
 		return
 	case "proofResult":
-		ProofResultHandler(node, ctx, dataByte, messageBroadcaster)
+		ProofResultHandler(dataByte, messageBroadcaster)
 		return
 	case "proofVoteResult":
-		ProofVoteResultHandler(node, ctx, dataByte, messageBroadcaster)
+		ProofVoteResultHandler(dataByte, messageBroadcaster)
+		// VRF call
+		return
+	case "":
 		return
 	default:
 		return
@@ -37,7 +38,7 @@ func ProcessGossipMessage(node host.Host, ctx context.Context, dataType string, 
 }
 
 // ProofHandler processes the proof received in a P2P message.
-func ProofHandler(node host.Host, ctx context.Context, dataByte []byte, messageBroadcaster peer.ID) {
+func ProofHandler(ctx context.Context, dataByte []byte, messageBroadcaster peer.ID) {
 	var proofData ProofData
 	if err := json.Unmarshal(dataByte, &proofData); err != nil {
 		logs.Log.Info("Error unmarshaling proof: %v")
@@ -86,46 +87,7 @@ func ProofHandler(node host.Host, ctx context.Context, dataByte []byte, messageB
 
 }
 
-// updatePodState updates the pod's state based on the proof data received.
-func updatePodState(proofData ProofData) {
-	currentPodData := shared.GetPodState()
-	currentPodData.LatestPodHeight = 1000000 // Example modification, should be based on actual proof data
-	shared.SetPodState(currentPodData)
-}
-
-// createProofResult creates a proof result based on the proof data received.
-func createProofResult(proofData ProofData) ProofResult {
-	// Logic to determine the success or failure of the proof validation
-	return ProofResult{
-		PodNumber: proofData.PodNumber,
-		Success:   true, // This should be determined by actual validation logic
-	}
-}
-
-// sendProofResult marshals and sends the proof result to the P2P network.
-func sendProofResult(ctx context.Context, node host.Host, proofResult ProofResult) {
-	proofResultByte, err := json.Marshal(proofResult)
-	if err != nil {
-		log.Printf("Error marshaling proof result: %v", err)
-		return
-	}
-
-	gossipMsg := types.GossipData{
-		Type: "proofResult",
-		Data: proofResultByte,
-	}
-
-	gossipMsgByte, err := json.Marshal(gossipMsg)
-	if err != nil {
-		log.Printf("Error marshaling gossip message: %v", err)
-		return
-	}
-
-	log.Printf("Sending proof result: %s", gossipMsgByte)
-	BroadcastMessage(ctx, node, gossipMsgByte)
-}
-
-func ProofResultHandler(node host.Host, ctx context.Context, dataByte []byte, messageBroadcaster peer.ID) {
+func ProofResultHandler(dataByte []byte, messageBroadcaster peer.ID) {
 
 	var proofResult ProofResult
 	err := json.Unmarshal(dataByte, &proofResult)
@@ -145,10 +107,14 @@ func ProofResultHandler(node host.Host, ctx context.Context, dataByte []byte, me
 		// if votes are enough and 2/3 votes are true
 		if voteResult {
 			DaData := shared.GetPodState().Batch.TransactionHash
+			daDataByte := []byte{}
+			for _, str := range DaData {
+				daDataByte = append(daDataByte, []byte(str)...)
+			}
 			ZkProof := shared.GetPodState().LatestPodProof
 			PodNumber := int(shared.GetPodState().LatestPodHeight)
 
-			finalizeDA := FinalizeDA{
+			finalizeDA := types.FinalizeDA{
 				CompressedHash: DaData,
 				Proof:          ZkProof,
 				PodNumber:      PodNumber,
@@ -158,32 +124,65 @@ func ProofResultHandler(node host.Host, ctx context.Context, dataByte []byte, me
 				log.Printf("Error marshaling da data: %v", err)
 			}
 
-			//DaBlockHash, err := da.DALayer(finalizeDAbytes, PodNumber)
-			//if err != nil {log.Printf("Error in DA Layer: %v", err)}
-			//fmt.Println("DaBlockHash : ", DaBlockHash)
+			// todo: handle all below error's
+			success, serializedRC := junction.InitVRF()
+			if !success {
+				logs.Log.Error("Failed to Init VRF")
+				return
+			}
+			logs.Log.Info("VRF initiated")
 
-			// Junction calls
-			//var funcLevelSerializedRc []byte
-			//for {
-			//	initVRFResponse, serializedRc := junction.InitVRF()
-			//	if !initVRFResponse {
-			//		time.Sleep(5 * time.Second)
-			//	} else {
-			//		funcLevelSerializedRc = serializedRc
-			//		break
-			//	}
-			//}
-			//_ = funcLevelSerializedRc
+			success = junction.ValidateVRF(serializedRC)
+			if !success {
+				logs.Log.Error("Failed to Init VRF")
+				return
+			}
+			logs.Log.Info("validate vrf success")
 
-			//junction.VerifyVRF()
-			//junction.SubmitCurrentPod()
-			//junction.VerifyCurrentPod()
+			// check if VRF is successfully validated
+			var vrfRecord *junctionTypes.VrfRecord
+			vrfRecord = junction.QueryVRF()
+			if vrfRecord == nil {
+				logs.Log.Error("VRF record is nil")
+				return
+			}
+			if !vrfRecord.IsVerified {
+				logs.Log.Error("Verification of VRF is failed, need Voting for correct VRN")
+				return
+			}
+
+			// DA submit
+			connection := shared.Node.NodeConnections
+			mdb := connection.GetDataAvailabilityDatabaseConnection()
+			dbName, err := mock.MockDA(mdb, daDataByte, PodNumber) // (mockda-%d", batchNumber), nil
+			if err != nil {
+				logs.Log.Error("Error in submitting data to DA")
+				return
+			}
+			_ = dbName
+			logs.Log.Info("data in DA submitted")
+
+			// submit pod
+			success = junction.SubmitCurrentPod()
+			if !success {
+				logs.Log.Error("Failed to submit pod")
+				return
+			}
+			logs.Log.Info("pod submitted")
+
+			// verify pod
+			junction.VerifyCurrentPod()
+			if !success {
+				logs.Log.Error("Failed to Transact Verify pod")
+				return
+			}
+			logs.Log.Info("pod verification transaction done")
+			// todo : query if verification return true or false...
 
 			// Send Message containing the Da Hash and Junction Hash to the respective nodes
 			saveVerifiedPOD()
 			peerListLocked = false
 			peerListLock.Unlock()
-
 			peerListLock.Lock()
 			for _, peerInfo := range incomingPeers.GetPeers() {
 				peerList.AddPeer(peerInfo)
@@ -387,7 +386,7 @@ func sendPodVoteResultToAllPeers(voteResult VoteResult) {
 	BroadcastMessage(CTX, Node, gossipMsgByte)
 }
 
-func ProofVoteResultHandler(node host.Host, ctx context.Context, dataByte []byte, messageBroadcaster peer.ID) {
+func ProofVoteResultHandler(dataByte []byte, messageBroadcaster peer.ID) {
 	var voteResult VoteResult
 	err := json.Unmarshal(dataByte, &voteResult)
 	if err != nil {
@@ -412,4 +411,45 @@ func ProofVoteResultHandler(node host.Host, ctx context.Context, dataByte []byte
 		logs.Log.Error("Proof Validation Failed, I am stopping here.. dont know what to do ....")
 		// don't know what to do yet
 	}
+}
+
+// Unused functions
+
+// updatePodState updates the pod's state based on the proof data received.
+func updatePodState(proofData ProofData) {
+	currentPodData := shared.GetPodState()
+	currentPodData.LatestPodHeight = 1000000 // Example modification, should be based on actual proof data
+	shared.SetPodState(currentPodData)
+}
+
+// createProofResult creates a proof result based on the proof data received.
+func createProofResult(proofData ProofData) ProofResult {
+	// Logic to determine the success or failure of the proof validation
+	return ProofResult{
+		PodNumber: proofData.PodNumber,
+		Success:   true, // This should be determined by actual validation logic
+	}
+}
+
+// sendProofResult marshals and sends the proof result to the P2P network.
+func sendProofResult(ctx context.Context, node host.Host, proofResult ProofResult) {
+	proofResultByte, err := json.Marshal(proofResult)
+	if err != nil {
+		log.Printf("Error marshaling proof result: %v", err)
+		return
+	}
+
+	gossipMsg := types.GossipData{
+		Type: "proofResult",
+		Data: proofResultByte,
+	}
+
+	gossipMsgByte, err := json.Marshal(gossipMsg)
+	if err != nil {
+		log.Printf("Error marshaling gossip message: %v", err)
+		return
+	}
+
+	log.Printf("Sending proof result: %s", gossipMsgByte)
+	BroadcastMessage(ctx, node, gossipMsgByte)
 }

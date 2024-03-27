@@ -19,11 +19,11 @@ var InitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "initialize the sequencer nodes",
 	Run: func(cmd *cobra.Command, args []string) {
-		moniker, _ := cmd.Flags().GetString("moniker")
-		stationType, _ := cmd.Flags().GetString("stationType")
-		daType, _ := cmd.Flags().GetString("daType")
-		daRPC, _ := cmd.Flags().GetString("daRpc")
-		stationRPC, _ := cmd.Flags().GetString("stationRpc")
+		moniker, _ = cmd.Flags().GetString("moniker")
+		stationType, _ = cmd.Flags().GetString("stationType")
+		daType, _ = cmd.Flags().GetString("daType")
+		daRPC, _ = cmd.Flags().GetString("daRpc")
+		stationRPC, _ = cmd.Flags().GetString("stationRpc")
 
 		homeDir, err := os.UserHomeDir()
 		if err != nil {

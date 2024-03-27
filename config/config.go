@@ -1,8 +1,8 @@
 package config
 
 import (
+	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/utilis"
-	"github.com/cometbft/cometbft/version"
 	"net/http"
 	"path/filepath"
 	"sync"
@@ -81,7 +81,7 @@ type BaseConfig struct {
 
 func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
-		Version:     version.TMCoreSemVer,
+		Version:     "0.0.1",
 		Moniker:     defaultMoniker,
 		FilterPeers: false,
 		DBBackend:   "goleveldb",
@@ -286,13 +286,17 @@ type JunctionConfig struct {
 
 // DefaultJunctionConfig returns a default configuration for the junction.
 func DefaultJunctionConfig() *JunctionConfig {
+	jsonRpc, stationId, _, _, _, err := utilis.GetJunctionDetails()
+	if err != nil {
+		logs.Log.Error("error in getting junctionDetails.json: " + err.Error())
+		return nil
+	}
 
-	stationId := utilis.GetStationIdFromGenesis() // return "" if error
 	VRFPrivateKey := utilis.GetVRFPrivateKey()
 	VRFPublicKey := utilis.GetVRFPubKey()
 
 	return &JunctionConfig{
-		JunctionRPC:   "http://localhost:26657",
+		JunctionRPC:   jsonRpc,
 		JunctionAPI:   "http://localhost:1317",
 		StationId:     stationId,
 		VRFPrivateKey: VRFPrivateKey,
