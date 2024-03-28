@@ -1,5 +1,6 @@
 data/
 sequencer/
 accounts/
+.idea/
 #provingKey.txt
 #verificationKey.txt
