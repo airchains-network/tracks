@@ -16,29 +16,30 @@ import (
 	"go.dedis.ch/kyber/v3/group/edwards25519"
 )
 
-func InitVRF() (bool, []byte) {
-	jsonRpc, stationId, accountPath, accountName, addressPrefix, err := utilis.GetJunctionDetails()
+func InitVRF() (success bool, addr string) {
+	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := utilis.GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
-		return false, nil
+		return false, ""
 	}
+	upperBond := uint64(len(tracks))
 
 	registry, err := cosmosaccount.New(cosmosaccount.WithHome(accountPath))
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error creating account registry: %v", err))
-		return false, nil
+		return false, ""
 	}
 
 	newTempAccount, err := registry.GetByName(accountName)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error getting account: %v", err))
-		return false, nil
+		return false, ""
 	}
 
 	newTempAddr, err := newTempAccount.Address(addressPrefix)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error getting address: %v", err))
-		return false, nil
+		return false, ""
 	}
 
 	ctx := context.Background()
@@ -47,7 +48,7 @@ func InitVRF() (bool, []byte) {
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
 		logs.Log.Error("Error creating account client")
-		return false, nil
+		return false, ""
 	}
 	// getting the account and creating client codes --> End
 
@@ -58,36 +59,36 @@ func InitVRF() (bool, []byte) {
 
 	privateKeyStr := utilis.GetVRFPrivateKey()
 	if privateKeyStr == "" {
-		return false, nil
+		return false, ""
 	}
 
 	privateKey, err := LoadHexPrivateKey(privateKeyStr)
 	if err != nil {
 		logs.Log.Error("Error in loading private key: " + err.Error())
-		return false, nil
+		return false, ""
 	}
 	publicKey := utilis.GetVRFPubKey()
 	if publicKey == "" {
-		return false, nil
+		return false, ""
 	}
 
 	rc := mainTypes.RequestCommitmentV2Plus{
 		BlockNum:         1,
 		StationId:        stationId,
-		UpperBound:       1,
+		UpperBound:       upperBond,
 		RequesterAddress: newTempAddr,
 	}
 
 	serializedRC, err := utilis.SerializeRequestCommitmentV2Plus(rc)
 	if err != nil {
 		logs.Log.Error(err.Error())
-		return false, nil
+		return false, ""
 	}
 
 	proof, vrfOutput, err := utilis.GenerateVRFProof(suite, privateKey, serializedRC, int64(rc.BlockNum))
 	if err != nil {
 		fmt.Printf("Error generating unique proof: %v\n", err)
-		return false, nil
+		return false, ""
 	}
 
 	extraArg := types.ExtraArg{
@@ -100,7 +101,7 @@ func InitVRF() (bool, []byte) {
 	extraArgsByte, err := json.Marshal(extraArg)
 	if err != nil {
 		logs.Log.Error(err.Error())
-		return false, nil
+		return false, ""
 	}
 
 	var defaultOccupancy uint64
@@ -117,12 +118,12 @@ func InitVRF() (bool, []byte) {
 	txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
 	if errTxRes != nil {
 		logs.Log.Error("error in transaction" + errTxRes.Error())
-		return false, nil
+		return false, ""
 	}
 
 	logs.Log.Info("Transaction Hash: " + txRes.TxHash)
 
-	return true, serializedRC
+	return true, newTempAddr
 
 }
 

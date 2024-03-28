@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationInfo types.StationInfo, accountName, accountPath, jsonRPC string, verificationKey groth16.VerifyingKey, addressPrefix string) bool {
+func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationInfo types.StationInfo, accountName, accountPath, jsonRPC string, verificationKey groth16.VerifyingKey, addressPrefix string, tracks []string) bool {
 
 	// convert station info to string
 	stationJsonBytes, err := json.Marshal(stationInfo)
@@ -67,13 +67,26 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 	amountStr := fmt.Sprintf("%damf", amount)
 	logs.Log.Info("Currently user have " + amountStr)
 
+	// Voting powers: almost equal.
 	var tracksVotingPower []uint64
-	power := uint64(100)
-	for i := 0; i < 1; i++ {
-		tracksVotingPower = append(tracksVotingPower, power)
+	totalPower := uint64(100)
+	numTracks := len(tracks)
+	// Calculate the equal share for each track
+	equalShare := totalPower / uint64(numTracks)
+	// Calculate the remainder
+	remainder := totalPower % uint64(numTracks)
+	// Distribute the equal share to each track
+	for i := 0; i < numTracks; i++ {
+		if remainder > 0 {
+			// For each track, until the remainder is exhausted,
+			// add an extra unit of power to make the total sum 100.
+			tracksVotingPower = append(tracksVotingPower, equalShare+1)
+			remainder-- // Decrement the remainder until it's 0
+		} else {
+			// Once the remainder is exhausted, append the equal share.
+			tracksVotingPower = append(tracksVotingPower, equalShare)
+		}
 	}
-	var tracks []string
-	tracks = append(tracks, newTempAddr)
 
 	ctx := context.Background()
 	gas := utilis.GenerateRandomWithFavour(611, 1200, [2]int{612, 1000}, 0.7)
@@ -100,6 +113,7 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 		logs.Log.Error(err.Error())
 		return false
 	}
+	logs.Log.Info("tx hash: " + txResp.TxHash)
 
 	timestamp := time.Now().String()
 	successGenesis := utilis.CreateGenesisJson(stationInfo, verificationKey, stationId, tracks, tracksVotingPower, txResp.TxHash, timestamp, extraArg, newTempAddr)
@@ -123,7 +137,7 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 	}
 	logs.Log.Info("Successfully Created VRF public and private Keys")
 
-	success = utilis.SetJunctionDetails(jsonRPC, stationId, accountPath, accountName, addressPrefix)
+	success = utilis.SetJunctionDetails(jsonRPC, stationId, accountPath, accountName, addressPrefix, tracks)
 	if !success {
 		logs.Log.Error("Failed to create data/vrfPubKey.txt properly")
 		return false

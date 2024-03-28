@@ -22,3 +22,24 @@ type VoteResult struct {
 	Votes              map[string]shared.Votes
 	Success            bool
 }
+
+type VRFInitiatedMsg struct {
+	PodNumber            uint64
+	selectedTrackAddress string
+	VrfInitiatorAddress  string
+}
+
+type VRFVerifiedMsg struct {
+	PodNumber            uint64
+	selectedTrackAddress string
+}
+
+type PodSubmittedMsgData struct {
+	PodNumber            uint64
+	selectedTrackAddress string
+}
+
+type PodVerifiedMsgData struct {
+	PodNumber          uint64
+	VerificationResult bool
+}

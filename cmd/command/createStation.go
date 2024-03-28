@@ -42,6 +42,12 @@ var CreateStation = &cobra.Command{
 		accountName := cmd.Flag("accountName").Value.String()
 		accountPath := cmd.Flag("accountPath").Value.String()
 		jsonRPC := cmd.Flag("jsonRPC").Value.String()
+		tracks, err := cmd.Flags().GetStringSlice("tracks")
+		if err != nil {
+			logs.Log.Error("Failed to get 'tracks' flag values: " + err.Error())
+			return
+		}
+
 		stationId := uuid.New().String()
 		provingKey, verificationKey, err := v1.GetVkPk()
 		_ = provingKey // currently unused here
@@ -51,7 +57,7 @@ var CreateStation = &cobra.Command{
 		}
 
 		addressPrefix := "air"
-		success := junction.CreateStation(extraArg, stationId, stationInfo, accountName, accountPath, jsonRPC, verificationKey, addressPrefix)
+		success := junction.CreateStation(extraArg, stationId, stationInfo, accountName, accountPath, jsonRPC, verificationKey, addressPrefix, tracks)
 		if !success {
 			logs.Log.Error("Failed to create new station due to above error")
 			return
@@ -62,5 +68,6 @@ var CreateStation = &cobra.Command{
 	},
 }
 
-// go run cmd/main.go create-station --accountName noob --accountPath ./accounts/keys --jsonRPC "http://34.131.189.98:26657"
+// go run cmd/main.go create-station --accountName noob --accountPath ./accounts/keys --jsonRPC "http://34.131.189.98:26657" --info "some info" --tracks air1dqf8xx42e8tlcwpd4ucwf60qeg4k6h7mzpnkf7,air1r6rmlc3ms9qrce5lxykfsx0xadt2c4gaslcpal,air1d8hv0xmwppgx2ge76na93gttuvwmha9njupxdf
+
 // go run cmd/main.go init --daRpc "mock-rpc" --daType "mock"  --moniker "monkey" --stationRpc "http://34.131.189.98:26657" --stationType "evm"

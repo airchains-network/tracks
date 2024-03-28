@@ -244,7 +244,7 @@ func handleStreamData(s network.Stream) {
 		}
 		fmt.Println("Data Type Received from other Peer :", dataType)
 
-		ProcessGossipMessage(Node, CTX, dataType, dataByte, messageBroadcaster)
+		ProcessGossipMessage(Node, dataType, dataByte, messageBroadcaster)
 	}
 }
 

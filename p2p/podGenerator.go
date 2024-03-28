@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -16,6 +15,7 @@ import (
 	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/syndtr/goleveldb/leveldb"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -79,8 +79,8 @@ func GenerateUnverifiedPods() {
 	}
 
 	TrackAppHash := generatePodHash(Witness, uZKP, MRH, currentPodNumber)
-	podState := shared.GetPodState()
-	tempMasterTrackAppHash := podState.MasterTrackAppHash
+	//podState := shared.GetPodState()
+	//tempMasterTrackAppHash := podState.MasterTrackAppHash
 
 	// update pod state as per latest pod
 	updateNewPodState(TrackAppHash, Witness, uZKP, MRH, uint64(batchNumber), batchInput)
@@ -100,7 +100,7 @@ func GenerateUnverifiedPods() {
 		Peers := getAllPeers(Node)
 		peerCount := len(Peers)
 		if peerCount == 1 {
-
+			// no peers connected so submit & verify VRF & Pod by own and update local database too.
 			DaData := shared.GetPodState().Batch.TransactionHash
 			daDataByte := []byte{}
 			for _, str := range DaData {
@@ -120,17 +120,16 @@ func GenerateUnverifiedPods() {
 				return
 			}
 
-			// todo: handle all below error's
-			success, serializedRC := junction.InitVRF()
+			success, addr := junction.InitVRF()
 			if !success {
 				logs.Log.Error("Failed to Init VRF")
 				return
 			}
 			logs.Log.Info("VRF initiated")
 
-			success = junction.ValidateVRF(serializedRC)
+			success = junction.ValidateVRF(addr)
 			if !success {
-				logs.Log.Error("Failed to Init VRF")
+				logs.Log.Error("Failed to Validate VRF")
 				return
 			}
 			logs.Log.Info("validate vrf success")
@@ -167,7 +166,7 @@ func GenerateUnverifiedPods() {
 			logs.Log.Info("pod submitted")
 
 			// verify pod
-			junction.VerifyCurrentPod()
+			success = junction.VerifyCurrentPod()
 			if !success {
 				logs.Log.Error("Failed to Transact Verify pod")
 				return
@@ -189,51 +188,115 @@ func GenerateUnverifiedPods() {
 			GenerateUnverifiedPods() // generate next pod
 
 		} else {
+			// call VRF -> if success: broadcast peerId of node who will verify VRF [not randomly]
 
-			// Preparing the Message that master track will gossip to the Network
-			proofData := ProofData{
-				PodNumber:    uint64(batchNumber),
-				TrackAppHash: TrackAppHash,
+			PodNumber := int(shared.GetPodState().LatestPodHeight)
+
+			success, addr := junction.InitVRF()
+			if !success {
+				logs.Log.Error("Failed to Init VRF")
+				return
 			}
+			logs.Log.Info("VRF initiated")
 
-			// Marshal the proofData
-			proofDataByte, err := json.Marshal(proofData)
+			// get own address
+			_, _, accountPath, accountName, addressPrefix, tracks, err := utilis.GetJunctionDetails()
 			if err != nil {
-				logs.Log.Error(fmt.Sprintf("Error in marshalling proof data : %s", err.Error()))
+				logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
+				return
+			}
+			myAddress, err := junction.CheckIfAccountExists(accountName, accountPath, addressPrefix)
+			if err != nil {
+				logs.Log.Error("Can not get junction wallet address")
+				return
 			}
 
+			// choose one verifiable random node to verify the VRF
+			// Filter out the peer with own Id
+			var filteredTracks []string
+			for _, track := range tracks {
+				if track != myAddress {
+					filteredTracks = append(filteredTracks, track)
+				}
+			}
+			// Select a random peer from the filtered list
+			selectedTrackAddress := filteredTracks[rand.Intn(len(filteredTracks))]
+			fmt.Println("Selected random address:", selectedTrackAddress)
+
+			// send verify VRF message to selected node
+			VRFInitiatedMsg := VRFInitiatedMsg{
+				PodNumber:            uint64(PodNumber),
+				selectedTrackAddress: selectedTrackAddress,
+				VrfInitiatorAddress:  addr,
+			}
+
+			VRFInitiatedMsgByte, err := json.Marshal(VRFInitiatedMsg)
+			if err != nil {
+				logs.Log.Error("Error in Marshaling ProofVote Result")
+				return
+			}
 			gossipMsg := types.GossipData{
-				Type: "proof",
-				Data: proofDataByte,
+				Type: "vrfInitiated",
+				Data: VRFInitiatedMsgByte,
 			}
-
 			gossipMsgByte, err := json.Marshal(gossipMsg)
 			if err != nil {
 				logs.Log.Error("Error marshaling gossip message")
 				return
 			}
+			BroadcastMessage(CTX, Node, gossipMsgByte)
 
-			logs.Log.Info("Sending proof result: %s")
-			BroadcastMessage(context.Background(), Node, gossipMsgByte)
+			// after VRF is verified: broadcast pod Submitter id/address to all.
+			// pod submitter will then broadcast the message that pod is submitted, and choose a node [not randomly] to verify the pod
+			// after pod is verify, the node will broadcast the message that pod is verified, and all nodes will update the database and generate next pod
+
+			// vrfHandlerGossip -> all nodes will got who is selected node
+			//// Preparing the Message that master track will gossip to the Network
+			//proofData := ProofData{
+			//	PodNumber:    uint64(batchNumber),
+			//	TrackAppHash: TrackAppHash,
+			//}
+			//
+			//// Marshal the proofData
+			//proofDataByte, err := json.Marshal(proofData)
+			//if err != nil {
+			//	logs.Log.Error(fmt.Sprintf("Error in marshalling proof data : %s", err.Error()))
+			//}
+			//
+			//gossipMsg := types.GossipData{
+			//	Type: "proof",
+			//	Data: proofDataByte,
+			//}
+			//
+			//gossipMsgByte, err := json.Marshal(gossipMsg)
+			//if err != nil {
+			//	logs.Log.Error("Error marshaling gossip message")
+			//	return
+			//}
+			//
+			//logs.Log.Info("Sending proof result: %s")
+			//BroadcastMessage(context.Background(), Node, gossipMsgByte)
 		}
 
-	} else {
-		if podState.MasterTrackAppHash != nil {
-			fmt.Println(TrackAppHash)
-			fmt.Println(tempMasterTrackAppHash)
-			currentPodData := shared.GetPodState()
-			if bytes.Equal(TrackAppHash, tempMasterTrackAppHash) {
-				SendValidProof(CTX, currentPodData.LatestPodHeight, decodedMaster)
-				return
-			} else {
-				SendInvalidProofError(CTX, currentPodData.LatestPodHeight, decodedMaster)
-				return
-			}
-		} else {
-			// pod state is nil, means master track has not yet broadcasted the proof
-			// don't need to do anything..
-		}
 	}
+
+	//else {
+	//	if podState.MasterTrackAppHash != nil {
+	//		fmt.Println(TrackAppHash)
+	//		fmt.Println(tempMasterTrackAppHash)
+	//		currentPodData := shared.GetPodState()
+	//		if bytes.Equal(TrackAppHash, tempMasterTrackAppHash) {
+	//			SendValidProof(CTX, currentPodData.LatestPodHeight, decodedMaster)
+	//			return
+	//		} else {
+	//			SendInvalidProofError(CTX, currentPodData.LatestPodHeight, decodedMaster)
+	//			return
+	//		}
+	//	} else {
+	//		// pod state is nil, means master track has not yet broadcasted the proof
+	//		// don't need to do anything..
+	//	}
+	//}
 
 }
 
@@ -396,7 +459,6 @@ func saveVerifiedPOD() {
 }
 
 func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
-
 	return MRH
 }
 

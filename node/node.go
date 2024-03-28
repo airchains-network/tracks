@@ -15,16 +15,6 @@ import (
 	"time"
 )
 
-func init() {
-	viper.SetConfigName("sequencer")            // name of config file (without extension)
-	viper.SetConfigType("toml")                 // REQUIRED if the config file does not have the extension in the name // path to look for the config file in
-	viper.AddConfigPath("$HOME/.tracks/config") // call multiple times to add many search paths 	// optionally look for config in the working directory
-	err := viper.ReadInConfig()                 // Find and read the config file
-	if err != nil {                             // Handle errors reading the config file
-		panic(fmt.Errorf("fatal error config file: %w", err))
-	}
-}
-
 func Start() {
 	var wg1 sync.WaitGroup
 	wg1.Add(2)
@@ -34,10 +24,12 @@ func Start() {
 	})
 	wg1.Wait()
 }
+
 func configureP2P(wg *sync.WaitGroup) {
 	defer wg.Done()
 	p2p.P2PConfiguration()
 }
+
 func beginDBIndexingOperations(wg *sync.WaitGroup) {
 	fmt.Println("Connected to the network. Starting the indexing process...")
 

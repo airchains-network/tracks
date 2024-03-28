@@ -3,6 +3,7 @@ package junction
 import (
 	"context"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
+	mainTypes "github.com/airchains-network/decentralized-sequencer/types"
 
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/junction/types"
@@ -12,16 +13,30 @@ import (
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 )
 
-func ValidateVRF(serializedRc []byte) bool {
-	jsonRpc, stationId, accountPath, accountName, addressPrefix, err := utilis.GetJunctionDetails()
+func ValidateVRF(addr string) bool {
+	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := utilis.GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
 		return false
 	}
+	upperBond := uint64(len(tracks))
 
 	registry, err := cosmosaccount.New(cosmosaccount.WithHome(accountPath))
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error creating account registry: %v", err))
+		return false
+	}
+
+	rc := mainTypes.RequestCommitmentV2Plus{
+		BlockNum:         1,
+		StationId:        stationId,
+		UpperBound:       upperBond,
+		RequesterAddress: addr,
+	}
+
+	serializedRC, err := utilis.SerializeRequestCommitmentV2Plus(rc)
+	if err != nil {
+		logs.Log.Error(err.Error())
 		return false
 	}
 
@@ -52,7 +67,7 @@ func ValidateVRF(serializedRc []byte) bool {
 		Creator:      newTempAddr,
 		StationId:    stationId,
 		PodNumber:    podNumber,
-		SerializedRc: serializedRc,
+		SerializedRc: serializedRC,
 	}
 
 	txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)

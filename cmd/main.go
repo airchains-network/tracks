@@ -43,6 +43,13 @@ func main() {
 	command.CreateStation.Flags().String("accountName", "", "Station Account Name")
 	command.CreateStation.Flags().String("accountPath", "", "Station Account Path")
 	command.CreateStation.Flags().String("jsonRPC", "", "Station JSON RPC")
+	//command.CreateStation.Flags().String("tracks", "", "tracks array for this station")
+	command.CreateStation.Flags().StringSlice("tracks", []string{}, "tracks array for this station")
+	command.CreateStation.MarkFlagRequired("info")
+	command.CreateStation.MarkFlagRequired("accountName")
+	command.CreateStation.MarkFlagRequired("accountPath")
+	command.CreateStation.MarkFlagRequired("jsonRPC")
+	command.CreateStation.MarkFlagRequired("tracks")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

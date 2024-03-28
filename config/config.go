@@ -286,7 +286,7 @@ type JunctionConfig struct {
 
 // DefaultJunctionConfig returns a default configuration for the junction.
 func DefaultJunctionConfig() *JunctionConfig {
-	jsonRpc, stationId, _, _, _, err := utilis.GetJunctionDetails()
+	jsonRpc, stationId, _, _, _, _, err := utilis.GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("error in getting junctionDetails.json: " + err.Error())
 		return nil

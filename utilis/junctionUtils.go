@@ -241,15 +241,17 @@ type JunctionDetails struct {
 	AccountPath   string
 	AccountName   string
 	AddressPrefix string
+	Tracks        []string
 }
 
-func SetJunctionDetails(JsonRPC, StationId, AccountPath, AccountName, AddressPrefix string) (success bool) {
+func SetJunctionDetails(JsonRPC, StationId, AccountPath, AccountName, AddressPrefix string, Tracks []string) (success bool) {
 	stationData := JunctionDetails{
 		JsonRPC:       JsonRPC,
 		StationId:     StationId,
 		AccountPath:   AccountPath,
 		AccountName:   AccountName,
 		AddressPrefix: AddressPrefix,
+		Tracks:        Tracks,
 	}
 
 	// Marshal the data into JSON
@@ -274,7 +276,7 @@ func SetJunctionDetails(JsonRPC, StationId, AccountPath, AccountName, AddressPre
 	return true
 }
 
-func GetJunctionDetails() (JsonRPC, StationId, AccountPath, AccountName, AddressPrefix string, err error) {
+func GetJunctionDetails() (JsonRPC, StationId, AccountPath, AccountName, AddressPrefix string, Tracks []string, err error) {
 	// Specify the file path and name
 	filePath := "data/stationData.json"
 
@@ -282,7 +284,7 @@ func GetJunctionDetails() (JsonRPC, StationId, AccountPath, AccountName, Address
 	jsonBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		logs.Log.Error("Error reading JSON file:" + err.Error())
-		return "", "", "", "", "", err
+		return "", "", "", "", "", Tracks, err
 	}
 
 	// Unmarshal the JSON data into GenesisDataType struct
@@ -290,7 +292,7 @@ func GetJunctionDetails() (JsonRPC, StationId, AccountPath, AccountName, Address
 	err = json.Unmarshal(jsonBytes, &junctionData)
 	if err != nil {
 		logs.Log.Error("Error unmarshaling JSON:" + err.Error())
-		return "", "", "", "", "", err
+		return "", "", "", "", "", Tracks, err
 	}
 
 	JsonRPC = junctionData.JsonRPC
@@ -298,13 +300,14 @@ func GetJunctionDetails() (JsonRPC, StationId, AccountPath, AccountName, Address
 	AccountPath = junctionData.AccountPath
 	AccountName = junctionData.AccountName
 	AddressPrefix = junctionData.AddressPrefix
+	Tracks = junctionData.Tracks
 
 	if JsonRPC == "" || StationId == "" || AccountPath == "" || AccountName == "" {
 		logs.Log.Error("Some fields are empty in data/stationData.json")
 		errorMsg := fmt.Errorf("Some fields are empty in data/stationData.json")
-		return "", "", "", "", "", errorMsg
+		return "", "", "", "", "", Tracks, errorMsg
 	}
 
 	// Return the StationId from the unmarshaled data
-	return JsonRPC, StationId, AccountPath, AccountName, AddressPrefix, nil
+	return JsonRPC, StationId, AccountPath, AccountName, AddressPrefix, Tracks, nil
 }
