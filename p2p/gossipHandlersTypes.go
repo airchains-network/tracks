@@ -25,18 +25,18 @@ type VoteResult struct {
 
 type VRFInitiatedMsg struct {
 	PodNumber            uint64
-	selectedTrackAddress string
+	SelectedTrackAddress string
 	VrfInitiatorAddress  string
 }
 
 type VRFVerifiedMsg struct {
 	PodNumber            uint64
-	selectedTrackAddress string
+	SelectedTrackAddress string
 }
 
 type PodSubmittedMsgData struct {
 	PodNumber            uint64
-	selectedTrackAddress string
+	SelectedTrackAddress string
 }
 
 type PodVerifiedMsgData struct {

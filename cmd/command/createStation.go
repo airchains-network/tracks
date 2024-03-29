@@ -68,6 +68,21 @@ var CreateStation = &cobra.Command{
 	},
 }
 
-// go run cmd/main.go create-station --accountName noob --accountPath ./accounts/keys --jsonRPC "http://34.131.189.98:26657" --info "some info" --tracks air1dqf8xx42e8tlcwpd4ucwf60qeg4k6h7mzpnkf7,air1r6rmlc3ms9qrce5lxykfsx0xadt2c4gaslcpal,air1d8hv0xmwppgx2ge76na93gttuvwmha9njupxdf
+//air1h25pqnxkv8g50n5nlrdv94wktjupfu4ujevsc8
+/*
+ sh restart.sh;
+ go run cmd/main.go create-station --accountName noob --accountPath ./accounts/keys --jsonRPC "http://34.131.189.98:26657" --info "some info" --tracks air1dqf8xx42e8tlcwpd4ucwf60qeg4k6h7mzpnkf7,air1h25pqnxkv8g50n5nlrdv94wktjupfu4ujevsc8
+ touch data/stationData.json; touch data/vrfPrivKey.txt; touch data/vrfPubKey.txt;
+ go run cmd/main.go init --daRpc "mock-rpc" --daType "mock"  --moniker "monkey" --stationRpc "http://34.131.189.98:26657" --stationType "evm"
+*/
 
-// go run cmd/main.go init --daRpc "mock-rpc" --daType "mock"  --moniker "monkey" --stationRpc "http://34.131.189.98:26657" --stationType "evm"
+/*
+ sh restart.sh;
+ touch data/genesis.json; touch data/stationData.json; touch data/vrfPrivKey.txt; touch data/vrfPubKey.txt;
+ copy paste the above files to other nodes
+*/
+/*
+ start both nodes simultaniously
+  go run cmd/main.go start
+  go run cmd/main.go start /ip4/192.168.1.24/tcp/2300/p2p/12D3KooWKAvMmJqu7A53UHC36ViycTS5M5V5wSB7Qf7pMuAeh7HK
+*/

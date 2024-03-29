@@ -29,16 +29,18 @@ var (
 
 func BatchGeneration(wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	GenerateUnverifiedPods()
 }
 
 func GenerateUnverifiedPods() {
-	incomingPeers = NewPeerList() // reset the incoming peers
-	peerListLock.Lock()
-	peerListLocked = true
+	fmt.Println("generating new pod")
+	//incomingPeers = NewPeerList() // reset the incoming peers
+	//peerListLock.Lock()
+	//peerListLocked = true
 	lds := shared.Node.NodeConnections.GetStaticDatabaseConnection()
 	ldt := shared.Node.NodeConnections.GetTxnDatabaseConnection()
-
+	fmt.Println("1")
 	ConfirmendTransactionIndex, err := lds.Get([]byte("batchStartIndex"), nil)
 	if err != nil {
 		err = lds.Put([]byte("batchStartIndex"), []byte("0"), nil)
@@ -47,12 +49,14 @@ func GenerateUnverifiedPods() {
 			os.Exit(0)
 		}
 	}
+	fmt.Println("2")
 
 	currentPodNumber, err := lds.Get([]byte("batchCount"), nil)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in getting sssssss from static db : %s", err.Error()))
 		os.Exit(0)
 	}
+	fmt.Println("3")
 
 	previousStateData, err := getPodStateFromDatabase()
 	if err != nil {
@@ -70,6 +74,8 @@ func GenerateUnverifiedPods() {
 
 	currentPodNumberInt, _ := strconv.Atoi(strings.TrimSpace(string(currentPodNumber)))
 	batchNumber := currentPodNumberInt + 1
+	fmt.Println("generating new pod")
+	fmt.Println(batchNumber)
 
 	//var batchInput *types.BatchStruct
 	Witness, uZKP, MRH, batchInput, err := createPOD(ldt, ConfirmendTransactionIndex, currentPodNumber)
@@ -176,14 +182,14 @@ func GenerateUnverifiedPods() {
 
 			// if (no peers connected): update database and make next pod without voting process
 			saveVerifiedPOD() // save data to database
-
-			peerListLocked = false
-			peerListLock.Unlock()
-			peerListLock.Lock()
-			for _, peerInfo := range incomingPeers.GetPeers() {
-				peerList.AddPeer(peerInfo)
-			}
-			peerListLock.Unlock()
+			//
+			//peerListLocked = false
+			//peerListLock.Unlock()
+			//peerListLock.Lock()
+			//for _, peerInfo := range incomingPeers.GetPeers() {
+			//	peerList.AddPeer(peerInfo)
+			//}
+			//peerListLock.Unlock()
 
 			GenerateUnverifiedPods() // generate next pod
 
@@ -226,7 +232,7 @@ func GenerateUnverifiedPods() {
 			// send verify VRF message to selected node
 			VRFInitiatedMsg := VRFInitiatedMsg{
 				PodNumber:            uint64(PodNumber),
-				selectedTrackAddress: selectedTrackAddress,
+				SelectedTrackAddress: selectedTrackAddress,
 				VrfInitiatorAddress:  addr,
 			}
 
@@ -456,6 +462,7 @@ func saveVerifiedPOD() {
 
 	podState.MasterTrackAppHash = nil
 	shared.SetPodState(podState)
+	logs.Log.Warn("presend pod data saved to database")
 }
 
 func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
@@ -466,8 +473,7 @@ func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uin
 	var podState *shared.PodState
 	// empty votes
 	votes := make(map[string]shared.Votes)
-	fmt.Println("Hey Saving the States with VIOte")
-	fmt.Println(podNumber)
+
 	podState = &shared.PodState{
 		LatestPodHeight:     podNumber,
 		LatestPodHash:       MRH,

@@ -72,7 +72,7 @@ func GetBalance(address string, blockNumber uint64, stationRPC string) (string, 
 }
 
 func GetAccountNonce(ctx context.Context, address string, blockNumber uint64) (string, error) {
-	client, err := rpc.Dial("http://localhost:8545")
+	client, err := rpc.Dial("http://192.168.1.24:8545")
 	if err != nil {
 		return "0", err
 	}

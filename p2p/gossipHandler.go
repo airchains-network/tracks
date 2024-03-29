@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"encoding/json"
+	"fmt"
 	mock "github.com/airchains-network/decentralized-sequencer/da/mockda"
 	"github.com/airchains-network/decentralized-sequencer/junction"
 	junctionTypes "github.com/airchains-network/decentralized-sequencer/junction/types"
@@ -55,10 +56,12 @@ func VRFInitiatedMsgHandler(dataByte []byte) {
 		// wait until pod number reached
 		if VRFInitiatedMsg.PodNumber == podState.LatestPodHeight {
 			// exit from the loop
+			logs.Log.Info("Pod number matched")
 			break
 		}
 
 		logs.Log.Warn("pod number is not matched, waiting for new pod")
+		fmt.Println(VRFInitiatedMsg.PodNumber, podState.LatestPodHeight)
 		// Await for 3 seconds
 		time.Sleep(3 * time.Second)
 	}
@@ -73,8 +76,11 @@ func VRFInitiatedMsgHandler(dataByte []byte) {
 		logs.Log.Error("Can not get junction wallet address")
 		return
 	}
+
+	logs.Log.Info("selected address: " + VRFInitiatedMsg.SelectedTrackAddress)
+	logs.Log.Info("My address:" + myAddress)
 	// now check for this pod number, who is the selected node
-	if VRFInitiatedMsg.selectedTrackAddress == myAddress {
+	if VRFInitiatedMsg.SelectedTrackAddress == myAddress {
 		logs.Log.Info("This Track Address is selected to verify VRN")
 		// call Verify VRN
 		VrfInitiatorAddress := VRFInitiatedMsg.VrfInitiatorAddress
@@ -101,10 +107,10 @@ func VRFInitiatedMsgHandler(dataByte []byte) {
 
 		// broadcast message that vrn is verified and selected node is ...
 		PodNumber := int(shared.GetPodState().LatestPodHeight)
-		selectedTrackAddress := tracks[vrfRecord.SelectedTrackIndex]
+		SelectedTrackAddress := tracks[vrfRecord.SelectedTrackIndex]
 		VRFVerifiedMsg := VRFVerifiedMsg{
 			PodNumber:            uint64(PodNumber),
-			selectedTrackAddress: selectedTrackAddress,
+			SelectedTrackAddress: SelectedTrackAddress,
 		}
 		VRFVerifiedMsgByte, err := json.Marshal(VRFVerifiedMsg)
 		if err != nil {
@@ -141,6 +147,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 			break
 		}
 		logs.Log.Warn("pod number is not matched, waiting for new pod")
+		fmt.Println(VRNVerifiedMsg.PodNumber, podState.LatestPodHeight)
 		time.Sleep(3 * time.Second)
 	}
 
@@ -156,7 +163,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 		return
 	}
 	// now check for this pod number, who is the selected track
-	if VRNVerifiedMsg.selectedTrackAddress == myAddress {
+	if VRNVerifiedMsg.SelectedTrackAddress == myAddress {
 		// submit data to DA
 		DaData := shared.GetPodState().Batch.TransactionHash
 		daDataByte := []byte{}
@@ -189,13 +196,13 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 			}
 		}
 		// Select a random peer from the filtered list
-		selectedTrackAddress := filteredTracks[rand.Intn(len(filteredTracks))]
+		SelectedTrackAddress := filteredTracks[rand.Intn(len(filteredTracks))]
 
 		podNumber := shared.GetPodState().LatestPodHeight
 		// broadcast pod submitted msg
 		PodSubmittedMsg := PodSubmittedMsgData{
 			PodNumber:            podNumber,
-			selectedTrackAddress: selectedTrackAddress,
+			SelectedTrackAddress: SelectedTrackAddress,
 		}
 		PodSubmittedMsgByte, err := json.Marshal(PodSubmittedMsg)
 		if err != nil {
@@ -231,6 +238,7 @@ func PodSubmittedMsgHandler(dataByte []byte) {
 			break
 		}
 		logs.Log.Warn("pod number is not matched, waiting for new pod")
+		fmt.Println(PodSubmittedMsg.PodNumber, podState.LatestPodHeight)
 		time.Sleep(3 * time.Second)
 	}
 
@@ -246,7 +254,7 @@ func PodSubmittedMsgHandler(dataByte []byte) {
 		return
 	}
 	// now check for this pod number, who is the selected track
-	if PodSubmittedMsg.selectedTrackAddress == myAddress {
+	if PodSubmittedMsg.SelectedTrackAddress == myAddress {
 		// verify pod
 		success := junction.VerifyCurrentPod()
 		if !success {
@@ -287,15 +295,15 @@ func PodSubmittedMsgHandler(dataByte []byte) {
 			}
 
 			saveVerifiedPOD() // save the latest pod details and make next pod
-
-			// add new nodes requested before starting next pod process
-			peerListLocked = false
-			peerListLock.Unlock()
-			peerListLock.Lock()
-			for _, peerInfo := range incomingPeers.GetPeers() {
-				peerList.AddPeer(peerInfo)
-			}
-			peerListLock.Unlock() // save data to database
+			//
+			//// add new nodes requested before starting next pod process
+			//peerListLocked = false
+			//peerListLock.Unlock()
+			//peerListLock.Lock()
+			//for _, peerInfo := range incomingPeers.GetPeers() {
+			//	peerList.AddPeer(peerInfo)
+			//}
+			//peerListLock.Unlock() // save data to database
 
 			BroadcastMessage(CTX, Node, gossipMsgByte)
 			GenerateUnverifiedPods() // generate next pod
@@ -310,6 +318,7 @@ func PodVerifiedMsgHandler(dataByte []byte) {
 		logs.Log.Error("Error in extracting PodVerifiedMsg")
 		return
 	}
+	logs.Log.Warn("pod msg decoded successfully")
 
 	// match the pod number
 	for {
@@ -318,17 +327,23 @@ func PodVerifiedMsgHandler(dataByte []byte) {
 			break
 		}
 		logs.Log.Warn("pod number is not matched, waiting for new pod")
+		fmt.Println(PodVerifiedMsg.PodNumber, podState.LatestPodHeight)
 		time.Sleep(3 * time.Second)
 	}
+	logs.Log.Warn("pod number matched successfully ")
 
 	if PodVerifiedMsg.VerificationResult == true {
-		saveVerifiedPOD()        // save the latest pod details and make next pod
+		logs.Log.Info("Saving current pod")
+		saveVerifiedPOD() // save the latest pod details and make next pod
+		logs.Log.Info("generating next pod")
 		GenerateUnverifiedPods() // generate next pod
+
+		return
 	} else {
 		logs.Log.Error("Pod verification failed, its time for voting")
+		return
 	}
 
-	return
 }
 
 //import (

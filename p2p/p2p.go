@@ -79,11 +79,6 @@ var (
 func onConnected(n network.
 	Network, c network.Conn) {
 
-	if !checkStateSync(CTX, Node, c.RemotePeer()) {
-		fmt.Println("State is not in sync!")
-		_ = n.ClosePeer(c.RemotePeer()) // you may change this depending on your needs
-	}
-
 	peerListLock.Lock()
 	defer peerListLock.Unlock()
 
@@ -124,6 +119,8 @@ func getAllPeers(node host.Host) []peer.AddrInfo {
 	sort.Slice(peers, func(i, j int) bool {
 		return peers[i].ID.String() < peers[j].ID.String()
 	})
+
+	fmt.Println("peers: ", peers)
 
 	return peers
 }
@@ -183,7 +180,14 @@ func connectToPeer(ctx context.Context, node host.Host, addrStr string) error {
 		return err
 	}
 	fmt.Printf("Connecting to %s\n", addrStr)
-	return node.Connect(ctx, peerInfo)
+	fmt.Println(node)
+	fmt.Println(CTX)
+	fmt.Println(peerInfo)
+	err = node.Connect(CTX, peerInfo)
+	if err != nil {
+		fmt.Printf("Unable to connect to peer. Error: %s", err.Error())
+	}
+	return err
 }
 
 func parseAddrToPeerInfo(addrStr string) (peer.AddrInfo, error) {
@@ -200,22 +204,22 @@ func parseAddrToPeerInfo(addrStr string) (peer.AddrInfo, error) {
 
 func setupStreamHandler(node host.Host) {
 	node.SetStreamHandler(protocol.ID(customProtocolID), streamHandler)
-	node.SetStreamHandler(protocol.ID(customDataSyncProtocolID), dataSyncHandler)    // Data Sync handler
-	node.SetStreamHandler(protocol.ID(customStateCheckProtocolID), handleStateCheck) // Add a handler for state checking
+	//node.SetStreamHandler(protocol.ID(customDataSyncProtocolID), dataSyncHandler)    // Data Sync handler
+	//node.SetStreamHandler(protocol.ID(customStateCheckProtocolID), handleStateCheck) // Add a handler for state checking
 }
 
 func streamHandler(s network.Stream) {
 	defer s.Close()
-	if s.Protocol() == protocol.ID(customDataSyncProtocolID) {
-		// Handle block data message
-		blockData := "sdsd"
-		gobDecoder := gob.NewDecoder(s)
-		err := gobDecoder.Decode(&blockData)
-		if err != nil {
-			logs.Log.Error("Failed to decode data")
-		}
-		return
-	}
+	//if s.Protocol() == protocol.ID(customDataSyncProtocolID) {
+	//	// Handle block data message
+	//	blockData := "sdsd"
+	//	gobDecoder := gob.NewDecoder(s)
+	//	err := gobDecoder.Decode(&blockData)
+	//	if err != nil {
+	//		logs.Log.Error("Failed to decode data")
+	//	}
+	//	return
+	//}
 	handleStreamData(s)
 }
 
@@ -346,7 +350,7 @@ func MasterTracksSelection(host host.Host, sharedInput string) string {
 		fmt.Println("No peers available.")
 		return ""
 	}
-	fmt.Printf(sharedInput)
+	fmt.Println("shared input", sharedInput)
 
 	// Compute the SHA256 hash of the sharedInput
 	h := sha256.New()
@@ -378,18 +382,18 @@ func MasterTracksSelection(host host.Host, sharedInput string) string {
 	return randomPeer.ID.String()
 }
 
-func sendDataSyncRequest(node host.Host, ctx context.Context, peerID peer.ID) {
-	s, err := node.NewStream(ctx, peerID, protocol.ID(customDataSyncProtocolID))
-	if err != nil {
-		logs.Log.Error("Failed to open stream")
-	}
-	defer s.Close()
-
-	_, err = s.Write([]byte("SYNC_REQUEST"))
-	if err != nil {
-		logs.Log.Error("Failed to write to stream")
-	}
-}
+//func sendDataSyncRequest(node host.Host, ctx context.Context, peerID peer.ID) {
+//	s, err := node.NewStream(ctx, peerID, protocol.ID(customDataSyncProtocolID))
+//	if err != nil {
+//		logs.Log.Error("Failed to open stream")
+//	}
+//	defer s.Close()
+//
+//	_, err = s.Write([]byte("SYNC_REQUEST"))
+//	if err != nil {
+//		logs.Log.Error("Failed to write to stream")
+//	}
+//}
 
 func dataSyncHandler(s network.Stream) {
 	defer s.Close()

@@ -19,7 +19,7 @@ func Start() {
 	var wg1 sync.WaitGroup
 	wg1.Add(2)
 	go configureP2P(&wg1)
-	go time.AfterFunc(3*time.Second, func() {
+	go time.AfterFunc(10*time.Second, func() {
 		beginDBIndexingOperations(&wg1)
 	})
 	wg1.Wait()
@@ -44,7 +44,7 @@ func beginDBIndexingOperations(wg *sync.WaitGroup) {
 	latestBlock := shared.GetLatestBlock(blockDB)
 	fmt.Println("This is the JSON ", viper.GetString("station.stationRPC"))
 	fmt.Println("This is the Station Type ", viper.GetString("station.stationType"))
-	client, err := ethclient.Dial(viper.GetString("station.stationRPC"))
+	client, err := ethclient.Dial("http://192.168.1.24:8545") // viper.GetString("station.stationRPC"))
 	if err != nil {
 		logs.Log.Error("Error in connecting to the network")
 		return
