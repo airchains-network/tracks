@@ -18,7 +18,6 @@ import (
 
 func ProcessGossipMessage(node host.Host, dataType string, dataByte []byte, messageBroadcaster peer.ID) {
 	_ = node
-
 	switch dataType {
 	case "vrfInitiated":
 		VRFInitiatedMsgHandler(dataByte)
@@ -128,12 +127,16 @@ func VRFInitiatedMsgHandler(dataByte []byte) {
 		}
 		BroadcastMessage(CTX, Node, gossipMsgByte)
 
+		// if this node is selected as pod submitter
+		if SelectedTrackAddress == myAddress {
+			VRNValidatedMsgHandler(VRFVerifiedMsgByte)
+		}
 	}
 	return
 }
 
 func VRNValidatedMsgHandler(dataByte []byte) {
-
+	fmt.Println("VRN Validated Msg Handler called")
 	var VRNVerifiedMsg VRFVerifiedMsg
 	if err := json.Unmarshal(dataByte, &VRNVerifiedMsg); err != nil {
 		logs.Log.Error("Error in extracting VRFVerifiedMsg")

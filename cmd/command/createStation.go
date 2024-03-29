@@ -84,5 +84,6 @@ var CreateStation = &cobra.Command{
 /*
  start both nodes simultaniously
   go run cmd/main.go start
-  go run cmd/main.go start /ip4/192.168.1.24/tcp/2300/p2p/12D3KooWKAvMmJqu7A53UHC36ViycTS5M5V5wSB7Qf7pMuAeh7HK
+  go run cmd/main.go start /ip4/192.168.1.24/tcp/2300/p2p/12D3KooWPi96exciLFcjnfN73dFD9GfynKYva3iibCYDTTaStKdM
+  go run cmd/main.go start /ip4/192.168.1.25/tcp/2300/p2p/12D3KooWB1CgEXF97AMga3xDdSggpfPbm7Npx2LPdWdLJt678tLY
 */
