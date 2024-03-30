@@ -9,7 +9,6 @@ import (
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	mainTypes "github.com/airchains-network/decentralized-sequencer/types"
-	"github.com/airchains-network/decentralized-sequencer/utilis"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 	"go.dedis.ch/kyber/v3"
@@ -17,7 +16,7 @@ import (
 )
 
 func InitVRF() (success bool, addr string) {
-	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := utilis.GetJunctionDetails()
+	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
 		return false, ""
@@ -57,7 +56,7 @@ func InitVRF() (success bool, addr string) {
 
 	podNumber := shared.GetPodState().LatestPodHeight
 
-	privateKeyStr := utilis.GetVRFPrivateKey()
+	privateKeyStr := GetVRFPrivateKey()
 	if privateKeyStr == "" {
 		return false, ""
 	}
@@ -67,7 +66,7 @@ func InitVRF() (success bool, addr string) {
 		logs.Log.Error("Error in loading private key: " + err.Error())
 		return false, ""
 	}
-	publicKey := utilis.GetVRFPubKey()
+	publicKey := GetVRFPubKey()
 	if publicKey == "" {
 		return false, ""
 	}
@@ -79,13 +78,13 @@ func InitVRF() (success bool, addr string) {
 		RequesterAddress: newTempAddr,
 	}
 
-	serializedRC, err := utilis.SerializeRequestCommitmentV2Plus(rc)
+	serializedRC, err := SerializeRequestCommitmentV2Plus(rc)
 	if err != nil {
 		logs.Log.Error(err.Error())
 		return false, ""
 	}
 
-	proof, vrfOutput, err := utilis.GenerateVRFProof(suite, privateKey, serializedRC, int64(rc.BlockNum))
+	proof, vrfOutput, err := GenerateVRFProof(suite, privateKey, serializedRC, int64(rc.BlockNum))
 	if err != nil {
 		fmt.Printf("Error generating unique proof: %v\n", err)
 		return false, ""

@@ -9,7 +9,6 @@ import (
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/airchains-network/decentralized-sequencer/types"
-	"github.com/airchains-network/decentralized-sequencer/utilis"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"math/rand"
@@ -65,7 +64,7 @@ func VRFInitiatedMsgHandler(dataByte []byte) {
 		time.Sleep(3 * time.Second)
 	}
 
-	_, _, accountPath, accountName, addressPrefix, tracks, err := utilis.GetJunctionDetails()
+	_, _, accountPath, accountName, addressPrefix, tracks, err := junction.GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
 		return
@@ -155,7 +154,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 	}
 
 	// check if this node is selected to submit pod & da
-	_, _, accountPath, accountName, addressPrefix, tracks, err := utilis.GetJunctionDetails()
+	_, _, accountPath, accountName, addressPrefix, tracks, err := junction.GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
 		return
@@ -246,7 +245,7 @@ func PodSubmittedMsgHandler(dataByte []byte) {
 	}
 
 	// check if this node is selected to verify pod
-	_, _, accountPath, accountName, addressPrefix, _, err := utilis.GetJunctionDetails()
+	_, _, accountPath, accountName, addressPrefix, _, err := junction.GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
 		return

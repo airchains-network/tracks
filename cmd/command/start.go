@@ -2,9 +2,7 @@ package command
 
 import (
 	"errors"
-	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/blocksync"
-	"github.com/airchains-network/decentralized-sequencer/config"
 	logger "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/node"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
@@ -12,8 +10,11 @@ import (
 )
 
 func initSequencer() error {
-	c := config.DefaultConfig()
-	fmt.Println(c)
+	c, err := shared.LoadConfig()
+	if err != nil {
+		logger.Log.Error("Failed to load conf info")
+		return err
+	}
 	if success := blocksync.InitDb(); !success {
 		return errors.New("failed to initialize database")
 	}
@@ -26,7 +27,7 @@ func initSequencer() error {
 		return errors.New("VRF keys not setup properly")
 	}
 
-	shared.NewNode(c)
+	shared.NewNode(&c)
 
 	return nil
 }
@@ -35,12 +36,14 @@ var StationCmd = &cobra.Command{
 	Use:   "start",
 	Short: "start the sequencer nodes",
 	Run: func(cmd *cobra.Command, args []string) {
+
 		if err := initSequencer(); err != nil {
-			logger.Log.Error("Error in initiating sequencer nodes")
 			logger.Log.Error(err.Error())
+			logger.Log.Error("Error in initiating sequencer nodes due to above error")
 			return
 		}
 
 		node.Start()
+
 	},
 }

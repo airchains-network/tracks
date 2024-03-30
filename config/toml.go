@@ -2,7 +2,7 @@ package config
 
 import (
 	"bytes"
-	"fmt"
+	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/utilis"
 	"path/filepath"
 	"strings"
@@ -26,25 +26,31 @@ func init() {
 
 /****** these are for production settings ***********/
 
-// EnsureRoot creates the root, config, and data directories if they don't exist,
+// CreateConfigFile creates the root, config, and data directories if they don't exist,
 // and panics if it fails.
-func EnsureRoot(rootDir string, config *Config) {
-	fmt.Println(rootDir)
+func CreateConfigFile(rootDir string, config *Config) (success bool) {
 	if err := utilis.EnsureDir(rootDir, DefaultDirPerm); err != nil {
-		panic(err.Error())
+		logs.Log.Error(err.Error())
+		return false
 	}
 	if err := utilis.EnsureDir(filepath.Join(rootDir, DefaultConfigDir), DefaultDirPerm); err != nil {
-		panic(err.Error())
+		logs.Log.Error(err.Error())
+		return false
 	}
 	if err := utilis.EnsureDir(filepath.Join(rootDir, DefaultDataDir), DefaultDirPerm); err != nil {
-		panic(err.Error())
+		logs.Log.Error(err.Error())
+		return false
 	}
 
-	configFilePath := filepath.Join(rootDir, defaultConfigFilePath)
+	configFilePath := filepath.Join(rootDir, DefaultConfigFilePath)
 
 	// Write default config file if missing.
 	if !utilis.FileExists(configFilePath) {
 		writeDefaultConfigFile(configFilePath, config)
+		return true
+	} else {
+		logs.Log.Error("Config file already exists at \n" + configFilePath + "\nPlease remove it and try again.")
+		return false
 	}
 }
 
@@ -89,24 +95,12 @@ tls_key_file = "{{ .RPC.TLSKeyFile }}"
 pprof_laddr = "{{ .RPC.PprofListenAddress }}"
 
 [p2p]
-laddr = "{{ .P2P.ListenAddress }}"
+root_dir = "{{ .RootDir }}"
+node_id = "{{ .P2P.NodeId }}"
+listen_address = "{{ .P2P.ListenAddress }}"
 external_address = "{{ .P2P.ExternalAddress }}"
 seeds = "{{ .P2P.Seeds }}"
 persistent_peers = "{{ .P2P.PersistentPeers }}"
-max_num_inbound_peers = {{ .P2P.MaxNumInboundPeers }}
-max_num_outbound_peers = {{ .P2P.MaxNumOutboundPeers }}
-unconditional_peer_ids = "{{ .P2P.UnconditionalPeerIDs }}"
-persistent_peers_max_dial_period = "{{ .P2P.PersistentPeersMaxDialPeriod }}"
-flush_throttle_timeout = "{{ .P2P.FlushThrottleTimeout }}"
-max_packet_msg_payload_size = {{ .P2P.MaxPacketMsgPayloadSize }}
-send_rate = {{ .P2P.SendRate }}
-recv_rate = {{ .P2P.RecvRate }}
-pex = {{ .P2P.PexReactor }}
-seed_mode = {{ .P2P.SeedMode }}
-private_peer_ids = "{{ .P2P.PrivatePeerIDs }}"
-allow_duplicate_ip = {{ .P2P.AllowDuplicateIP }}
-handshake_timeout = "{{ .P2P.HandshakeTimeout }}"
-dial_timeout = "{{ .P2P.DialTimeout }}"
 
 [statesync]
 enable = {{ .StateSync.Enable }}
@@ -135,16 +129,21 @@ double_sign_check_height = {{ .Consensus.DoubleSignCheckHeight }}
 [da]
 daType = "{{ .DA.DaType }}"
 daRPC = "{{ .DA.DaRPC }}"
+daKey = "{{ .DA.DaKey }}"
 
 # Station Configuration
 [station]
 stationType = "{{ .Station.StationType }}"
 stationRPC = "{{ .Station.StationRPC }}"
+stationAPI = "{{ .Station.StationAPI }}"
 
 # Junction Configuration
 [junction]
 junctionRPC =  "{{ .Junction.JunctionRPC }}"
 junctionAPI =  "{{ .Junction.JunctionAPI }}"
-# Add specific configuration keys and values for Junction here
-
+stationId = "{{ .Junction.StationId }}"
+VRFPrivateKey = "{{ .Junction.VRFPrivateKey }}"
+VRFPublicKey = "{{ .Junction.VRFPublicKey }}"
+AddressPrefix = "{{ .Junction.AddressPrefix }}"
+Tracks = {{ .Junction.Tracks }}
 `

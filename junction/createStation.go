@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/BurntSushi/toml"
+	"github.com/airchains-network/decentralized-sequencer/config"
 	junctionTypes "github.com/airchains-network/decentralized-sequencer/junction/types"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/types"
@@ -11,8 +13,21 @@ import (
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
+	"os"
+	"path/filepath"
+
 	"time"
 )
+
+type JunctionConfig struct {
+	JunctionRPC   string
+	JunctionAPI   string
+	StationID     string
+	VRFPrivateKey string
+	VRFPublicKey  string
+	AddressPrefix string
+	Tracks        []string
+}
 
 func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationInfo types.StationInfo, accountName, accountPath, jsonRPC string, verificationKey groth16.VerifyingKey, addressPrefix string, tracks []string) bool {
 
@@ -116,33 +131,72 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 	logs.Log.Info("tx hash: " + txResp.TxHash)
 
 	timestamp := time.Now().String()
-	successGenesis := utilis.CreateGenesisJson(stationInfo, verificationKey, stationId, tracks, tracksVotingPower, txResp.TxHash, timestamp, extraArg, newTempAddr)
+	successGenesis := CreateGenesisJson(stationInfo, verificationKey, stationId, tracks, tracksVotingPower, txResp.TxHash, timestamp, extraArg, newTempAddr)
 	if !successGenesis {
 		return false
 	}
 
 	// create VRF Keys
-	vrfPrivateKey, vrfPublicKey := utilis.NewKeyPair()
+	vrfPrivateKey, vrfPublicKey := NewKeyPair()
 	vrfPrivateKeyHex := vrfPrivateKey.String()
 	vrfPublicKeyHex := vrfPublicKey.String()
 	if vrfPrivateKeyHex != "" {
-		utilis.SetVRFPrivKey(vrfPrivateKeyHex)
+		SetVRFPrivKey(vrfPrivateKeyHex)
 	} else {
 		logs.Log.Error("Error saving VRF private key")
+		return false
 	}
 	if vrfPublicKeyHex != "" {
-		utilis.SetVRFPubKey(vrfPublicKeyHex)
+		SetVRFPubKey(vrfPublicKeyHex)
 	} else {
 		logs.Log.Error("Error saving VRF public key")
+		return false
 	}
 	logs.Log.Info("Successfully Created VRF public and private Keys")
 
-	success = utilis.SetJunctionDetails(jsonRPC, stationId, accountPath, accountName, addressPrefix, tracks)
-	if !success {
-		logs.Log.Error("Failed to create data/vrfPubKey.txt properly")
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		logs.Log.Error("Error in getting home dir path: " + err.Error())
 		return false
 	}
-	logs.Log.Info("data/vrfPubKey.txt Created")
+
+	ConfigFilePath := filepath.Join(homeDir, config.DefaultTracksDir, config.DefaultConfigDir, config.DefaultConfigFileName)
+	bytes, err := os.ReadFile(ConfigFilePath)
+	if err != nil {
+		logs.Log.Error("Error reading sequencer.toml")
+		return false
+
+	}
+
+	var conf config.Config // JunctionConfig
+	err = toml.Unmarshal(bytes, &conf)
+	if err != nil {
+		logs.Log.Error("error in unmarshling file")
+		return false
+	}
+
+	// Update the values
+	conf.Junction.JunctionRPC = jsonRPC
+	conf.Junction.JunctionAPI = ""
+	conf.Junction.StationId = stationId
+	conf.Junction.VRFPrivateKey = vrfPrivateKeyHex
+	conf.Junction.VRFPublicKey = vrfPublicKeyHex
+	conf.Junction.AddressPrefix = "air"
+	conf.Junction.AccountPath = accountPath
+	conf.Junction.AccountName = accountName
+	conf.Junction.Tracks = tracks
+
+	// Marshal the struct to TOML
+	f, err := os.Create(ConfigFilePath)
+	if err != nil {
+		logs.Log.Error("Error creating file")
+		return false
+	}
+	defer f.Close()
+	newData := toml.NewEncoder(f)
+	if err := newData.Encode(conf); err != nil {
+	}
 
 	return true
+
 }

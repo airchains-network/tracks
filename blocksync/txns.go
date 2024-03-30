@@ -40,7 +40,7 @@ func insertTxn(db *leveldb.DB, txns stationTypes.TransactionStruct, transactionN
 func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *leveldb.DB, transactionHash string, blockNumber int, blockHash string) {
 	blockNumberUint64, err := strconv.ParseUint(strconv.Itoa(blockNumber), 10, 64)
 	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error parsing block number to uint64:", err))
+		logs.Log.Error(fmt.Sprintf("error parsing block number to uint64:", err))
 		time.Sleep(2 * time.Second)
 		logs.Log.Info("Retrying in 2s...")
 		StoreEVMTransactions(client, ctx, ldt, transactionHash, blockNumber, blockHash)
@@ -77,6 +77,13 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 
 	v, r, s := tx.RawSignatureValues()
 
+	var toAddress string
+	if tx.To() == nil {
+		toAddress = "0x000000000000000000000000000000000000000000"
+	} else {
+		toAddress = tx.To().Hex()
+	}
+
 	txData := stationTypes.TransactionStruct{
 		BlockHash:        blockHash,
 		BlockNumber:      blockNumberUint64,
@@ -88,7 +95,7 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 		Nonce:            utilis.ToString(tx.Nonce()),
 		R:                r.String(),
 		S:                s.String(),
-		To:               tx.To().Hex(),
+		To:               toAddress,
 		TransactionIndex: utilis.ToString(receipt.TransactionIndex),
 		Type:             fmt.Sprintf("%d", tx.Type()),
 		V:                v.String(),

@@ -14,7 +14,7 @@ import (
 )
 
 func ValidateVRF(addr string) bool {
-	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := utilis.GetJunctionDetails()
+	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
 		return false
@@ -34,7 +34,7 @@ func ValidateVRF(addr string) bool {
 		RequesterAddress: addr,
 	}
 
-	serializedRC, err := utilis.SerializeRequestCommitmentV2Plus(rc)
+	serializedRC, err := SerializeRequestCommitmentV2Plus(rc)
 	if err != nil {
 		logs.Log.Error(err.Error())
 		return false

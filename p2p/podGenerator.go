@@ -35,14 +35,15 @@ func BatchGeneration(wg *sync.WaitGroup) {
 
 func GenerateUnverifiedPods() {
 	fmt.Println("generating new pod")
-	//incomingPeers = NewPeerList() // reset the incoming peers
-	//peerListLock.Lock()
-	//peerListLocked = true
+
 	lds := shared.Node.NodeConnections.GetStaticDatabaseConnection()
 	ldt := shared.Node.NodeConnections.GetTxnDatabaseConnection()
+	fmt.Println(lds)
+
 	fmt.Println("1")
 	ConfirmendTransactionIndex, err := lds.Get([]byte("batchStartIndex"), nil)
 	if err != nil {
+		logs.Log.Warn("ConfirmendTransactionIndex not found in static db")
 		err = lds.Put([]byte("batchStartIndex"), []byte("0"), nil)
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in saving batchStartIndex in static db : %s", err.Error()))
@@ -206,7 +207,7 @@ func GenerateUnverifiedPods() {
 			logs.Log.Info("VRF initiated")
 
 			// get own address
-			_, _, accountPath, accountName, addressPrefix, tracks, err := utilis.GetJunctionDetails()
+			_, _, accountPath, accountName, addressPrefix, tracks, err := junction.GetJunctionDetails()
 			if err != nil {
 				logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
 				return
@@ -384,8 +385,9 @@ func createPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness [
 	batch.Messages = Messages
 	batch.TransactionNonces = TransactionNonces
 	batch.AccountNonces = AccountNonces
-
+	fmt.Println("batch data", batch)
 	witnessVector, currentStatusHash, proofByte, pkErr := v1.GenerateProof(batch, limitInt+1)
+	fmt.Println("Witness Vector: ", currentStatusHash)
 	if pkErr != nil {
 		logs.Log.Error(fmt.Sprintf("Error in generating proof : %s", pkErr.Error()))
 		return nil, nil, nil, nil, pkErr

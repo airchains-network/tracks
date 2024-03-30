@@ -1,8 +1,7 @@
 package config
 
 import (
-	logs "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/utilis"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"net/http"
 	"path/filepath"
 	"sync"
@@ -10,15 +9,7 @@ import (
 )
 
 const (
-	StationRPC           = "http://localhost:8545" //Station RPC
-	StationID            = "1"                     //Station Unique ID
-	StationName          = "Station1"              // NAME OF THE STATION
-	StationType          = "1"                     //EVM, SVM ,COSMWASM
-	PODSize              = 25                      // P0D Size
-	StationBlockDuration = 5                       // In Seconds
-	JunctionRPC          = "1"                     // Junction RPC
-	DAType               = "mock"                  // Data Availability Type  : -Eigen , Avail , Celestia,Mock
-	DARpc                = "localhost:8080"        // Data Availability RPC
+	PODSize = 25 // P0D Size
 )
 
 const (
@@ -32,8 +23,8 @@ const (
 )
 
 var (
-	defaultConfigFilePath  = filepath.Join(DefaultConfigDir, DefaultConfigFileName)
-	defaultGenesisFilePath = filepath.Join(DefaultConfigDir, DefaultGenesisFileName)
+	DefaultConfigFilePath  = filepath.Join(DefaultConfigDir, DefaultConfigFileName)
+	DefaultGenesisFilePath = filepath.Join(DefaultTracksDir, DefaultConfigDir, DefaultGenesisFileName)
 )
 
 type Config struct {
@@ -142,43 +133,19 @@ func DefaultRPCConfig() *RPCConfig {
 
 // P2P COnfiguration
 type P2PConfig struct {
-	RootDir                      string        `mapstructure:"home"`
-	ListenAddress                string        `mapstructure:"laddr"`
-	ExternalAddress              string        `mapstructure:"external_address"`
-	Seeds                        string        `mapstructure:"seeds"`
-	PersistentPeers              string        `mapstructure:"persistent_peers"`
-	MaxNumInboundPeers           int           `mapstructure:"max_num_inbound_peers"`
-	MaxNumOutboundPeers          int           `mapstructure:"max_num_outbound_peers"`
-	UnconditionalPeerIDs         string        `mapstructure:"unconditional_peer_ids"`
-	PersistentPeersMaxDialPeriod time.Duration `mapstructure:"persistent_peers_max_dial_period"`
-	FlushThrottleTimeout         time.Duration `mapstructure:"flush_throttle_timeout"`
-	MaxPacketMsgPayloadSize      int           `mapstructure:"max_packet_msg_payload_size"`
-	SendRate                     int64         `mapstructure:"send_rate"`
-	RecvRate                     int64         `mapstructure:"recv_rate"`
-	PexReactor                   bool          `mapstructure:"pex"`
-	SeedMode                     bool          `mapstructure:"seed_mode"`
-	PrivatePeerIDs               string        `mapstructure:"private_peer_ids"`
-	AllowDuplicateIP             bool          `mapstructure:"allow_duplicate_ip"`
-	HandshakeTimeout             time.Duration `mapstructure:"handshake_timeout"`
-	DialTimeout                  time.Duration `mapstructure:"dial_timeout"`
+	RootDir         string  `mapstructure:"home"`
+	NodeId          peer.ID `mapstructure:"node_id"`
+	ListenAddress   string  `mapstructure:"laddr"`
+	ExternalAddress string  `mapstructure:"external_address"`
+	Seeds           string  `mapstructure:"seeds"`
+	PersistentPeers string  `mapstructure:"persistent_peers"`
 }
 
 func DefaultP2PConfig() *P2PConfig {
 	return &P2PConfig{
-		ListenAddress:                "tcp://0.0.0.0:2300",
-		ExternalAddress:              "", // Empty means it will be set automatically.
-		MaxNumInboundPeers:           40,
-		MaxNumOutboundPeers:          10,
-		PersistentPeersMaxDialPeriod: 0, // No delay by default, can use exponential backoff.
-		FlushThrottleTimeout:         100 * time.Millisecond,
-		MaxPacketMsgPayloadSize:      1024,      // 1 KB
-		SendRate:                     5_120_000, // 5 MB/s
-		RecvRate:                     5_120_000, // 5 MB/s
-		PexReactor:                   true,
-		SeedMode:                     false,
-		AllowDuplicateIP:             false,
-		HandshakeTimeout:             20 * time.Second,
-		DialTimeout:                  3 * time.Second,
+		ListenAddress:   "tcp://0.0.0.0:2300",
+		ExternalAddress: "",
+		NodeId:          "",
 	}
 }
 
@@ -254,18 +221,21 @@ func DefaultConsensusConfig() *ConsensusConfig {
 type DAConfig struct {
 	DaType string
 	DaRPC  string
+	DaKey  string
 }
 
 func DefaultDAConfig() *DAConfig {
 	return &DAConfig{
-		DaType: "mockDa",
+		DaType: "",
 		DaRPC:  "",
+		DaKey:  "",
 	}
 }
 
 type StationConfig struct {
 	StationType string
 	StationRPC  string
+	StationAPI  string
 }
 
 // DefaultStationConfig returns a default configuration for the station.
@@ -273,6 +243,7 @@ func DefaultStationConfig() *StationConfig {
 	return &StationConfig{
 		StationType: "",
 		StationRPC:  "",
+		StationAPI:  "",
 	}
 }
 
@@ -282,25 +253,32 @@ type JunctionConfig struct {
 	StationId     string
 	VRFPrivateKey string
 	VRFPublicKey  string
+	AddressPrefix string
+	AccountName   string
+	AccountPath   string
+	Tracks        []string
 }
 
 // DefaultJunctionConfig returns a default configuration for the junction.
 func DefaultJunctionConfig() *JunctionConfig {
-	jsonRpc, stationId, _, _, _, _, err := utilis.GetJunctionDetails()
-	if err != nil {
-		logs.Log.Error("error in getting junctionDetails.json: " + err.Error())
-		return nil
-	}
 
-	VRFPrivateKey := utilis.GetVRFPrivateKey()
-	VRFPublicKey := utilis.GetVRFPubKey()
+	jsonRpc := ""
+	JunctionAPI := ""
+	stationId := ""
+	VRFPrivateKey := ""
+	VRFPublicKey := ""
+	AddressPrefix := "air"
+	var Tracks []string
 
 	return &JunctionConfig{
 		JunctionRPC:   jsonRpc,
-		JunctionAPI:   "http://localhost:1317",
+		JunctionAPI:   JunctionAPI,
 		StationId:     stationId,
 		VRFPrivateKey: VRFPrivateKey,
 		VRFPublicKey:  VRFPublicKey,
+		AddressPrefix: AddressPrefix,
+		AccountName:   "",
+		AccountPath:   "",
+		Tracks:        Tracks,
 	}
-
 }

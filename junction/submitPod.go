@@ -13,7 +13,7 @@ import (
 )
 
 func SubmitCurrentPod() (success bool) {
-	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := utilis.GetJunctionDetails()
+	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := GetJunctionDetails()
 	_ = tracks
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())

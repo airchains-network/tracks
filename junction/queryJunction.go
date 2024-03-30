@@ -5,13 +5,12 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/junction/types"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
-	"github.com/airchains-network/decentralized-sequencer/utilis"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 )
 
 func QueryVRF() (vrfRecord *types.VrfRecord) {
 
-	jsonRpc, stationId, _, _, _, _, err := utilis.GetJunctionDetails()
+	jsonRpc, stationId, _, _, _, _, err := GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
 		return nil
@@ -41,7 +40,7 @@ func QueryVRF() (vrfRecord *types.VrfRecord) {
 
 func QueryPod(podNumber uint64) (pod *types.Pods) {
 
-	jsonRpc, stationId, _, _, _, _, err := utilis.GetJunctionDetails()
+	jsonRpc, stationId, _, _, _, _, err := GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
 		return nil

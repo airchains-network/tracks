@@ -1,4 +1,4 @@
-package utilis
+package junction
 
 import (
 	"bytes"
@@ -6,8 +6,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/airchains-network/decentralized-sequencer/config"
 	junctionTypes "github.com/airchains-network/decentralized-sequencer/junction/types"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/consensys/gnark/backend/groth16"
 	"go.dedis.ch/kyber/v3"
@@ -15,6 +17,7 @@ import (
 	"io"
 	"math/big"
 	"os"
+	"path/filepath"
 )
 
 func CreateGenesisJson(stationInfo types.StationInfo, verificationKey groth16.VerifyingKey, stationId string, tracks []string, tracksVotingPower []uint64, txHash string, transactionTime string, extraArg junctionTypes.StationArg, creator string) (success bool) {
@@ -34,20 +37,25 @@ func CreateGenesisJson(stationInfo types.StationInfo, verificationKey groth16.Ve
 	// Marshal the data into JSON
 	jsonBytes, err := json.MarshalIndent(genesisData, "", "    ")
 	if err != nil {
-		//logs.Log.Error("Error marshaling to JSON:" + err.Error())
+		logs.Log.Error("Error marshaling to JSON:" + err.Error())
 		return false
 	}
 
-	// Specify the file path and name
-	filePath := "data/genesis.json"
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		logs.Log.Error("Error in getting home dir path: " + err.Error())
+		return false
+	}
+
+	GenesisFilePath := filepath.Join(homeDir, config.DefaultGenesisFilePath)
 
 	// Write the JSON data to a file
-	err = os.WriteFile(filePath, jsonBytes, 0644)
+	err = os.WriteFile(GenesisFilePath, jsonBytes, 0644)
 	if err != nil {
-		//logs.Log.Error("Error writing JSON to file:" + err.Error())
+		logs.Log.Error("Error writing JSON to file:" + err.Error())
 		return false
 	} else {
-		logs.Log.Info(filePath + " created")
+		logs.Log.Info(GenesisFilePath + " created")
 	}
 
 	return true
@@ -67,8 +75,14 @@ func NewKeyPair() (privateKeyX kyber.Scalar, publicKeyX kyber.Point) {
 }
 
 func SetVRFPubKey(pubKey string) {
-	// Create or open the file chainId.txt
-	file, err := os.Create("data/vrfPubKey.txt")
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		logs.Log.Error("Error in getting home dir path: " + err.Error())
+	}
+
+	ConfigFilePath := filepath.Join(homeDir, config.DefaultTracksDir, config.DefaultConfigDir)
+	VRFPubKeyPath := filepath.Join(ConfigFilePath, "vrfPubKey.txt")
+	file, err := os.Create(VRFPubKeyPath)
 	if err != nil {
 		// Handle the error if the file cannot be created
 		logs.Log.Error(fmt.Sprintf("error creating vrfPubKey.txt: %v", err))
@@ -97,8 +111,13 @@ func SetVRFPubKey(pubKey string) {
 }
 
 func SetVRFPrivKey(privateKey string) {
-	// Create or open the file chainId.txt
-	file, err := os.Create("data/vrfPrivKey.txt")
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		logs.Log.Error("Error in getting home dir path: " + err.Error())
+	}
+	ConfigFilePath := filepath.Join(homeDir, config.DefaultTracksDir, config.DefaultConfigDir)
+	VRFPrivKeyPath := filepath.Join(ConfigFilePath, "vrfPrivKey.txt")
+	file, err := os.Create(VRFPrivKeyPath)
 	if err != nil {
 		// Handle the error if the file cannot be created
 		logs.Log.Error(fmt.Sprintf("error creating vrfPrivKey.txt: %v", err))
@@ -127,8 +146,14 @@ func SetVRFPrivKey(privateKey string) {
 }
 
 func GetVRFPrivateKey() (privateKey string) {
-	// get private Key
-	file, err := os.Open("data/vrfPrivKey.txt")
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		logs.Log.Error("Error in getting home dir path: " + err.Error())
+	}
+
+	ConfigFilePath := filepath.Join(homeDir, config.DefaultTracksDir, config.DefaultConfigDir)
+	VRFPrivKeyPath := filepath.Join(ConfigFilePath, "vrfPrivKey.txt")
+	file, err := os.Open(VRFPrivKeyPath)
 	if err != nil {
 		logs.Log.Error("Can not get VRF private key: " + err.Error())
 		return ""
@@ -151,8 +176,17 @@ func GetVRFPrivateKey() (privateKey string) {
 }
 
 func GetVRFPubKey() (pubKey string) {
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		logs.Log.Error("Error in getting home dir path: " + err.Error())
+	}
+
+	ConfigFilePath := filepath.Join(homeDir, config.DefaultTracksDir, config.DefaultConfigDir)
+	VRFPubKeyPath := filepath.Join(ConfigFilePath, "vrfPubKey.txt")
+
 	// get private Key
-	file, err := os.Open("data/vrfPubKey.txt")
+	file, err := os.Open(VRFPubKeyPath)
 	if err != nil {
 		logs.Log.Error("Can not get VRF public key: " + err.Error())
 		return ""
@@ -235,76 +269,45 @@ func GenerateVRFProof(suite kyber.Group, privateKey kyber.Scalar, data []byte, n
 	return proof, vrfOutput, nil
 }
 
-type JunctionDetails struct {
-	JsonRPC       string
-	StationId     string
-	AccountPath   string
-	AccountName   string
-	AddressPrefix string
-	Tracks        []string
-}
-
-func SetJunctionDetails(JsonRPC, StationId, AccountPath, AccountName, AddressPrefix string, Tracks []string) (success bool) {
-	stationData := JunctionDetails{
-		JsonRPC:       JsonRPC,
-		StationId:     StationId,
-		AccountPath:   AccountPath,
-		AccountName:   AccountName,
-		AddressPrefix: AddressPrefix,
-		Tracks:        Tracks,
-	}
-
-	// Marshal the data into JSON
-	stationDataBytes, err := json.MarshalIndent(stationData, "", "    ")
-	if err != nil {
-		//logs.Log.Error("Error marshaling to JSON:" + err.Error())
-		return false
-	}
-
-	// Specify the file path and name
-	filePath := "data/stationData.json"
-
-	// Write the JSON data to a file
-	err = os.WriteFile(filePath, stationDataBytes, 0644)
-	if err != nil {
-		logs.Log.Error("Error writing JSON to file:" + err.Error())
-		return false
-	} else {
-		logs.Log.Info(filePath + " created")
-	}
-
-	return true
-}
-
 func GetJunctionDetails() (JsonRPC, StationId, AccountPath, AccountName, AddressPrefix string, Tracks []string, err error) {
 	// Specify the file path and name
-	filePath := "data/stationData.json"
 
-	// Read the JSON data from the file
-	jsonBytes, err := os.ReadFile(filePath)
+	baseConfig, err := shared.LoadConfig()
 	if err != nil {
-		logs.Log.Error("Error reading JSON file:" + err.Error())
-		return "", "", "", "", "", Tracks, err
+		errorMsg := fmt.Errorf("error in aloading config file")
+		return "", "", "", "", "", Tracks, errorMsg
 	}
 
-	// Unmarshal the JSON data into GenesisDataType struct
-	var junctionData JunctionDetails
-	err = json.Unmarshal(jsonBytes, &junctionData)
-	if err != nil {
-		logs.Log.Error("Error unmarshaling JSON:" + err.Error())
-		return "", "", "", "", "", Tracks, err
+	JsonRPC = baseConfig.Junction.JunctionRPC
+	StationId = baseConfig.Junction.StationId
+	AccountPath = baseConfig.Junction.AccountPath
+	AccountName = baseConfig.Junction.AccountName
+	AddressPrefix = baseConfig.Junction.AddressPrefix
+	Tracks = baseConfig.Junction.Tracks
+
+	if JsonRPC == "" {
+		errorMsg := fmt.Errorf("JsonRPC should not be empty at config file")
+		return "", "", "", "", "", Tracks, errorMsg
+	}
+	if StationId == "" {
+		errorMsg := fmt.Errorf("StationId should not be empty at config file. Create station first")
+		return "", "", "", "", "", Tracks, errorMsg
+	}
+	if AccountPath == "" {
+		errorMsg := fmt.Errorf("AccountPath should not be empty at config file")
+		return "", "", "", "", "", Tracks, errorMsg
+	}
+	if AccountName == "" {
+		errorMsg := fmt.Errorf("AccountName should not be empty at config file")
+		return "", "", "", "", "", Tracks, errorMsg
+	}
+	if AddressPrefix == "" {
+		errorMsg := fmt.Errorf("AddressPrefix should not be empty at config file")
+		return "", "", "", "", "", Tracks, errorMsg
 	}
 
-	JsonRPC = junctionData.JsonRPC
-	StationId = junctionData.StationId
-	AccountPath = junctionData.AccountPath
-	AccountName = junctionData.AccountName
-	AddressPrefix = junctionData.AddressPrefix
-	Tracks = junctionData.Tracks
-
-	if JsonRPC == "" || StationId == "" || AccountPath == "" || AccountName == "" {
-		logs.Log.Error("Some fields are empty in data/stationData.json")
-		errorMsg := fmt.Errorf("Some fields are empty in data/stationData.json")
+	if len(Tracks) == 0 {
+		errorMsg := fmt.Errorf("tracks filed should not be empty in config file")
 		return "", "", "", "", "", Tracks, errorMsg
 	}
 
