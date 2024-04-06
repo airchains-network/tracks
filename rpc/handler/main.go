@@ -1,48 +1,45 @@
 package handler
 
 import (
-	"github.com/airchains-network/decentralized-sequencer/rpc/model"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
-func RouterHandler(c *gin.Context) {
+// Adding the 'RouterHandler' function explained earlier here:
 
-	// Parse the request body into a struct
-	var requestBody *model.RequestBody
+func RouterHandler(c *gin.Context) {
+	Log := logrus.New()
+
+	var requestBody *RequestBody
 	err := c.BindJSON(&requestBody)
 	if err != nil {
-		respondWithError(c, "Invalid Request Body")
+		respondWithError(c, Log, 1, "Invalid Request Body", 500)
 		return
 	}
 
 	JsonRPC := requestBody.JsonRPC
-	Method := requestBody.Method
-	Params := requestBody.Params
 	ID := requestBody.ID
 
 	if JsonRPC != "2.0" {
-		respondWithError(c, "Invalid JsonRPC ID, it should be 2.0")
+		respondWithError(c, Log, 2, "Invalid JsonRPC ID, it should be 2.0", 500)
 		return
 	}
 	if ID != "1" {
-		respondWithError(c, "ID should be 1")
+		respondWithError(c, Log, 3, "ID should be 1", 500)
 		return
 	}
 
-	switch Method {
+	handler := NewHandler(Log)
+
+	switch requestBody.Method {
 	case "tracks_getLatestPod":
-		HandleGetLatestPod(c, Params)
+		handler.HandleGetLatestPod(c)
 	case "tracks_batchCount":
-		HandleGetBatchCount(c, Params)
+		HandleGetBatchCount(c, requestBody.Params) // Assuming this is defined
 	case "tracks_getPodByNumber":
-		HandleGetPodByNumber(c, Params)
+		HandleGetPodByNumber(c, requestBody.Params) // Assuming this is defined
 	default:
-
-		respondWithError(c, "No method exists with name "+Method)
+		errorMsg := "No method exists with the name " + requestBody.Method
+		respondWithError(c, Log, 4, errorMsg, 404)
 	}
-
-	// POST Request's:-
-	// '{"jsonrpc":"2.0","method":"tracks_getLatestPod","params":[],"id":1}'
-	// '{"jsonrpc":"2.0","method":"tracks_batchCount","params":[],"id":1}'
-	// '{"jsonrpc":"2.0","method":"tracks_getPodByNumber","params":["0x123ab"],"id":1}'
 }

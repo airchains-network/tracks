@@ -9,10 +9,7 @@ import (
 )
 
 const (
-	PODSize = 25 // P0D Size
-)
-
-const (
+	PODSize                       = 25 // P0D Size
 	defaultMoniker                = "tracks"
 	DefaultTracksDir              = ".tracks"
 	DefaultConfigDir              = "config"
@@ -61,13 +58,13 @@ func (cfg *Config) SetRoot(root string) *Config {
 }
 
 type BaseConfig struct {
-	Version     string `mapstructure:"version"`
-	RootDir     string `mapstructure:"home"`
-	ProxyApp    string `mapstructure:"proxy_app"`
-	Moniker     string `mapstructure:"moniker"`
-	DBBackend   string `mapstructure:"db_backend"`
-	DBPath      string `mapstructure:"db_dir"`
-	FilterPeers bool   `mapstructure:"filter_peers"`
+	Version     string
+	RootDir     string
+	ProxyApp    string
+	Moniker     string
+	DBBackend   string
+	DBPath      string
+	FilterPeers bool
 }
 
 func DefaultBaseConfig() BaseConfig {
@@ -82,26 +79,26 @@ func DefaultBaseConfig() BaseConfig {
 
 type RPCConfig struct {
 	mu                        sync.RWMutex
-	RootDir                   string        `mapstructure:"home"`
-	ListenAddress             string        `mapstructure:"laddr"`
-	CORSAllowedOrigins        []string      `mapstructure:"cors_allowed_origins"`
-	CORSAllowedMethods        []string      `mapstructure:"cors_allowed_methods"`
-	CORSAllowedHeaders        []string      `mapstructure:"cors_allowed_headers"`
-	GRPCListenAddress         string        `mapstructure:"grpc_laddr"`
-	GRPCMaxOpenConnections    int           `mapstructure:"grpc_max_open_connections"`
-	Unsafe                    bool          `mapstructure:"unsafe"`
-	MaxOpenConnections        int           `mapstructure:"max_open_connections"`
-	MaxSubscriptionClients    int           `mapstructure:"max_subscription_clients"`
-	MaxSubscriptionsPerClient int           `mapstructure:"max_subscriptions_per_client"`
-	SubscriptionBufferSize    int           `mapstructure:"experimental_subscription_buffer_size"`
-	WebSocketWriteBufferSize  int           `mapstructure:"experimental_websocket_write_buffer_size"`
-	CloseOnSlowClient         bool          `mapstructure:"experimental_close_on_slow_client"`
-	TimeoutBroadcastTxCommit  time.Duration `mapstructure:"timeout_broadcast_tx_commit"`
-	MaxBodyBytes              int64         `mapstructure:"max_body_bytes"`
-	MaxHeaderBytes            int           `mapstructure:"max_header_bytes"`
-	TLSCertFile               string        `mapstructure:"tls_cert_file"`
-	TLSKeyFile                string        `mapstructure:"tls_key_file"`
-	PprofListenAddress        string        `mapstructure:"pprof_laddr"`
+	RootDir                   string
+	ListenAddress             string
+	CORSAllowedOrigins        []string
+	CORSAllowedMethods        []string
+	CORSAllowedHeaders        []string
+	GRPCListenAddress         string
+	GRPCMaxOpenConnections    int
+	Unsafe                    bool
+	MaxOpenConnections        int
+	MaxSubscriptionClients    int
+	MaxSubscriptionsPerClient int
+	SubscriptionBufferSize    int
+	WebSocketWriteBufferSize  int
+	CloseOnSlowClient         bool
+	TimeoutBroadcastTxCommit  time.Duration
+	MaxBodyBytes              int64
+	MaxHeaderBytes            int
+	TLSCertFile               string
+	TLSKeyFile                string
+	PprofListenAddress        string
 }
 
 // DefaultRPCConfig returns a default configuration for the RPC server
@@ -133,12 +130,13 @@ func DefaultRPCConfig() *RPCConfig {
 
 // P2P COnfiguration
 type P2PConfig struct {
-	RootDir         string  `mapstructure:"home"`
-	NodeId          peer.ID `mapstructure:"node_id"`
-	ListenAddress   string  `mapstructure:"laddr"`
-	ExternalAddress string  `mapstructure:"external_address"`
-	Seeds           string  `mapstructure:"seeds"`
-	PersistentPeers string  `mapstructure:"persistent_peers"`
+	RootDir                 string
+	NodeId                  peer.ID
+	ListenAddress           string
+	ExternalAddress         string
+	Seeds                   string
+	PersistentPeers         []string
+	CurrentlyConnectedPeers []string
 }
 
 func DefaultP2PConfig() *P2PConfig {
@@ -146,20 +144,21 @@ func DefaultP2PConfig() *P2PConfig {
 		ListenAddress:   "tcp://0.0.0.0:2300",
 		ExternalAddress: "",
 		NodeId:          "",
+		PersistentPeers: []string{},
 	}
 }
 
 // StateSyncConfig holds configuration settings related to syncing pods.
 type StateSyncConfig struct {
-	Enable            bool          `mapstructure:"enable"`              // Enable or disable pod syncing
-	TempDir           string        `mapstructure:"temp_dir"`            // Directory for temporary storage during pod syncing
-	RPCServers        []string      `mapstructure:"rpc_servers"`         // List of RPC servers for fetching pods
-	PodTrustPeriod    time.Duration `mapstructure:"pod_trust_period"`    // Period for which a pod is considered trusted
-	PodTrustHeight    int64         `mapstructure:"pod_trust_height"`    // Height at which the pod's trust starts
-	PodTrustHash      string        `mapstructure:"pod_trust_hash"`      // Hash of a trusted pod to start syncing from
-	PodDiscoveryTime  time.Duration `mapstructure:"pod_discovery_time"`  // Time for discovering new pods
-	PodRequestTimeout time.Duration `mapstructure:"pod_request_timeout"` // Timeout for pod requests
-	PodChunkFetchers  int32         `mapstructure:"pod_chunk_fetchers"`  // Number of concurrent fetchers for pod chunks
+	Enable            bool          // Enable or disable pod syncing
+	TempDir           string        // Directory for temporary storage during pod syncing
+	RPCServers        []string      // List of RPC servers for fetching pods
+	PodTrustPeriod    time.Duration // Period for which a pod is considered trusted
+	PodTrustHeight    int64         // Height at which the pod's trust starts
+	PodTrustHash      string        // Hash of a trusted pod to start syncing from
+	PodDiscoveryTime  time.Duration // Time for discovering new pods
+	PodRequestTimeout time.Duration // Timeout for pod requests
+	PodChunkFetchers  int32         // Number of concurrent fetchers for pod chunks
 }
 
 // NewStateSyncConfig creates a new instance of StateSyncConfig with default values.
@@ -182,22 +181,17 @@ type ConsensusConfig struct {
 	RootDir string `mapstructure:"home"`
 
 	// Timing configurations for the pod consensus process
-	TimeoutPropose        time.Duration `mapstructure:"timeout_propose"`
-	TimeoutProposeDelta   time.Duration `mapstructure:"timeout_propose_delta"`
-	TimeoutPrevote        time.Duration `mapstructure:"timeout_prevote"`
-	TimeoutPrevoteDelta   time.Duration `mapstructure:"timeout_prevote_delta"`
-	TimeoutPrecommit      time.Duration `mapstructure:"timeout_precommit"`
-	TimeoutPrecommitDelta time.Duration `mapstructure:"timeout_precommit_delta"`
-	TimeoutCommit         time.Duration `mapstructure:"timeout_commit"`
-
-	// Configuration to skip the commit timeout for faster consensus on pods
-	SkipTimeoutCommit bool `mapstructure:"skip_timeout_commit"`
-
-	// Pod-specific configurations
-	ValidatePods               bool          `mapstructure:"validate_pods"`                 // Whether to validate pods before accepting them
-	PodValidationSleepDuration time.Duration `mapstructure:"pod_validation_sleep_duration"` // Sleep duration between pod validations
-
-	DoubleSignCheckHeight int64 `mapstructure:"double_sign_check_height"` // Height to check for double signing
+	TimeoutPropose             time.Duration
+	TimeoutProposeDelta        time.Duration
+	TimeoutPrevote             time.Duration
+	TimeoutPrevoteDelta        time.Duration
+	TimeoutPrecommit           time.Duration
+	TimeoutPrecommitDelta      time.Duration
+	TimeoutCommit              time.Duration
+	SkipTimeoutCommit          bool
+	ValidatePods               bool
+	PodValidationSleepDuration time.Duration
+	DoubleSignCheckHeight      int64
 }
 
 // DefaultConsensusConfig returns a default configuration for the consensus service.

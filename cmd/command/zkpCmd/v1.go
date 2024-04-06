@@ -5,11 +5,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func runV1ZKPCommand(_ *cobra.Command, _ []string) {
+	v1.CreateVkPkNew()
+}
+
 var V1ZKP = &cobra.Command{
 	Use:   "v1",
-	Short: "initialize the version 1 zero knowledge prover",
-	Run: func(cmd *cobra.Command, args []string) {
-		v1.CreateVkPkNew()
-
-	},
+	Short: "Initialize the Version 1 Zero Knowledge Prover",
+	Run:   runV1ZKPCommand,
 }

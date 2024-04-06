@@ -6,7 +6,7 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/junction/types"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
-	"github.com/airchains-network/decentralized-sequencer/utilis"
+	utilis "github.com/airchains-network/decentralized-sequencer/utils"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 	"time"
@@ -60,7 +60,8 @@ func SubmitCurrentPod() (success bool) {
 	ctx := context.Background()
 	gas := utilis.GenerateRandomWithFavour(510, 1000, [2]int{520, 700}, 0.7)
 	gasFees := fmt.Sprintf("%damf", gas)
-	logs.Log.Warn(fmt.Sprintf("Gas Fees Used for submitPod transaction is: %s\n", gasFees))
+
+	logs.Log.Info(fmt.Sprintf("Gas Fees Used for submitPod transaction is: %s\n", gasFees))
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
 		logs.Log.Error("Error creating account client")

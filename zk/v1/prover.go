@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/blocksync"
 	"github.com/airchains-network/decentralized-sequencer/config"
+	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
@@ -108,9 +109,8 @@ func GenerateVerificationKey() (groth16.ProvingKey, groth16.VerifyingKey, error)
 }
 
 func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []byte, error) {
-
 	ccs := ComputeCCS()
-	fmt.Println(batchNum)
+	logs.Log.Info("Generating proof for batch number:" + fmt.Sprintf("%d", batchNum))
 	var transactions []TransactionSecond
 
 	for i := 0; i < config.PODSize; i++ {
@@ -133,18 +133,16 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		return nil, "", nil, err
 	}
 
-	pk, err := ReadProvingKeyFromFile("provingKey.txt")
+	//pk, err := ReadProvingKeyFromFile("provingKey.txt")
+	homeDir, _ := os.UserHomeDir()
+	provingKeyFile := homeDir + "/.tracks/config/provingKey.txt"
+	pk, err := ReadProvingKeyFromFile(provingKeyFile)
 
 	if err != nil {
 		fmt.Println("Error reading proving key:", err)
 		return nil, "", nil, err
 	}
 
-	//snarkField, err := twistededwards.GetSnarkField(tedwards.BLS12_381)
-	//if err != nil {
-	//	fmt.Println("Error getting snark field")
-	//	return nil, "", nil, err
-	//}
 	var inputValueLength int
 
 	fromLength := len(inputData.From)
@@ -253,7 +251,12 @@ func ReadProvingKeyFromFile(filename string) (groth16.ProvingKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
 
 	pk := groth16.NewProvingKey(ecc.BLS12_381)
 	_, err = pk.ReadFrom(file)

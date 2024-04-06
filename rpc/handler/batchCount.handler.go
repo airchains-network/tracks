@@ -1,40 +1,30 @@
-// sample POST request:
-// {"jsonrpc":"2.0","method":"tracks_getLatestPod","params":[],"id":1}
-
-// Sample Response:
-/*
-{
-	"jsonrpc":"2.0",
-	"id":"1",
-	"error":{"code":200,"message":""},
-	"result":[
-		417
-	]
-}
-*/
-
 package handler
 
 import (
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+	"net/http"
 	"strconv"
 	"strings"
 )
 
+const BatchCountKey = "batchCount"
+
 func HandleGetBatchCount(c *gin.Context, Params []any) {
-
-	// currently it have no use
-	_ = Params
-
+	logger := logrus.New()
 	staticDB := shared.Node.NodeConnections.GetStaticDatabaseConnection()
-	currentPodNumber, err := staticDB.Get([]byte("batchCount"), nil)
+	currentPodNumber, err := staticDB.Get([]byte(BatchCountKey), nil)
 	if err != nil {
-		respondWithError(c, "Error in getting current pod number from database")
+		logger.WithField("batchCountKey", BatchCountKey).Error("Failed to get current pod number from database: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error in getting current pod number from database"})
+		return
 	}
-	currentPodNumberInt, _ := strconv.Atoi(strings.TrimSpace(string(currentPodNumber)))
-	responseData := []any{currentPodNumberInt}
-	respondWithSuccess(c, responseData, "success")
-	return
-
+	currentPodNumberInt, err := strconv.Atoi(strings.TrimSpace(string(currentPodNumber)))
+	if err != nil {
+		logger.WithField("currentPodNumber", string(currentPodNumber)).Error("Failed to convert current pod number to integer: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error in converting current pod number to integer"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"batchCount": currentPodNumberInt})
 }

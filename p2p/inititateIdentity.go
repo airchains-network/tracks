@@ -5,14 +5,25 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-func GeneratePeerID() peer.ID {
+type PeerGenerator struct {
+	ListenAddr string
+	PingConfig bool
+}
+
+func NewPeerGenerator(listenAddr string, pingConfig bool) *PeerGenerator {
+	return &PeerGenerator{
+		ListenAddr: listenAddr,
+		PingConfig: pingConfig,
+	}
+}
+
+func (pg *PeerGenerator) GeneratePeerID() (peer.ID, error) {
 	node, err := libp2p.New(
-		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/2300"),
-		libp2p.Ping(false),
+		libp2p.ListenAddrStrings(pg.ListenAddr),
+		libp2p.Ping(pg.PingConfig),
 	)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	publicID := node.ID()
-	return publicID
+	return node.ID(), nil
 }

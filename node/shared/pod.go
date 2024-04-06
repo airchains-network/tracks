@@ -46,10 +46,11 @@ type Connections struct {
 	DataAvailabilityDatabaseConnection *leveldb.DB
 	StaticDatabaseConnection           *leveldb.DB
 	StateDatabaseConnection            *leveldb.DB
+	MockDatabaseConnection             *leveldb.DB
 }
 
 type NodeS struct {
-	config          *config.Config
+	Config          *config.Config
 	podState        *PodState
 	NodeConnections *Connections
 }
@@ -63,22 +64,17 @@ func InitializePodState(stateConnection *leveldb.DB) *PodState {
 		logs.Log.Error("Pod should be already initiated/updated by now")
 		os.Exit(0)
 	}
-
-	// unmarshal pod state
 	var podState *PodState
 	err = json.Unmarshal(podStateByte, &podState)
 	if err != nil {
 		logs.Log.Error("Error in unmarshal  pod state")
 		os.Exit(0)
 	}
-
 	return podState
-
 }
 func GetPodState() *PodState {
 	mu.Lock()
 	defer mu.Unlock()
-	//fmt.Println(Node.podState)
 	return Node.podState
 }
 
@@ -96,6 +92,7 @@ func InitializeDatabaseConnections() *Connections {
 		PodsDatabaseConnection:             blocksync.GetBatchesDbInstance(),
 		DataAvailabilityDatabaseConnection: blocksync.GetDaDbInstance(),
 		StaticDatabaseConnection:           blocksync.GetStaticDbInstance(),
+		MockDatabaseConnection:             blocksync.GetMockDbInstance(),
 	}
 }
 
@@ -160,40 +157,18 @@ func GetLatestBlock(blockDB *leveldb.DB) int {
 	return latestBlock
 }
 
-func GetLatestBatchIndex(staticDB *leveldb.DB) []byte {
-	batchStartIndex, err := staticDB.Get([]byte("batchStartIndex"), nil)
-	if err != nil {
-		err = staticDB.Put([]byte("batchStartIndex"), []byte("0"), nil)
-		if err != nil {
-			logs.Log.Error(fmt.Sprintf("Error in saving batchStartIndex in static db : %s", err.Error()))
-			return nil
-		}
-	}
-	return batchStartIndex
-}
-
 func NewNode(conf *config.Config) {
 
 	NodeConnections := InitializeDatabaseConnections()
 	stateConnection := NodeConnections.GetStateDatabaseConnection()
-
 	podState := InitializePodState(stateConnection)
 
 	Node = &NodeS{
-		config:          conf,
+		Config:          conf,
 		podState:        podState,
 		NodeConnections: NodeConnections,
 	}
 }
-
-//func GetConfig() *config.Config {
-
-var (
-	DaType      string
-	DaRPC       string
-	StationType string
-	StationRPC  string
-)
 
 func LoadConfig() (config config.Config, err error) {
 	homeDir, err := os.UserHomeDir()
@@ -218,20 +193,3 @@ func LoadConfig() (config config.Config, err error) {
 	err = viper.Unmarshal(&config)
 	return config, err
 }
-
-//func LoadConfig() (config config.Config, err error) {
-//	homeDir, err := os.UserHomeDir()
-//	if err != nil {
-//		panic(err) // Handle error appropriately
-//	}
-//	tracksDir := filepath.Join(homeDir, ".tracks/config") //TODO make this dynamic
-//
-//	viper.AddConfigPath(tracksDir)
-//	viper.SetConfigName("sequencer")
-//	viper.SetConfigType("toml") // explicitly define the config type
-//
-//	if err = viper.ReadInConfig(); err != nil {
-//		return
-//	}
-//	return
-//}

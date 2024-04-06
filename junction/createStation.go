@@ -9,7 +9,7 @@ import (
 	junctionTypes "github.com/airchains-network/decentralized-sequencer/junction/types"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/types"
-	"github.com/airchains-network/decentralized-sequencer/utilis"
+	utilis "github.com/airchains-network/decentralized-sequencer/utils"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
@@ -29,7 +29,7 @@ type JunctionConfig struct {
 	Tracks        []string
 }
 
-func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationInfo types.StationInfo, accountName, accountPath, jsonRPC string, verificationKey groth16.VerifyingKey, addressPrefix string, tracks []string) bool {
+func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationInfo types.StationInfo, accountName, accountPath, jsonRPC string, verificationKey groth16.VerifyingKey, addressPrefix string, tracks []string, bootstrapNode []string) bool {
 
 	// convert station info to string
 	stationJsonBytes, err := json.Marshal(stationInfo)
@@ -171,11 +171,12 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 	var conf config.Config // JunctionConfig
 	err = toml.Unmarshal(bytes, &conf)
 	if err != nil {
-		logs.Log.Error("error in unmarshling file")
+		logs.Log.Error("error in unmarshalling file")
 		return false
 	}
 
 	// Update the values
+	conf.P2P.PersistentPeers = bootstrapNode
 	conf.Junction.JunctionRPC = jsonRPC
 	conf.Junction.JunctionAPI = ""
 	conf.Junction.StationId = stationId
@@ -192,7 +193,12 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 		logs.Log.Error("Error creating file")
 		return false
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			logs.Log.Error("Error closing file")
+		}
+	}(f)
 	newData := toml.NewEncoder(f)
 	if err := newData.Encode(conf); err != nil {
 	}

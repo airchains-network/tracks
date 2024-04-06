@@ -8,24 +8,24 @@ type DAConfigType struct {
 }
 
 type AvailSuccessResponse struct {
-	BlockNumber int    `json:"block_number"`
-	BlockHash   string `json:"block_hash"`
-	Hash        string `json:"hash"`
-	Index       int    `json:"index"`
+	BlockNumber int
+	BlockHash   string
+	Hash        string
+	Index       int
 }
 
 type CelestiaSuccessResponse struct {
-	Jsonrpc string `json:"jsonrpc"`
-	Result  int    `json:"result"`
-	ID      int    `json:"id"`
+	Jsonrpc string
+	Result  int
+	ID      int
 }
 
 type CelestiaErrorResponse struct {
-	Jsonrpc string `json:"jsonrpc"`
-	ID      int    `json:"id"`
+	Jsonrpc string
+	ID      int
 	Error   struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
+		Code    int
+		Message string
 	} `json:"error"`
 }
 
@@ -36,11 +36,11 @@ type MockDAStruck struct {
 }
 
 type DAStruct struct {
-	DAKey             string `json:"da_key"`
-	DAClientName      string `json:"da_client_name"`
-	BatchNumber       string `json:"batch_number"`
-	PreviousStateHash string `json:"previous_state_hash"`
-	CurrentStateHash  string `json:"current_state_hash"`
+	DAKey             string
+	DAClientName      string
+	BatchNumber       string
+	PreviousStateHash string
+	CurrentStateHash  string
 }
 
 type FinalizeDA struct {

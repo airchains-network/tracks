@@ -1,41 +1,41 @@
 package handler
 
 import (
-	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/rpc/model"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
+func NewErrorResponse(code int64, message string) *ErrorDetails {
+	return &ErrorDetails{
+		Code:    code,
+		Message: message,
+	}
+}
+
 // respondWithError sends a JSON error response
-func respondWithError(c *gin.Context, errorMsg string) {
-	response := model.ResponseBody{
+func respondWithError(c *gin.Context, logger *logrus.Logger, errorCode int64, errorMsg string, httpCode int) {
+	response := ResponseBody{
 		JsonRPC: "2.0",
 		ID:      "1",
-		Error: model.ErrorMsg{
-			Code:    500,
-			Message: errorMsg,
-		},
-
-		Result: nil,
+		Error:   NewErrorResponse(errorCode, errorMsg),
+		Result:  nil,
 	}
-	fmt.Println("Error: ", errorMsg)
-
-	c.JSON(http.StatusBadRequest, response)
-	return
+	logger.WithFields(logrus.Fields{
+		"ErrorCode": errorCode,
+		"Message":   errorMsg,
+	}).Error("Error occurred")
+	c.JSON(httpCode, response)
 }
 
 // respondWithJSON sends a JSON response
-func respondWithSuccess(c *gin.Context, resData []any, description string) {
-	response := model.ResponseBody{
+func respondWithSuccess(c *gin.Context, logger *logrus.Logger, resData interface{}, description string) {
+	response := ResponseBody{
 		JsonRPC: "2.0",
 		ID:      "1",
-		Error: model.ErrorMsg{
-			Code:    200,
-			Message: "",
-		},
-		Result: resData,
+		Error:   NewErrorResponse(0, ""),
+		Result:  resData,
 	}
+
 	c.JSON(http.StatusOK, response)
-	return
 }

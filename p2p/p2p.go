@@ -1,10 +1,8 @@
 package p2p
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/gob"
 	"fmt"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
@@ -16,7 +14,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	multiaddr "github.com/multiformats/go-multiaddr"
 	"io"
-	"log"
 	"math/big"
 	"os"
 	"os/signal"
@@ -26,11 +23,9 @@ import (
 )
 
 const (
-	identityFilePath           = "sequencer/identity.info"
-	customProtocolID           = "/station/tracks/0.0.1"
-	customDataSyncProtocolID   = "/tracks/dataSync/0.0.1"
-	customStateCheckProtocolID = "/tracks/stateCheck/0.0.1" // You could add a new protocol for state checking
-	MaxChunkSize               = 100
+	identityFilePath = "sequencer/identity.info"
+	customProtocolID = "/station/tracks/0.0.1"
+	MaxChunkSize     = 100
 )
 
 var (
@@ -68,7 +63,6 @@ func NewPeerList() *PeerList {
 }
 
 var (
-	// ConnectedPeers = make(map[peer.ID]peer.AddrInfo) // Not used anymore
 	mutex    = &sync.Mutex{}
 	Node     host.Host
 	CTX      context.Context
@@ -76,39 +70,61 @@ var (
 )
 
 // Your other functions...
-func onConnected(n network.
-	Network, c network.Conn) {
+//func onConnected(n network.
+//	Network, c network.Conn) {
+//
+//	peerListLock.Lock()
+//	defer peerListLock.Unlock()
+//
+//	peerInfo := peer.AddrInfo{ID: c.RemotePeer(), Addrs: []multiaddr.Multiaddr{c.RemoteMultiaddr()}}
+//
+//	if peerListLocked {
+//		incomingPeers.AddPeer(peerInfo)
+//	} else {
+//		peerList.AddPeer(peerInfo)
+//	}
+//
+//	fmt.Printf("Connected to %s\n", c.RemotePeer())
+//
+//}
 
+func onConnected(n network.Network, c network.Conn) {
 	peerListLock.Lock()
 	defer peerListLock.Unlock()
-
-	peerInfo := peer.AddrInfo{ID: c.RemotePeer(), Addrs: []multiaddr.Multiaddr{c.RemoteMultiaddr()}}
-
-	if peerListLocked {
-		incomingPeers.AddPeer(peerInfo)
-	} else {
-		peerList.AddPeer(peerInfo)
+	baseConfig, err := shared.LoadConfig()
+	if err != nil {
+		fmt.Println("Error loading configuration")
+		return
 	}
 
-	fmt.Printf("Connected to %s\n", c.RemotePeer())
+	peerInfo := peer.AddrInfo{ID: c.RemotePeer(), Addrs: []multiaddr.Multiaddr{c.RemoteMultiaddr()}}
+	persistentPeers := baseConfig.P2P.PersistentPeers
 
-	//// Send a data sync request to the newly connected peer
-	//sendDataSyncRequest(Node, CTX, c.RemotePeer())
+	for _, p := range persistentPeers {
+		peerMultiAddress := fmt.Sprintf("%s/p2p/%s", c.RemoteMultiaddr().String(), c.RemotePeer().String())
+		fmt.Println("peerMultiAddress: ", peerMultiAddress)
+		if p == peerMultiAddress {
+			peerList.AddPeer(peerInfo)
+
+			// update in shared AddConnectedPeer
+
+			fmt.Printf("Connected to %s\n", c.RemotePeer())
+			break
+		} else {
+			fmt.Println("Not connected to persistent peer")
+
+		}
+	}
 }
+
 func onDisconnected(n network.Network, c network.Conn) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	// delete(ConnectedPeers, c.RemotePeer()) // Not used anymore
 	fmt.Printf("Disconnected from %s\n", c.RemotePeer())
-}
 
-//// Get all peers, including the current node
-//func getAllPeers(node host.Host) []peer.AddrInfo {
-//	peers := peerList.GetPeers()
-//	ownPeerInfo := peer.AddrInfo{ID: node.ID(), Addrs: node.Addrs()}
-//	peers = append(peers, ownPeerInfo)
-//	return peers
-//}
+	// update in shared RemoveConnectedPeer
+}
 
 func getAllPeers(node host.Host) []peer.AddrInfo {
 	peers := peerList.GetPeers()
@@ -119,8 +135,6 @@ func getAllPeers(node host.Host) []peer.AddrInfo {
 	sort.Slice(peers, func(i, j int) bool {
 		return peers[i].ID.String() < peers[j].ID.String()
 	})
-
-	fmt.Println("peers: ", peers)
 
 	return peers
 }
@@ -204,22 +218,11 @@ func parseAddrToPeerInfo(addrStr string) (peer.AddrInfo, error) {
 
 func setupStreamHandler(node host.Host) {
 	node.SetStreamHandler(protocol.ID(customProtocolID), streamHandler)
-	//node.SetStreamHandler(protocol.ID(customDataSyncProtocolID), dataSyncHandler)    // Data Sync handler
-	//node.SetStreamHandler(protocol.ID(customStateCheckProtocolID), handleStateCheck) // Add a handler for state checking
+
 }
 
 func streamHandler(s network.Stream) {
 	defer s.Close()
-	//if s.Protocol() == protocol.ID(customDataSyncProtocolID) {
-	//	// Handle block data message
-	//	blockData := "sdsd"
-	//	gobDecoder := gob.NewDecoder(s)
-	//	err := gobDecoder.Decode(&blockData)
-	//	if err != nil {
-	//		logs.Log.Error("Failed to decode data")
-	//	}
-	//	return
-	//}
 	handleStreamData(s)
 }
 
@@ -274,20 +277,6 @@ func sendMessage(ctx context.Context, node host.Host, peerID peer.ID, message []
 
 	return nil
 }
-
-//func BroadcastMessage(ctx context.Context, host host.Host, message []byte) {
-//	mutex.Lock()
-//	defer mutex.Unlock()
-//
-//	for peerID := range peerList.GetPeers() {
-//		if peerID == host.ID() {
-//			continue
-//		}
-//		if err := sendMessage(ctx, host, peerID, message); err != nil {
-//			fmt.Printf("Error broadcasting message to %s: %s\n", peerID, err)
-//		}
-//	}
-//}
 
 func BroadcastMessage(ctx context.Context, host host.Host, message []byte) {
 	mutex.Lock()
@@ -350,9 +339,7 @@ func MasterTracksSelection(host host.Host, sharedInput string) string {
 		fmt.Println("No peers available.")
 		return ""
 	}
-	fmt.Println("shared input", sharedInput)
 
-	// Compute the SHA256 hash of the sharedInput
 	h := sha256.New()
 	h.Write([]byte(sharedInput))
 	hashed := h.Sum(nil)
@@ -381,92 +368,23 @@ func MasterTracksSelection(host host.Host, sharedInput string) string {
 
 	return randomPeer.ID.String()
 }
-
-//func sendDataSyncRequest(node host.Host, ctx context.Context, peerID peer.ID) {
-//	s, err := node.NewStream(ctx, peerID, protocol.ID(customDataSyncProtocolID))
-//	if err != nil {
-//		logs.Log.Error("Failed to open stream")
-//	}
-//	defer s.Close()
-//
-//	_, err = s.Write([]byte("SYNC_REQUEST"))
-//	if err != nil {
-//		logs.Log.Error("Failed to write to stream")
-//	}
-//}
-
-func dataSyncHandler(s network.Stream) {
-	defer s.Close()
-
-	buf := make([]byte, 256)
-	n, err := s.Read(buf)
+func PeerConnectionStatus(host host.Host) bool {
+	peers := getAllPeers(host)
+	numPeers := len(peers)
+	baseConfig, err := shared.LoadConfig()
 	if err != nil {
-		logs.Log.Error("Failed to read from stream")
-	}
-
-	if string(buf[:n]) == "SYNC_REQUEST" {
-		// If it's a sync request, fetch data and send it
-		data := "sds" // TODO: Implement this function
-		gobEncoder := gob.NewEncoder(s)
-		err := gobEncoder.Encode(data)
-		if err != nil {
-			logs.Log.Error("Failed to encode data")
-		}
-	}
-}
-
-func checkStateSync(ctx context.Context, node host.Host, peerID peer.ID) bool {
-	s, err := node.NewStream(ctx, peerID, protocol.ID(customStateCheckProtocolID))
-	if err != nil {
-		log.Fatalf("Failed to open stream: %v", err)
-	}
-	defer s.Close()
-
-	// Send your state
-	nodeState := getNodeState()
-	err = gob.NewEncoder(s).Encode(nodeState)
-	if err != nil {
-		log.Fatalf("Failed to send state: %v", err)
-	}
-
-	// Receive peer's state
-	var peerState shared.PodState
-	err = gob.NewDecoder(s).Decode(&peerState)
-	if err != nil {
-		log.Fatalf("Failed to decode peer state: %v", err)
-	}
-
-	// Compare your state to the peer's
-	return compareStates(nodeState, peerState)
-}
-
-func handleStateCheck(s network.Stream) {
-	defer s.Close()
-	// Receive peer's state
-	var peerState shared.PodState
-	_ = gob.NewDecoder(s).Decode(&peerState)
-
-	// Send your state
-	nodeState := getNodeState()
-	_ = gob.NewEncoder(s).Encode(nodeState)
-}
-
-func getNodeState() shared.PodState {
-	// return your current state
-	return shared.PodState{}
-}
-
-func compareStates(s1, s2 shared.PodState) bool {
-	if s1.LatestPodHeight != s2.LatestPodHeight {
+		fmt.Println("Error loading configuration")
 		return false
 	}
-	if s1.LatestPodHash != nil && s2.LatestPodHash != nil {
-		if !bytes.Equal(s1.LatestPodHash, s2.LatestPodHash) {
-			return false
-		} else {
-			return true
-		}
+	persistentPeers := baseConfig.P2P.PersistentPeers
+
+	if len(persistentPeers) == numPeers {
+		return true
+	} else {
+		logs.Log.Warn("ALl Node Not Connected to Persistent Peers")
+		logs.Log.Warn("Number of Persistent Peers: " + string(rune(len(persistentPeers))))
+		logs.Log.Warn("Number of Connected Peers: " + string(rune(numPeers)))
+		return false
 	}
 
-	return true
 }

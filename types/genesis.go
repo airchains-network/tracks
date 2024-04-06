@@ -10,13 +10,13 @@ type StationInfo struct {
 }
 
 type GenesisDataType struct {
-	StationId          string           `json:"stationId"`
-	Creator            string           `json:"creator"`
-	CreationTime       string           `json:"creationTime"`
-	TxHash             string           `json:"txHash"`
-	Tracks             []string         `json:"tracks"`
-	TracksVotingPowers []uint64         `json:"tracksVotingPowers"`
-	VerificationKey    interface{}      `json:"verificationKey"`
-	ExtraArg           types.StationArg `json:"extraArg"`
-	StationInfo        StationInfo      `json:"stationInfo"`
+	StationId          string
+	Creator            string
+	CreationTime       string
+	TxHash             string
+	Tracks             []string
+	TracksVotingPowers []uint64
+	VerificationKey    interface{}
+	ExtraArg           types.StationArg
+	StationInfo        StationInfo
 }

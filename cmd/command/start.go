@@ -9,25 +9,37 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func runSequencerCommand(_ *cobra.Command, _ []string) {
+	if err := initSequencer(); err != nil {
+		logger.Log.Error(err.Error())
+		logger.Log.Error("Error in initiating sequencer nodes due to the above error")
+		return
+	}
+	node.Start()
+}
+
 func initSequencer() error {
-	c, err := shared.LoadConfig()
+	config, err := shared.LoadConfig()
 	if err != nil {
 		logger.Log.Error("Failed to load conf info")
 		return err
 	}
+
 	if success := blocksync.InitDb(); !success {
 		return errors.New("failed to initialize database")
 	}
+
 	logger.Log.Info("Database Initialized")
 
-	if c.Junction.StationId == "" {
+	if config.Junction.StationId == "" {
 		return errors.New("create station before stating sequencer")
 	}
-	if c.Junction.VRFPublicKey == "" || c.Junction.VRFPrivateKey == "" {
+
+	if config.Junction.VRFPublicKey == "" || config.Junction.VRFPrivateKey == "" {
 		return errors.New("VRF keys not setup properly")
 	}
 
-	shared.NewNode(&c)
+	shared.NewNode(&config)
 
 	return nil
 }
@@ -35,15 +47,5 @@ func initSequencer() error {
 var StationCmd = &cobra.Command{
 	Use:   "start",
 	Short: "start the sequencer nodes",
-	Run: func(cmd *cobra.Command, args []string) {
-
-		if err := initSequencer(); err != nil {
-			logger.Log.Error(err.Error())
-			logger.Log.Error("Error in initiating sequencer nodes due to above error")
-			return
-		}
-
-		node.Start()
-
-	},
+	Run:   runSequencerCommand,
 }

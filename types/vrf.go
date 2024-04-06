@@ -5,5 +5,4 @@ type RequestCommitmentV2Plus struct {
 	StationId        string
 	UpperBound       uint64
 	RequesterAddress string
-	//ExtraArgs        []byte
 }

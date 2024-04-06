@@ -8,6 +8,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 var txDbInstance *leveldb.DB
@@ -23,19 +24,36 @@ var mockDbInstance *leveldb.DB
 // InitTxDb This function initializes a LevelDB database for transactions and returns a boolean indicating
 // whether the initialization was successful.
 func InitTxDb() bool {
-	txDB, err := leveldb.OpenFile("data/leveldb/tx", nil)
+	homeDir, _ := os.UserHomeDir()
+	filePath := filepath.Join(homeDir, "data/leveldb/tx")
+
+	txDB, err := leveldb.OpenFile(filePath, nil)
 	if err != nil {
 		log.Fatal("Failed to open transaction LevelDB:", err)
 		return false
 	}
 	txDbInstance = txDB
+
+	txnNumberByte, err := txDbInstance.Get([]byte("txnCount"), nil)
+	if txnNumberByte == nil || err != nil {
+		err = txDbInstance.Put([]byte("txnCount"), []byte("0"), nil)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in saving txnCount in txnDb : %s", err.Error()))
+			//return false
+			os.Exit(0)
+		}
+	}
+
 	return true
+
 }
 
 // InitBlockDb This function initializes a LevelDB database for storing blocks and returns a boolean indicating
 // whether the initialization was successful.
 func InitBlockDb() bool {
-	blockDB, err := leveldb.OpenFile("data/leveldb/blocks", nil)
+	homeDir, _ := os.UserHomeDir()
+	filePath := filepath.Join(homeDir, ".tracks/data/leveldb/blocks")
+	blockDB, err := leveldb.OpenFile(filePath, nil)
 	if err != nil {
 		log.Fatal("Failed to open block LevelDB:", err)
 		return false
@@ -45,7 +63,6 @@ func InitBlockDb() bool {
 
 	// get
 
-	// check is its assignes
 	blockNumberByte, err := blockDB.Get([]byte("blockCount"), nil)
 
 	if blockNumberByte == nil || err != nil {
@@ -63,7 +80,9 @@ func InitBlockDb() bool {
 // InitStaticDb This function initializes a static LevelDB database and returns a boolean indicating whether the
 // initialization was successful or not.
 func InitStaticDb() bool {
-	staticDB, err := leveldb.OpenFile("data/leveldb/static", nil)
+	homeDir, _ := os.UserHomeDir()
+	filePath := filepath.Join(homeDir, ".tracks/data/leveldb/static")
+	staticDB, err := leveldb.OpenFile(filePath, nil)
 	if err != nil {
 		log.Fatal("Failed to open static LevelDB:", err)
 		return false
@@ -73,7 +92,9 @@ func InitStaticDb() bool {
 }
 
 func InitStateDb() bool {
-	stateDB, err := leveldb.OpenFile("data/leveldb/state", nil)
+	homeDir, _ := os.UserHomeDir()
+	filePath := filepath.Join(homeDir, ".tracks/data/leveldb/state")
+	stateDB, err := leveldb.OpenFile(filePath, nil)
 	if err != nil {
 		log.Fatal("Failed to open state LevelDB:", err)
 		return false
@@ -115,12 +136,13 @@ func InitStateDb() bool {
 // InitBatchesDb This function initializes a batches LevelDB database and returns a boolean indicating whether the
 // initialization was successful or not.
 func InitBatchesDb() bool {
-	batchesDB, err := leveldb.OpenFile("data/leveldb/batches", nil)
+	homeDir, _ := os.UserHomeDir()
+	filePath := filepath.Join(homeDir, ".tracks/data/leveldb/batches")
+	batchesDB, err := leveldb.OpenFile(filePath, nil)
 	if err != nil {
 		log.Fatal("Failed to open batches LevelDB:", err)
 		return false
 	}
-
 	batchesDbInstance = batchesDB
 	return true
 }
@@ -128,7 +150,9 @@ func InitBatchesDb() bool {
 // InitProofDb This function initializes a proof LevelDB database and returns a boolean indicating whether the
 // initialization was successful or not.
 func InitProofDb() bool {
-	proofDB, err := leveldb.OpenFile("data/leveldb/proof", nil)
+	homeDir, _ := os.UserHomeDir()
+	filePath := filepath.Join(homeDir, ".tracks/data/leveldb/proof")
+	proofDB, err := leveldb.OpenFile(filePath, nil)
 	if err != nil {
 		log.Fatal("Failed to open proof LevelDB:", err)
 		return false
@@ -138,9 +162,11 @@ func InitProofDb() bool {
 }
 
 func InitPublicWitnessDb() bool {
-	publicWitnessDB, err := leveldb.OpenFile("data/leveldb/publicWitness", nil)
+	homeDir, _ := os.UserHomeDir()
+	filePath := filepath.Join(homeDir, ".tracks/data/leveldb/publicWitness")
+	publicWitnessDB, err := leveldb.OpenFile(filePath, nil)
 	if err != nil {
-		log.Fatal("Failed to open public witness LevelDB:", err)
+		log.Fatal("Failed to open publicWitness LevelDB:", err)
 		return false
 	}
 	publicWitnessDbInstance = publicWitnessDB
@@ -148,11 +174,9 @@ func InitPublicWitnessDb() bool {
 }
 
 func InitDaDb() bool {
-	daDB, err := leveldb.OpenFile("data/leveldb/da", nil)
-	if err != nil {
-		log.Fatal("Failed to open da LevelDB:", err)
-		return false
-	}
+	homeDir, _ := os.UserHomeDir()
+	filePath := filepath.Join(homeDir, ".tracks/data/leveldb/da")
+	daDB, err := leveldb.OpenFile(filePath, nil)
 	da := types.DAStruct{
 		DAKey:             "0",
 		DAClientName:      "0",
@@ -162,6 +186,10 @@ func InitDaDb() bool {
 	}
 
 	daBytes, err := json.Marshal(da)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in marshalling da : %s", err.Error()))
+		return false
+	}
 
 	daDbInstance = daDB
 	daBytes, err = daDbInstance.Get([]byte("batch_0"), nil)
@@ -176,33 +204,50 @@ func InitDaDb() bool {
 	return true
 }
 func InitMockDb() bool {
-	mockDb, err := leveldb.OpenFile("data/leveldb/mockda", nil)
+
+	homeDir, _ := os.UserHomeDir()
+	filePath := filepath.Join(homeDir, ".tracks/data/leveldb/mock")
+	mockDB, err := leveldb.OpenFile(filePath, nil)
 	if err != nil {
-		log.Fatal("Failed to open da LevelDB:", err)
+		log.Fatal("Failed to open mock LevelDB:", err)
 		return false
 	}
-	mockDbInstance = mockDb
+	mockDbInstance = mockDB
 	return true
 }
 
 // InitDb This function  initializes three different databases and returns true if all of them are
 // successfully initialized, otherwise it returns false.
 func InitDb() bool {
-	txStatus := InitTxDb()
-	blockStatus := InitBlockDb()
-	staticStatus := InitStaticDb()
-	batchesStatus := InitBatchesDb()
-	proofStatus := InitProofDb()
-	publicWitnessStatus := InitPublicWitnessDb()
-	daDbInstanceStatus := InitDaDb()
-	mockDbInstanceStatus := InitMockDb()
-	stateDbInstanceStatus := InitStateDb()
-
-	if txStatus && blockStatus && staticStatus && stateDbInstanceStatus && batchesStatus && proofStatus && publicWitnessStatus && daDbInstanceStatus && mockDbInstanceStatus {
-		return true
-	} else {
+	if !InitTxDb() {
 		return false
 	}
+	if !InitBlockDb() {
+		return false
+	}
+	if !InitStaticDb() {
+		return false
+	}
+	if !InitStateDb() {
+		return false
+	}
+	if !InitBatchesDb() {
+		return false
+	}
+	if !InitProofDb() {
+		return false
+	}
+	if !InitPublicWitnessDb() {
+		return false
+	}
+	if !InitDaDb() {
+		return false
+	}
+	if !InitMockDb() {
+		return false
+	}
+	return true
+
 }
 
 // GetTxDbInstance This function returns the instance of the air-leveldb database.

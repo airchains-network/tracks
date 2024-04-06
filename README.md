@@ -1,30 +1,31 @@
 
 ### Clear old data if present 
 ```shell 
-sh clear-data.sh;
 sudo rm -rf ~/.tracks
 ```
 
 ### Init sequencer
 ```shell
-go run cmd/main.go init --daRpc "mock-rpc" --daKey "mockKey" --daType "mock"  --moniker "monkey" --stationRpc "http://192.168.1.24:8545" --stationAPI "http://192.168.1.24:8545" --stationType "evm" 
+go run cmd/main.go init --daRpc "mock-rpc" --daKey "mockKey" --daType "mock"  --moniker "monkey" --stationRpc "http://127.0.0.1:8545" --stationAPI "http://127.0.0.1:8545" --stationType "evm" 
+```
+### Create Keys for Junction
+```shell
+go run cmd/main.go keys junction --accountName dummy --accountPath ./accounts/keys
+```
+
+### Init Prover
+```shell
+go run cmd/main.go  prover v1
 ```
 
 ### create station on junction
 ```sh
-go run cmd/main.go create-station --accountName noob --accountPath ./accounts/keys --jsonRPC "http://34.131.189.98:26657" --info "some info" --tracks air1dqf8xx42e8tlcwpd4ucwf60qeg4k6h7mzpnkf7,air1h25pqnxkv8g50n5nlrdv94wktjupfu4ujevsc8
+go run cmd/main.go create-station --accountName dummy --accountPath ./accounts/keys --jsonRPC "http://localhost:1213" --info "basic info" --tracks air1dqf8xx42e8tlcwpd4ucwf60qeg4k6h7mzpnkf7  --bootstrapNode "/ip4/192.168.1.24/tcp/2300/p2p/12D3KooWFoN66sCWotff1biUcnBE2vRTmYJRHJqZy27x1EpBB6AM"
 ```
 
-### start single node 
+### start  node 
 note: it will stick on submit pod, if u put more then one track in create-track in above code..
 ```shell
 go run cmd/main.go start
 ```
 
-### Start multi node
-```shell
-go run cmd/main.go start
-
-go run cmd/main.go start /ip4/192.168.1.24/tcp/2300/p2p/12D3KooWPi96exciLFcjnfN73dFD9GfynKYva3iibCYDTTaStKdM
-go run cmd/main.go start /ip4/192.168.1.25/tcp/2300/p2p/12D3KooWB1CgEXF97AMga3xDdSggpfPbm7Npx2LPdWdLJt678tLY
-```

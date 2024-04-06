@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/config"
+	"github.com/airchains-network/decentralized-sequencer/da/avail"
+	"github.com/airchains-network/decentralized-sequencer/da/celestia"
 	mock "github.com/airchains-network/decentralized-sequencer/da/mockda"
 	"github.com/airchains-network/decentralized-sequencer/junction"
 	junctionTypes "github.com/airchains-network/decentralized-sequencer/junction/types"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/airchains-network/decentralized-sequencer/types"
-	"github.com/airchains-network/decentralized-sequencer/utilis"
+	utilis "github.com/airchains-network/decentralized-sequencer/utils"
 	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -23,10 +25,6 @@ import (
 	"time"
 )
 
-var (
-	StationRPC string
-)
-
 func BatchGeneration(wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -34,13 +32,10 @@ func BatchGeneration(wg *sync.WaitGroup) {
 }
 
 func GenerateUnverifiedPods() {
-	fmt.Println("generating new pod")
-
+	logs.Log.Info("Generating new POD")
 	lds := shared.Node.NodeConnections.GetStaticDatabaseConnection()
 	ldt := shared.Node.NodeConnections.GetTxnDatabaseConnection()
-	fmt.Println(lds)
 
-	fmt.Println("1")
 	ConfirmendTransactionIndex, err := lds.Get([]byte("batchStartIndex"), nil)
 	if err != nil {
 		logs.Log.Warn("ConfirmendTransactionIndex not found in static db")
@@ -50,21 +45,18 @@ func GenerateUnverifiedPods() {
 			os.Exit(0)
 		}
 	}
-	fmt.Println("2")
 
 	currentPodNumber, err := lds.Get([]byte("batchCount"), nil)
 	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in getting sssssss from static db : %s", err.Error()))
+		logs.Log.Error(fmt.Sprintf("Error in getting currentPodNumber from static db : %s", err.Error()))
 		os.Exit(0)
 	}
-	fmt.Println("3")
 
 	previousStateData, err := getPodStateFromDatabase()
 	if err != nil {
 		logs.Log.Error("Error in getting previous station data")
 		os.Exit(0)
 	}
-	//fmt.Println("get this data from database:", previousStateData)
 	PreviousTrackAppHash := previousStateData.TracksAppHash
 	if PreviousTrackAppHash == nil {
 		PreviousTrackAppHash = []byte("nil")
@@ -75,8 +67,6 @@ func GenerateUnverifiedPods() {
 
 	currentPodNumberInt, _ := strconv.Atoi(strings.TrimSpace(string(currentPodNumber)))
 	batchNumber := currentPodNumberInt + 1
-	fmt.Println("generating new pod")
-	fmt.Println(batchNumber)
 
 	//var batchInput *types.BatchStruct
 	Witness, uZKP, MRH, batchInput, err := createPOD(ldt, ConfirmendTransactionIndex, currentPodNumber)
@@ -86,16 +76,10 @@ func GenerateUnverifiedPods() {
 	}
 
 	TrackAppHash := generatePodHash(Witness, uZKP, MRH, currentPodNumber)
-	//podState := shared.GetPodState()
-	//tempMasterTrackAppHash := podState.MasterTrackAppHash
 
-	// update pod state as per latest pod
 	updateNewPodState(TrackAppHash, Witness, uZKP, MRH, uint64(batchNumber), batchInput)
 
-	// Here the MasterTrack Will Broadcast the uZKP in the Network
 	if decodedMaster == Node.ID() {
-		fmt.Println("I am Master")
-		// make master's vote true by default
 		podState := shared.GetPodState()
 		currentVotes := podState.Votes
 		currentVotes[decodedMaster.String()] = shared.Votes{
@@ -107,7 +91,6 @@ func GenerateUnverifiedPods() {
 		Peers := getAllPeers(Node)
 		peerCount := len(Peers)
 		if peerCount == 1 {
-			// no peers connected so submit & verify VRF & Pod by own and update local database too.
 			DaData := shared.GetPodState().Batch.TransactionHash
 			daDataByte := []byte{}
 			for _, str := range DaData {
@@ -156,13 +139,139 @@ func GenerateUnverifiedPods() {
 			// DA submit
 			connection := shared.Node.NodeConnections
 			mdb := connection.GetDataAvailabilityDatabaseConnection()
-			dbName, err := mock.MockDA(mdb, daDataByte, PodNumber) // (mockda-%d", batchNumber), nil
+			dbName, err := mock.MockDA(mdb, daDataByte, PodNumber)
 			if err != nil {
 				logs.Log.Error("Error in submitting data to DA")
 				return
 			}
 			_ = dbName
 			logs.Log.Info("data in DA submitted")
+			DaBatchSaver := connection.DataAvailabilityDatabaseConnection
+			baseConfig, err := shared.LoadConfig()
+			if err != nil {
+				fmt.Println("Error loading configuration")
+			}
+			Datype := baseConfig.DA.DaType
+			if Datype == "mock" {
+				mdb := connection.MockDatabaseConnection
+				daCheck, daCheckErr := mock.MockDA(mdb, daDataByte, PodNumber)
+				if daCheckErr != nil {
+					logs.Log.Error("Error in submitting data to DA")
+					return
+				}
+
+				da := types.DAStruct{
+					DAKey:             daCheck,
+					DAClientName:      "mock-da",
+					BatchNumber:       strconv.Itoa(PodNumber),
+					PreviousStateHash: "",
+					CurrentStateHash:  "",
+				}
+
+				daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+				daStoreData, daStoreDataErr := json.Marshal(da)
+				if daStoreDataErr != nil {
+					logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+				}
+
+				storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
+				if storeErr != nil {
+					logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+				}
+
+				logs.Log.Info("data in DA submitted")
+			} else if Datype == "avail" {
+				daCheck, daCheckErr := avail.Avail(daDataByte, baseConfig.DA.DaRPC)
+				if daCheckErr != nil {
+					logs.Log.Warn("Error in submitting data to DA")
+					return
+				}
+
+				da := types.DAStruct{
+					DAKey:             daCheck,
+					DAClientName:      "mock-da",
+					BatchNumber:       strconv.Itoa(PodNumber),
+					PreviousStateHash: "",
+					CurrentStateHash:  "",
+				}
+
+				daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+				daStoreData, daStoreDataErr := json.Marshal(da)
+				if daStoreDataErr != nil {
+					logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+				}
+
+				storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
+				if storeErr != nil {
+					logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+				}
+
+				logs.Log.Info("data in DA submitted")
+
+			} else if Datype == "celestia" {
+				daCheck, daCheckErr := celestia.Celestia(daDataByte, baseConfig.DA.DaRPC, baseConfig.DA.DaRPC)
+
+				if daCheckErr != nil {
+					logs.Log.Warn("Error in submitting data to DA")
+					return
+				}
+
+				da := types.DAStruct{
+					DAKey:             daCheck,
+					DAClientName:      "mock-da",
+					BatchNumber:       strconv.Itoa(PodNumber),
+					PreviousStateHash: "",
+					CurrentStateHash:  "",
+				}
+
+				daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+				daStoreData, daStoreDataErr := json.Marshal(da)
+				if daStoreDataErr != nil {
+					logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+				}
+
+				storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
+				if storeErr != nil {
+					logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+				}
+
+				logs.Log.Info("data in DA submitted")
+
+			} else if Datype == "eigen" {
+				//daCheck, daCheckErr := eigen.Eigen(daDataByte,
+				//	baseConfig.DA.DaRPC, baseConfig.DA.DaRPC,
+				//)
+				//
+				//if daCheckErr != nil {
+				//	logs.Log.Warn("Error in submitting data to DA")
+				//	return
+				//}
+				//
+				//da := types.DAStruct{
+				//	DAKey:             daCheck,
+				//	DAClientName:      "mock-da",
+				//	BatchNumber:       strconv.Itoa(PodNumber),
+				//	PreviousStateHash: "",
+				//	CurrentStateHash:  "",
+				//}
+
+				//daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+				//daStoreData, daStoreDataErr := json.Marshal(da)
+				//if daStoreDataErr != nil {
+				//	logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+				//}
+
+				//storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
+				//if storeErr != nil {
+				//	logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+				//}
+
+				logs.Log.Info("data in DA submitted")
+
+			} else {
+				logs.Log.Error("Unknown layer. Please use 'avail' or 'celestia' as argument.")
+				return
+			}
 
 			// submit pod
 			success = junction.SubmitCurrentPod()
@@ -179,18 +288,8 @@ func GenerateUnverifiedPods() {
 				return
 			}
 			logs.Log.Info("pod verification transaction done")
-			// todo : query if verification return true or false...
 
-			// if (no peers connected): update database and make next pod without voting process
 			saveVerifiedPOD() // save data to database
-			//
-			//peerListLocked = false
-			//peerListLock.Unlock()
-			//peerListLock.Lock()
-			//for _, peerInfo := range incomingPeers.GetPeers() {
-			//	peerList.AddPeer(peerInfo)
-			//}
-			//peerListLock.Unlock()
 
 			GenerateUnverifiedPods() // generate next pod
 
@@ -231,7 +330,7 @@ func GenerateUnverifiedPods() {
 			fmt.Println("Selected random address:", selectedTrackAddress)
 
 			// send verify VRF message to selected node
-			VRFInitiatedMsg := VRFInitiatedMsg{
+			VRFInitiatedMsg := VRFInitiatedMsgData{
 				PodNumber:            uint64(PodNumber),
 				SelectedTrackAddress: selectedTrackAddress,
 				VrfInitiatorAddress:  addr,
@@ -252,59 +351,8 @@ func GenerateUnverifiedPods() {
 				return
 			}
 			BroadcastMessage(CTX, Node, gossipMsgByte)
-
-			// after VRF is verified: broadcast pod Submitter id/address to all.
-			// pod submitter will then broadcast the message that pod is submitted, and choose a node [not randomly] to verify the pod
-			// after pod is verify, the node will broadcast the message that pod is verified, and all nodes will update the database and generate next pod
-
-			// vrfHandlerGossip -> all nodes will got who is selected node
-			//// Preparing the Message that master track will gossip to the Network
-			//proofData := ProofData{
-			//	PodNumber:    uint64(batchNumber),
-			//	TrackAppHash: TrackAppHash,
-			//}
-			//
-			//// Marshal the proofData
-			//proofDataByte, err := json.Marshal(proofData)
-			//if err != nil {
-			//	logs.Log.Error(fmt.Sprintf("Error in marshalling proof data : %s", err.Error()))
-			//}
-			//
-			//gossipMsg := types.GossipData{
-			//	Type: "proof",
-			//	Data: proofDataByte,
-			//}
-			//
-			//gossipMsgByte, err := json.Marshal(gossipMsg)
-			//if err != nil {
-			//	logs.Log.Error("Error marshaling gossip message")
-			//	return
-			//}
-			//
-			//logs.Log.Info("Sending proof result: %s")
-			//BroadcastMessage(context.Background(), Node, gossipMsgByte)
 		}
-
 	}
-
-	//else {
-	//	if podState.MasterTrackAppHash != nil {
-	//		fmt.Println(TrackAppHash)
-	//		fmt.Println(tempMasterTrackAppHash)
-	//		currentPodData := shared.GetPodState()
-	//		if bytes.Equal(TrackAppHash, tempMasterTrackAppHash) {
-	//			SendValidProof(CTX, currentPodData.LatestPodHeight, decodedMaster)
-	//			return
-	//		} else {
-	//			SendInvalidProofError(CTX, currentPodData.LatestPodHeight, decodedMaster)
-	//			return
-	//		}
-	//	} else {
-	//		// pod state is nil, means master track has not yet broadcasted the proof
-	//		// don't need to do anything..
-	//	}
-	//}
-
 }
 
 func createPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
@@ -315,9 +363,6 @@ func createPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness [
 	limitInt, _ := strconv.Atoi(strings.TrimSpace(string(limit)))
 
 	batchStartIndexInt, _ := strconv.Atoi(strings.TrimSpace(string(batchStartIndex)))
-
-	fmt.Println(limitInt)
-	fmt.Println(batchStartIndexInt)
 
 	var batch types.BatchStruct
 
@@ -359,7 +404,7 @@ func createPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness [
 			os.Exit(0)
 		}
 
-		accountNouceCheck, err := utilis.GetAccountNonce(context.Background(), tx.Hash, tx.BlockNumber)
+		accountNonceCheck, err := utilis.GetAccountNonce(context.Background(), tx.Hash, tx.BlockNumber, baseConfig.Station.StationRPC)
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in getting account nonce : %s", err.Error()))
 			os.Exit(0)
@@ -373,7 +418,7 @@ func createPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness [
 		ReceiverBalances = append(ReceiverBalances, receiverBalancesCheck)
 		Messages = append(Messages, tx.Input)
 		TransactionNonces = append(TransactionNonces, tx.Nonce)
-		AccountNonces = append(AccountNonces, accountNouceCheck)
+		AccountNonces = append(AccountNonces, accountNonceCheck)
 	}
 
 	batch.From = From
@@ -385,9 +430,7 @@ func createPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness [
 	batch.Messages = Messages
 	batch.TransactionNonces = TransactionNonces
 	batch.AccountNonces = AccountNonces
-	fmt.Println("batch data", batch)
 	witnessVector, currentStatusHash, proofByte, pkErr := v1.GenerateProof(batch, limitInt+1)
-	fmt.Println("Witness Vector: ", currentStatusHash)
 	if pkErr != nil {
 		logs.Log.Error(fmt.Sprintf("Error in generating proof : %s", pkErr.Error()))
 		return nil, nil, nil, nil, pkErr
@@ -455,11 +498,6 @@ func saveVerifiedPOD() {
 	err = batchDB.Put([]byte(podKey), podByte, nil)
 	if err != nil {
 		panic("Failed to update pod data: " + err.Error())
-	}
-
-	err = os.WriteFile("data/batchCount.txt", []byte(strconv.Itoa(currentPodNumberInt)), 0666)
-	if err != nil {
-		panic("Failed to update batch number: " + err.Error())
 	}
 
 	podState.MasterTrackAppHash = nil

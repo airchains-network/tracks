@@ -19,9 +19,22 @@ func Start() {
 	var wg1 sync.WaitGroup
 	wg1.Add(2)
 	go configureP2P(&wg1)
-	go time.AfterFunc(10*time.Second, func() {
-		beginDBIndexingOperations(&wg1)
-	})
+
+	go func() {
+		time.Sleep(5 * time.Second)
+		ticker := time.NewTicker(4 * time.Second) // adjust the check frequency as needed
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				if p2p.PeerConnectionStatus(p2p.Node) {
+					fmt.Println("All peers connected")
+					beginDBIndexingOperations(&wg1)
+					return
+				}
+			}
+		}
+	}()
 	wg1.Wait()
 }
 
@@ -31,25 +44,18 @@ func configureP2P(wg *sync.WaitGroup) {
 }
 
 func beginDBIndexingOperations(wg *sync.WaitGroup) {
-	fmt.Println("Connected to the network. Starting the indexing process...")
-
 	defer wg.Done()
 	connection := shared.Node.NodeConnections
-
 	staticDB := connection.GetStaticDatabaseConnection()
 	blockDB := connection.GetBlockDatabaseConnection()
 	txnDB := connection.GetTxnDatabaseConnection()
-
 	shared.CheckAndInitializeDBCounters(staticDB)
 	latestBlock := shared.GetLatestBlock(blockDB)
-	fmt.Println("This is the JSON ", viper.GetString("station.stationRPC"))
-	fmt.Println("This is the Station Type ", viper.GetString("station.stationType"))
-	client, err := ethclient.Dial("http://192.168.1.24:8545") // viper.GetString("station.stationRPC"))
+	client, err := ethclient.Dial(viper.GetString("station.stationRPC")) // viper.GetString("station.stationRPC"))
 	if err != nil {
 		logs.Log.Error("Error in connecting to the network")
 		return
 	}
-
 	initializeCounter(staticDB, "batchCount")
 	initializeCounter(staticDB, "batchStartIndex")
 

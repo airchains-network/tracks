@@ -43,13 +43,12 @@ func InitVRF() (success bool, addr string) {
 
 	ctx := context.Background()
 	gasFees := fmt.Sprintf("%damf", 213)
-	logs.Log.Warn(fmt.Sprintf("Gas Fees Used for init VRF transaction is: %s\n", gasFees))
+	logs.Log.Info(fmt.Sprintf("Gas Fees Used for init VRF transaction is: %s\n", gasFees))
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
 		logs.Log.Error("Error creating account client")
 		return false, ""
 	}
-	// getting the account and creating client codes --> End
 
 	// get variables required to generate or call verifiable random number
 	suite := edwards25519.NewBlakeSHA256Ed25519()
@@ -96,7 +95,6 @@ func InitVRF() (success bool, addr string) {
 		VrfOutput:    vrfOutput,
 	}
 
-	// marshal
 	extraArgsByte, err := json.Marshal(extraArg)
 	if err != nil {
 		logs.Log.Error(err.Error())
@@ -104,7 +102,7 @@ func InitVRF() (success bool, addr string) {
 	}
 
 	var defaultOccupancy uint64
-	defaultOccupancy = 1 // todo: for multinode sequencer =node.DefaultOccupancy
+	defaultOccupancy = 1
 	msg := types.MsgInitiateVrf{
 		Creator:        newTempAddr,
 		PodNumber:      podNumber,

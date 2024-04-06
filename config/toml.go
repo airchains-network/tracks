@@ -3,7 +3,7 @@ package config
 import (
 	"bytes"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/utilis"
+	"github.com/airchains-network/decentralized-sequencer/utils"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -29,15 +29,15 @@ func init() {
 // CreateConfigFile creates the root, config, and data directories if they don't exist,
 // and panics if it fails.
 func CreateConfigFile(rootDir string, config *Config) (success bool) {
-	if err := utilis.EnsureDir(rootDir, DefaultDirPerm); err != nil {
+	if err := utils.EnsureDir(rootDir, DefaultDirPerm); err != nil {
 		logs.Log.Error(err.Error())
 		return false
 	}
-	if err := utilis.EnsureDir(filepath.Join(rootDir, DefaultConfigDir), DefaultDirPerm); err != nil {
+	if err := utils.EnsureDir(filepath.Join(rootDir, DefaultConfigDir), DefaultDirPerm); err != nil {
 		logs.Log.Error(err.Error())
 		return false
 	}
-	if err := utilis.EnsureDir(filepath.Join(rootDir, DefaultDataDir), DefaultDirPerm); err != nil {
+	if err := utils.EnsureDir(filepath.Join(rootDir, DefaultDataDir), DefaultDirPerm); err != nil {
 		logs.Log.Error(err.Error())
 		return false
 	}
@@ -45,7 +45,7 @@ func CreateConfigFile(rootDir string, config *Config) (success bool) {
 	configFilePath := filepath.Join(rootDir, DefaultConfigFilePath)
 
 	// Write default config file if missing.
-	if !utilis.FileExists(configFilePath) {
+	if !utils.FileExists(configFilePath) {
 		writeDefaultConfigFile(configFilePath, config)
 		return true
 	} else {
@@ -65,7 +65,7 @@ func WriteConfigFile(configFilePath string, config *Config) {
 		panic(err)
 	}
 
-	utilis.MustWriteFile(configFilePath, buffer.Bytes(), 0644)
+	utils.MustWriteFile(configFilePath, buffer.Bytes(), 0644)
 }
 
 const defaultConfigTemplate = `# This is a TOML config file.
@@ -100,7 +100,7 @@ node_id = "{{ .P2P.NodeId }}"
 listen_address = "{{ .P2P.ListenAddress }}"
 external_address = "{{ .P2P.ExternalAddress }}"
 seeds = "{{ .P2P.Seeds }}"
-persistent_peers = "{{ .P2P.PersistentPeers }}"
+persistent_peers = {{ .P2P.PersistentPeers }}
 
 [statesync]
 enable = {{ .StateSync.Enable }}

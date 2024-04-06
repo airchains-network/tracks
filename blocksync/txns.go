@@ -1,13 +1,12 @@
 package blocksync
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	stationTypes "github.com/airchains-network/decentralized-sequencer/types"
-	"github.com/airchains-network/decentralized-sequencer/utilis"
+	utilis "github.com/airchains-network/decentralized-sequencer/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -29,7 +28,8 @@ func insertTxn(db *leveldb.DB, txns stationTypes.TransactionStruct, transactionN
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile("data/transactionCount.txt", []byte(strconv.Itoa(transactionNumber+1)), 0666)
+
+	err = db.Put([]byte("txnCount"), []byte(strconv.Itoa(transactionNumber+1)), nil)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 		toAddress = tx.To().Hex()
 	}
 
-	txData := stationTypes.TransactionStruct{
+	var txData = stationTypes.TransactionStruct{
 		BlockHash:        blockHash,
 		BlockNumber:      blockNumberUint64,
 		From:             msg.Hex(),
@@ -102,19 +102,11 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 		Value:            tx.Value().String(),
 	}
 
-	fileOpen, err := os.Open("data/transactionCount.txt")
+	// get transaction number from database
+	transactionNumberBytes, err := ldt.Get([]byte("txnCount"), nil)
 	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Failed to read file: %s" + err.Error()))
+		logs.Log.Error(fmt.Sprintf("Failed to get transaction number: %s" + err.Error()))
 		os.Exit(0)
-	}
-	defer fileOpen.Close()
-
-	scanner := bufio.NewScanner(fileOpen)
-
-	transactionNumberBytes := ""
-
-	for scanner.Scan() {
-		transactionNumberBytes = scanner.Text()
 	}
 
 	transactionNumber, err := strconv.Atoi(strings.TrimSpace(string(transactionNumberBytes)))
@@ -129,8 +121,4 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 		os.Exit(0)
 	}
 
-	//logs.Log.Debug(fmt.Sprintf("Successfully saved Transation %s in the latest phase", txHash))
-
 }
-
-//TODO add COSMOS txn saver
