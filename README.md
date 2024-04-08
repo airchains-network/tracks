@@ -24,7 +24,6 @@ sudo rm -rf ~/.tracks
 ```
 
 ### start  node 
-note: it will stick on submit pod, if u put more then one track in create-track in above code..
 ```shell
 ./bin/tracks start
 ```
