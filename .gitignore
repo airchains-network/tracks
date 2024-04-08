@@ -1,2 +1,4 @@
 ./data/*
 ./accounts/*
+./.idea/*
+./bin/*
