@@ -61,7 +61,6 @@ func StartRPC(wg *sync.WaitGroup) {
 	if err := server.Start(); err != nil {
 		server.Log.WithField("error", err).Fatal("Failed to start server")
 	}
-
 	server.Log.Info("Server Started Successfully on Port 2024")
 
 	stopChan := make(chan os.Signal, 1)

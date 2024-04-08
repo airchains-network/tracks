@@ -7,7 +7,7 @@ import (
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/airchains-network/decentralized-sequencer/types"
-	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1"
+	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1EVM"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )

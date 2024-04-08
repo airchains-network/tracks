@@ -11,8 +11,8 @@ import (
 
 func main() {
 	var rootCmd = &cobra.Command{
-		Use:   "station-trackd",
-		Short: "Decentralized Sequencer for StaionApps",
+		Use:   "track",
+		Short: "Decentralized Sequencer for Stations",
 	}
 
 	rootCmd.AddCommand(command.StationCmd)

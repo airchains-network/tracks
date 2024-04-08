@@ -7,6 +7,7 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/config"
 	"github.com/airchains-network/decentralized-sequencer/da/avail"
 	"github.com/airchains-network/decentralized-sequencer/da/celestia"
+	"github.com/airchains-network/decentralized-sequencer/da/eigen"
 	mock "github.com/airchains-network/decentralized-sequencer/da/mockda"
 	"github.com/airchains-network/decentralized-sequencer/junction"
 	junctionTypes "github.com/airchains-network/decentralized-sequencer/junction/types"
@@ -14,7 +15,7 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	"github.com/airchains-network/decentralized-sequencer/types"
 	utilis "github.com/airchains-network/decentralized-sequencer/utils"
-	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1"
+	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1EVM"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/rand"
@@ -164,8 +165,8 @@ func GenerateUnverifiedPods() {
 					DAKey:             daCheck,
 					DAClientName:      "mock-da",
 					BatchNumber:       strconv.Itoa(PodNumber),
-					PreviousStateHash: "",
-					CurrentStateHash:  "",
+					PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
+					CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
 				}
 
 				daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
@@ -191,8 +192,8 @@ func GenerateUnverifiedPods() {
 					DAKey:             daCheck,
 					DAClientName:      "mock-da",
 					BatchNumber:       strconv.Itoa(PodNumber),
-					PreviousStateHash: "",
-					CurrentStateHash:  "",
+					PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
+					CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
 				}
 
 				daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
@@ -220,8 +221,8 @@ func GenerateUnverifiedPods() {
 					DAKey:             daCheck,
 					DAClientName:      "mock-da",
 					BatchNumber:       strconv.Itoa(PodNumber),
-					PreviousStateHash: "",
-					CurrentStateHash:  "",
+					PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
+					CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
 				}
 
 				daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
@@ -238,33 +239,33 @@ func GenerateUnverifiedPods() {
 				logs.Log.Info("data in DA submitted")
 
 			} else if Datype == "eigen" {
-				//daCheck, daCheckErr := eigen.Eigen(daDataByte,
-				//	baseConfig.DA.DaRPC, baseConfig.DA.DaRPC,
-				//)
-				//
-				//if daCheckErr != nil {
-				//	logs.Log.Warn("Error in submitting data to DA")
-				//	return
-				//}
-				//
-				//da := types.DAStruct{
-				//	DAKey:             daCheck,
-				//	DAClientName:      "mock-da",
-				//	BatchNumber:       strconv.Itoa(PodNumber),
-				//	PreviousStateHash: "",
-				//	CurrentStateHash:  "",
-				//}
+				daCheck, daCheckErr := eigen.Eigen(daDataByte,
+					baseConfig.DA.DaRPC, baseConfig.DA.DaRPC,
+				)
 
-				//daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
-				//daStoreData, daStoreDataErr := json.Marshal(da)
-				//if daStoreDataErr != nil {
-				//	logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
-				//}
+				if daCheckErr != nil {
+					logs.Log.Warn("Error in submitting data to DA")
+					return
+				}
 
-				//storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
-				//if storeErr != nil {
-				//	logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
-				//}
+				da := types.DAStruct{
+					DAKey:             daCheck,
+					DAClientName:      "mock-da",
+					BatchNumber:       strconv.Itoa(PodNumber),
+					PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
+					CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
+				}
+
+				daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+				daStoreData, daStoreDataErr := json.Marshal(da)
+				if daStoreDataErr != nil {
+					logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+				}
+
+				storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
+				if storeErr != nil {
+					logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+				}
 
 				logs.Log.Info("data in DA submitted")
 
