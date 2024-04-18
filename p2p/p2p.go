@@ -140,14 +140,9 @@ func getAllPeers(node host.Host) []peer.AddrInfo {
 }
 
 func startNode(ctx context.Context) (host.Host, error) {
-	privKey, err := loadPrivateKey(identityFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load private key: %w", err)
-	}
 
 	node, err := libp2p.New(
 		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/2300"),
-		libp2p.Identity(privKey),
 		libp2p.Ping(false),
 	)
 	if err != nil {

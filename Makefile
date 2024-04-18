@@ -18,7 +18,7 @@ MAKEFLAGS += --silent
 ## build: Compile the binary.
 build:
 	@echo "  >  Building binary..."
-	@GOPATH=$(GOPATH) GOBIN=$(GOBIN) go build $(LDFLAGS) -o $(GOBIN)/$(BINARYNAME) ./cmd/main.go
+	 go build -o ./$(BINARYNAME) ./cmd/main.go
 
 ## install: Install missing dependencies.
 install:
