@@ -24,7 +24,7 @@ func RouterHandler(c *gin.Context) {
 		respondWithError(c, Log, 2, "Invalid JsonRPC ID, it should be 2.0", 500)
 		return
 	}
-	if ID != "1" {
+	if ID != 1 {
 		respondWithError(c, Log, 3, "ID should be 1", 500)
 		return
 	}

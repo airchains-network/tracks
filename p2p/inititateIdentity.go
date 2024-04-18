@@ -6,7 +6,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -34,11 +33,14 @@ func (pg *PeerGenerator) GeneratePeerID() (peer.ID, error) {
 		return "", err
 	}
 
-	pg.PrivKey = node.Peerstore().PrivKey(node.ID())
+	privateKey, err := crypto.MarshalPrivateKey(node.Peerstore().PrivKey(node.ID()))
+	if err != nil {
+		panic(err)
+	}
 	pg.Node = node
 	homeDir, _ := os.UserHomeDir()
-	filePath := filepath.Join(homeDir, ".tracks/config/sequencer")
-	err = savePrivateKey(filepath.Join(filePath, "identity.info"), pg.PrivKey)
+	filePath := filepath.Join(homeDir, ".tracks/config")
+	err = savePrivateKey(filepath.Join(filePath, "identity.info"), privateKey)
 	if err != nil {
 		return "", err
 	}
@@ -46,16 +48,26 @@ func (pg *PeerGenerator) GeneratePeerID() (peer.ID, error) {
 	return node.ID(), nil
 }
 
-func savePrivateKey(filePath string, privKey crypto.PrivKey) error {
-	privateKeyBytes, err := crypto.MarshalPrivateKey(privKey)
-	if err != nil {
-		return fmt.Errorf("unable to marshal private key: %v", err)
-	}
+func savePrivateKey(filePath string, privateKey []byte) error {
 
-	err = ioutil.WriteFile(filePath, privateKeyBytes, 0644)
+	// Ensure the directory exists
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("unable to create directory: %v", err)
+	}
+	fmt.Println(privateKey)
+	err := os.WriteFile(filePath, privateKey, 0644)
 	if err != nil {
 		return fmt.Errorf("unable to write private key to file: %v", err)
 	}
-
+	serializedPrivKey, err := os.ReadFile(filePath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	a, err := crypto.UnmarshalPrivateKey(serializedPrivKey)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(a)
 	return nil
 }

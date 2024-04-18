@@ -4,7 +4,7 @@ type RequestBody struct {
 	JsonRPC string        `json:"jsonrpc"`
 	Method  string        `json:"method"`
 	Params  []interface{} `json:"params"`
-	ID      string        `json:"id"`
+	ID      int           `json:"id"`
 }
 
 type ErrorDetails struct {
@@ -16,7 +16,7 @@ type ErrorDetails struct {
 type ResponseBody struct {
 	JsonRPC string        `json:"jsonrpc"`
 	ID      string        `json:"id"`
-	Error   *ErrorDetails `json:"error"`
+	Error   *ErrorDetails `json:"error,omitempty"`
 	Result  interface{}   `json:"result"` // use interface{} for arbitrary result structure
 }
 type ErrorMsg struct {

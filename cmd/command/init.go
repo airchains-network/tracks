@@ -36,17 +36,17 @@ func InitConfigs(cmd *cobra.Command) (*Configs, error) {
 
 	configs.daType, err = cmd.Flags().GetString("daType")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get flag 'daType': %w", err)
+		return nil, fmt.Errorf("failed to get flag 'daType': %w", err)
 	}
 
 	configs.daRPC, err = cmd.Flags().GetString("daRpc")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get flag 'daRpc': %w", err)
+		return nil, fmt.Errorf("failed to get flag 'daRpc': %w", err)
 	}
 
 	configs.daKey, err = cmd.Flags().GetString("daKey")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get flag 'daKey': %w", err)
+		return nil, fmt.Errorf("failed to get flag 'daKey': %w", err)
 	}
 
 	configs.stationRPC, err = cmd.Flags().GetString("stationRpc")

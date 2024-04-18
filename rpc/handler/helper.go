@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -19,7 +20,6 @@ func respondWithError(c *gin.Context, logger *logrus.Logger, errorCode int64, er
 		JsonRPC: "2.0",
 		ID:      "1",
 		Error:   NewErrorResponse(errorCode, errorMsg),
-		Result:  nil,
 	}
 	logger.WithFields(logrus.Fields{
 		"ErrorCode": errorCode,
@@ -33,9 +33,8 @@ func respondWithSuccess(c *gin.Context, logger *logrus.Logger, resData interface
 	response := ResponseBody{
 		JsonRPC: "2.0",
 		ID:      "1",
-		Error:   NewErrorResponse(0, ""),
 		Result:  resData,
 	}
-
+	fmt.Println(response)
 	c.JSON(http.StatusOK, response)
 }
