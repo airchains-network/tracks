@@ -17,7 +17,6 @@ import (
 	"math/big"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"sort"
 	"sync"
 	"syscall"
@@ -141,13 +140,13 @@ func getAllPeers(node host.Host) []peer.AddrInfo {
 }
 
 func startNode(ctx context.Context) (host.Host, error) {
-	homeDir, _ := os.UserHomeDir()
-	filePath := filepath.Join(homeDir, ".tracks/config/sequencer.toml")
-	privateKey, err := loadPrivateKey(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load private key: %w", err)
-	}
-	fmt.Println(privateKey)
+	//homeDir, _ := os.UserHomeDir()
+	//filePath := filepath.Join(homeDir, ".tracks/config/sequencer.toml")
+	//privateKey, err := loadPrivateKey(filePath)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to load private key: %w", err)
+	//}
+	//fmt.Println(privateKey)
 
 	node, err := libp2p.New(
 		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/2300"),
