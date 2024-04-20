@@ -25,7 +25,7 @@ var mockDbInstance *leveldb.DB
 // whether the initialization was successful.
 func InitTxDb() bool {
 	homeDir, _ := os.UserHomeDir()
-	filePath := filepath.Join(homeDir, "data/leveldb/tx")
+	filePath := filepath.Join(homeDir, ".tracks/data/leveldb/tx")
 
 	txDB, err := leveldb.OpenFile(filePath, nil)
 	if err != nil {

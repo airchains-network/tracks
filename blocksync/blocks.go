@@ -14,7 +14,6 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -96,31 +95,30 @@ func getLastProcessedBlock(db *leveldb.DB) int {
 	return lastBlockNum
 }
 
-func StoreWasmBlock(wg *sync.WaitGroup, ldb *leveldb.DB, ldt *leveldb.DB, JsonRPC string, JsonAPI string) {
-	defer wg.Done()
-
+func StoreWasmBlock(ldb *leveldb.DB, ldt *leveldb.DB, JsonRPC string, JsonAPI string) {
 	rpcUrl := fmt.Sprintf("%s/cosmos/base/tendermint/v1beta1/blocks/latest", JsonAPI)
 	res, resErr := http.Get(rpcUrl)
 	if resErr != nil {
-
+		logs.Log.Error(resErr.Error())
 	}
 	defer res.Body.Close()
-
 	bodyBlockHeight, bodyBlockHeightErr := io.ReadAll(res.Body)
 	if bodyBlockHeightErr != nil {
-
+		logs.Log.Error(bodyBlockHeightErr.Error())
 	}
 
 	var blockHeight BlockObject
 	error := json.Unmarshal(bodyBlockHeight, &blockHeight)
 	if error != nil {
+		logs.Log.Error(error.Error())
 
 	}
 	latestBlock := blockHeight.Block.Header.Height
 
 	numLatestBlock, err := strconv.Atoi(latestBlock)
 	if err != nil {
-		panic(err)
+		logs.Log.Error(err.Error())
+
 	}
 	lastBlock := getLastProcessedBlock(ldb)
 	startBlock := lastBlock + 1
@@ -132,48 +130,45 @@ func StoreWasmBlock(wg *sync.WaitGroup, ldb *leveldb.DB, ldt *leveldb.DB, JsonRP
 
 func OldWasmBlocks(JsonRPC string, JsonAPI string, startBlock int, numLatestBlock int, db *leveldb.DB, txnDB *leveldb.DB) {
 	for i := startBlock; i <= numLatestBlock; i++ {
-		fmt.Println("Saving block number:", i)
 		rpcUrl := fmt.Sprintf("%s/block?height=%d", JsonRPC, i)
 		resp, err := http.Get(rpcUrl)
 		if err != nil {
-			log.Println("Error fetching block:", err)
-			continue
+			logs.Log.Error(err.Error())
+
 		}
 
 		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close() // Close the response body here
 		if err != nil {
-			log.Println("Error reading block body:", err)
-			continue
+			logs.Log.Error(err.Error())
 		}
 
 		var blockData Response
 
 		jsonErr := json.Unmarshal(body, &blockData)
 		if jsonErr != nil {
-			log.Fatal(jsonErr)
+			logs.Log.Error(err.Error())
+
 		}
-
 		if len(blockData.Result.Block.Data.Txs) > 0 {
-
 			StoreWasmTransaction(blockData.Result.Block.Data.Txs, txnDB, JsonAPI)
 		}
 
 		var responseMap map[string]interface{}
 		if err := json.Unmarshal(body, &responseMap); err != nil {
-			log.Fatal("Error unmarshalling JSON:", err) // Consider if fatal is appropriate here
+			logs.Log.Error("Error While Unmarshalling " + err.Error())
+
 		}
 		if result, ok := responseMap["result"]; ok {
 			resultJSON, err := json.MarshalIndent(result, "", "  ")
 			if err != nil {
-				log.Fatal("Error marshalling JSON:", err)
+				logs.Log.Error("Error marshalling JSON" + err.Error())
 			}
 
 			blockKey := []byte("Block" + strconv.Itoa(i))
 
 			if err = db.Put(blockKey, resultJSON, nil); err != nil {
-				log.Println("Error saving block to LevelDB:", err)
-				continue
+				logs.Log.Error(err.Error())
 			}
 
 			blockCount := i + 1
@@ -186,8 +181,8 @@ func OldWasmBlocks(JsonRPC string, JsonAPI string, startBlock int, numLatestBloc
 	}
 }
 
-func GetWasmCurrentBlock() (BlockObject, error) {
-	rpcUrl := fmt.Sprintf("%s/cosmos/base/tendermint/v1beta1/blocks/latest", "common.ExecutionClientTRPC")
+func GetWasmCurrentBlock(JsonAPI string) (BlockObject, error) {
+	rpcUrl := fmt.Sprintf("%s/cosmos/base/tendermint/v1beta1/blocks/latest", JsonAPI)
 	res, err := http.Get(rpcUrl)
 	if err != nil {
 		return BlockObject{}, err
@@ -205,42 +200,36 @@ func GetWasmCurrentBlock() (BlockObject, error) {
 func watchWasmBlocks(JsonRPC string, JsonAPI string, currentBlockHeight int, db *leveldb.DB, txnDB *leveldb.DB) {
 	var currentBlock BlockObject
 	for {
-		latestBlock, err := GetWasmCurrentBlock()
+		latestBlock, err := GetWasmCurrentBlock(JsonAPI)
 		if err != nil {
-			fmt.Println("Error fetching current block:", err)
+			logs.Log.Debug(err.Error())
 			time.Sleep(2 * time.Second)
 			continue
 		}
 
 		if currentBlock.Block.Header.Height == latestBlock.Block.Header.Height {
-			fmt.Println("No new blocks. Waiting for 3 second.")
-			time.Sleep(3 * time.Second)
+			time.Sleep(7 * time.Second)
 			continue
 		}
-
-		fmt.Println("New block:", latestBlock.Block.Header.Height)
+		logs.Log.Info("New blocks Found")
 		rpcUrl := fmt.Sprintf("%s/block?height=%s", JsonRPC, latestBlock.Block.Header.Height)
 		resp, err := http.Get(rpcUrl)
 		if err != nil {
-			fmt.Println("Error fetching block details:", err)
-			continue
+			logs.Log.Error(err.Error())
 		}
 
 		body, err := io.ReadAll(resp.Body)
-		err = resp.Body.Close()
+		resp.Body.Close()
 		if err != nil {
-			return
-		} // Explicitly close the body
-		if err != nil {
-			fmt.Println("Error reading response body:", err)
+			logs.Log.Error(err.Error())
 			continue
 		}
 
 		var blockData Response
 
-		error := json.Unmarshal(body, &blockData)
-		if error != nil {
-			log.Fatal(error)
+		err = json.Unmarshal(body, &blockData)
+		if err != nil {
+			logs.Log.Error(err.Error())
 		}
 
 		if len(blockData.Result.Block.Data.Txs) > 0 {

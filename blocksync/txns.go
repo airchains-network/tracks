@@ -1,7 +1,6 @@
 package blocksync
 
 import (
-	"bufio"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -24,7 +23,7 @@ import (
 	"time"
 )
 
-func insertTxn(db *leveldb.DB, txns stationTypes.TransactionStruct, transactionNumber int) error {
+func insertTxnEVM(db *leveldb.DB, txns stationTypes.TransactionStruct, transactionNumber int) error {
 	data, err := json.Marshal(txns)
 	if err != nil {
 		return err
@@ -32,6 +31,21 @@ func insertTxn(db *leveldb.DB, txns stationTypes.TransactionStruct, transactionN
 
 	txnsKey := fmt.Sprintf("txns-%d", transactionNumber+1)
 	err = db.Put([]byte(txnsKey), data, nil)
+	if err != nil {
+		return err
+	}
+
+	err = db.Put([]byte("txnCount"), []byte(strconv.Itoa(transactionNumber+1)), nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func insertTxnWASM(db *leveldb.DB, txns []byte, transactionNumber int) error {
+
+	txnsKey := fmt.Sprintf("txns-%d", transactionNumber+1)
+	err := db.Put([]byte(txnsKey), txns, nil)
 	if err != nil {
 		return err
 	}
@@ -122,7 +136,7 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 		os.Exit(0)
 	}
 
-	insetTxnErr := insertTxn(ldt, txData, transactionNumber)
+	insetTxnErr := insertTxnEVM(ldt, txData, transactionNumber)
 	if insetTxnErr != nil {
 		logs.Log.Error(fmt.Sprintf("Failed to insert transaction: %s" + insetTxnErr.Error()))
 		os.Exit(0)
@@ -131,9 +145,8 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 }
 
 func StoreWasmTransaction(txn []interface{}, db *leveldb.DB, JsonAPI string) {
-	fmt.Println("Saving Transactions ......⏳")
 	for i, tx := range txn {
-		fmt.Println("Processing Transaction: ", i)
+		_ = i
 		hash, err := ComputeTransactionHash(tx.(string))
 		if err != nil {
 			log.Println("Error computing transaction hash:", err)
@@ -151,37 +164,22 @@ func StoreWasmTransaction(txn []interface{}, db *leveldb.DB, JsonAPI string) {
 			if err != nil {
 				return
 			}
-			//TODO change this boi
-			fileOpen, err := os.Open("data/transactionCount.txt")
+			// get transaction number from database
+			transactionNumberBytes, err := db.Get([]byte("txnCount"), nil)
 			if err != nil {
-
-			}
-			defer fileOpen.Close()
-
-			scanner := bufio.NewScanner(fileOpen)
-
-			transactionNumberBytes := ""
-
-			for scanner.Scan() {
-				transactionNumberBytes = scanner.Text()
+				logs.Log.Error(fmt.Sprintf("Failed to get transaction number: %s" + err.Error()))
+				os.Exit(0)
 			}
 
 			transactionNumber, err := strconv.Atoi(strings.TrimSpace(string(transactionNumberBytes)))
 			if err != nil {
-
+				logs.Log.Error(fmt.Sprintf("Invalid transaction number : %s" + err.Error()))
+				os.Exit(0)
 			}
-
-			//txnKey := []byte(hash)
-			txnsKey := fmt.Sprintf("txns-%d", transactionNumber+1)
-			if err = db.Put([]byte(txnsKey), bodyTxnHash, nil); err != nil {
-				log.Println("Error saving txn to LevelDB:", err)
-				continue
-			} else {
-				err = os.WriteFile("data/transactionCount.txt", []byte(strconv.Itoa(transactionNumber+1)), 0666)
-				if err != nil {
-
-				}
-				fmt.Println("Transaction saved successfully:", txnsKey)
+			insetTxnErr := insertTxnWASM(db, bodyTxnHash, transactionNumber)
+			if insetTxnErr != nil {
+				logs.Log.Error(fmt.Sprintf("Failed to insert transaction: %s" + insetTxnErr.Error()))
+				os.Exit(0)
 			}
 
 		} else {
