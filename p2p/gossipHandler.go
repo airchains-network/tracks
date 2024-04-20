@@ -284,7 +284,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 				CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
 			}
 
-			daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+			daStoreKey := fmt.Sprintf("da-%d", PodNumber)
 			daStoreData, daStoreDataErr := json.Marshal(da)
 			if daStoreDataErr != nil {
 				logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
@@ -311,7 +311,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 				CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
 			}
 
-			daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+			daStoreKey := fmt.Sprintf("da-%d", PodNumber)
 			daStoreData, daStoreDataErr := json.Marshal(da)
 			if daStoreDataErr != nil {
 				logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
@@ -340,7 +340,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 				CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
 			}
 
-			daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+			daStoreKey := fmt.Sprintf("da-%d", PodNumber)
 			daStoreData, daStoreDataErr := json.Marshal(da)
 			if daStoreDataErr != nil {
 				logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
@@ -371,7 +371,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 				CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
 			}
 
-			daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+			daStoreKey := fmt.Sprintf("da-%d", PodNumber)
 			daStoreData, daStoreDataErr := json.Marshal(da)
 			if daStoreDataErr != nil {
 				logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))

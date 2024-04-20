@@ -67,13 +67,7 @@ func Eigen(daData []byte, rpcUrl string, accountKey string) (string, error) {
 
 	blobKey := string(d[:])
 
-	// ! TODO : "DA status "
-	//daStatus, err := GetStatus(conn, d, ctx)
-	//if err != nil {
-	//	logger.Log.Error(err.Error())
-	//	return "nil", err
-	//}
-	//fmt.Printf("DA status %v\n", daStatus)
+	//TODO Add DA check Status
 	return blobKey, nil
 
 }

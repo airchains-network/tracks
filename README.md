@@ -27,6 +27,3 @@ go run cmd/main.go create-station --accountName dummy --accountPath ./accounts/k
 ```shell
 go run cmd/main.go start
 ```
-
-
-

@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
@@ -37,6 +38,7 @@ type PodState struct {
 	TracksAppHash       []byte
 	Batch               *types.BatchStruct
 	MasterTrackAppHash  []byte
+	Timestamp           *time.Time `json:"timestamp,omitempty"`
 }
 type Connections struct {
 	mu                                 sync.Mutex

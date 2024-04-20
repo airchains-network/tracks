@@ -169,7 +169,7 @@ func GenerateUnverifiedPods() {
 					CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
 				}
 
-				daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+				daStoreKey := fmt.Sprintf("da-%d", PodNumber)
 				daStoreData, daStoreDataErr := json.Marshal(da)
 				if daStoreDataErr != nil {
 					logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
@@ -196,7 +196,7 @@ func GenerateUnverifiedPods() {
 					CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
 				}
 
-				daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+				daStoreKey := fmt.Sprintf("da-%d", PodNumber)
 				daStoreData, daStoreDataErr := json.Marshal(da)
 				if daStoreDataErr != nil {
 					logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
@@ -225,7 +225,7 @@ func GenerateUnverifiedPods() {
 					CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
 				}
 
-				daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+				daStoreKey := fmt.Sprintf("da-%d", PodNumber)
 				daStoreData, daStoreDataErr := json.Marshal(da)
 				if daStoreDataErr != nil {
 					logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
@@ -256,7 +256,7 @@ func GenerateUnverifiedPods() {
 					CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
 				}
 
-				daStoreKey := fmt.Sprintf("da-pointer-%d", PodNumber)
+				daStoreKey := fmt.Sprintf("da-%d", PodNumber)
 				daStoreData, daStoreDataErr := json.Marshal(da)
 				if daStoreDataErr != nil {
 					logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
@@ -457,32 +457,14 @@ func createPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness [
 func saveVerifiedPOD() {
 
 	podState := shared.GetPodState()
-	batchInput := podState.Batch
+	batchTimestamp := time.Now()
+	podState.Timestamp = &batchTimestamp
 	currentPodNumber := podState.LatestPodHeight
 	currentPodNumberInt := int(currentPodNumber)
 
-	batchByte, err := json.Marshal(batchInput)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in marshalling batch data : %s", err.Error()))
-		os.Exit(0)
-	}
-
-	podByte, err := json.Marshal(podState)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in marshalling pod data : %s", err.Error()))
-		os.Exit(0)
-	}
-
-	ldbatch := shared.Node.NodeConnections.GetDataAvailabilityDatabaseConnection()
 	lds := shared.Node.NodeConnections.GetStaticDatabaseConnection()
 
-	batchKey := fmt.Sprintf("batch-%d", currentPodNumberInt)
-	err = ldbatch.Put([]byte(batchKey), batchByte, nil)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in writing batch data to file : %s", err.Error()))
-		os.Exit(0)
-	}
-	err = lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(config.PODSize*(currentPodNumberInt))), nil)
+	err := lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(config.PODSize*(currentPodNumberInt))), nil)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in updating batchStartIndex in static db : %s", err.Error()))
 		os.Exit(0)
@@ -496,14 +478,20 @@ func saveVerifiedPOD() {
 
 	batchDB := shared.Node.NodeConnections.GetPodsDatabaseConnection()
 	podKey := fmt.Sprintf("pod-%d", currentPodNumberInt)
-	err = batchDB.Put([]byte(podKey), podByte, nil)
+
+	batchInputWithTimestampBytes, err := json.Marshal(podState)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in marshalling batch data : %s", err.Error()))
+		os.Exit(0)
+	}
+	err = batchDB.Put([]byte(podKey), batchInputWithTimestampBytes, nil)
 	if err != nil {
 		panic("Failed to update pod data: " + err.Error())
 	}
 
 	podState.MasterTrackAppHash = nil
 	shared.SetPodState(podState)
-	logs.Log.Warn("presend pod data saved to database")
+	logs.Log.Warn("present pod data saved to database")
 }
 
 func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {

@@ -1,7 +1,11 @@
 package blocksync
 
 import (
+	"bufio"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
@@ -11,6 +15,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/syndtr/goleveldb/leveldb"
+	"io"
+	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -121,4 +128,74 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 		os.Exit(0)
 	}
 
+}
+
+func StoreWasmTransaction(txn []interface{}, db *leveldb.DB, JsonAPI string) {
+	fmt.Println("Saving Transactions ......⏳")
+	for i, tx := range txn {
+		fmt.Println("Processing Transaction: ", i)
+		hash, err := ComputeTransactionHash(tx.(string))
+		if err != nil {
+			log.Println("Error computing transaction hash:", err)
+			continue
+		}
+		rpcUrl := fmt.Sprintf("%s/cosmos/tx/v1beta1/txs/%s", JsonAPI, hash)
+		respo, err := http.Get(rpcUrl)
+		if err != nil {
+			log.Println("HTTP request failed for transaction hash:", err)
+			continue
+		}
+		if respo != nil {
+			bodyTxnHash, err := io.ReadAll(respo.Body)
+			err = respo.Body.Close()
+			if err != nil {
+				return
+			}
+			//TODO change this boi
+			fileOpen, err := os.Open("data/transactionCount.txt")
+			if err != nil {
+
+			}
+			defer fileOpen.Close()
+
+			scanner := bufio.NewScanner(fileOpen)
+
+			transactionNumberBytes := ""
+
+			for scanner.Scan() {
+				transactionNumberBytes = scanner.Text()
+			}
+
+			transactionNumber, err := strconv.Atoi(strings.TrimSpace(string(transactionNumberBytes)))
+			if err != nil {
+
+			}
+
+			//txnKey := []byte(hash)
+			txnsKey := fmt.Sprintf("txns-%d", transactionNumber+1)
+			if err = db.Put([]byte(txnsKey), bodyTxnHash, nil); err != nil {
+				log.Println("Error saving txn to LevelDB:", err)
+				continue
+			} else {
+				err = os.WriteFile("data/transactionCount.txt", []byte(strconv.Itoa(transactionNumber+1)), 0666)
+				if err != nil {
+
+				}
+				fmt.Println("Transaction saved successfully:", txnsKey)
+			}
+
+		} else {
+			log.Println("Received nil response for transaction hash:", hash)
+		}
+	}
+}
+
+func ComputeTransactionHash(base64Tx string) (string, error) {
+	txBytes, err := base64.StdEncoding.DecodeString(base64Tx)
+	if err != nil {
+		return "", err
+	}
+	hash := sha256.Sum256(txBytes)
+	txHash := hex.EncodeToString(hash[:])
+	return txHash, nil
 }
