@@ -305,7 +305,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 
 			da := types.DAStruct{
 				DAKey:             daCheck,
-				DAClientName:      "mock-da",
+				DAClientName:      "avail-da",
 				BatchNumber:       strconv.Itoa(PodNumber),
 				PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
 				CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
@@ -334,7 +334,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 
 			da := types.DAStruct{
 				DAKey:             daCheck,
-				DAClientName:      "mock-da",
+				DAClientName:      "celestia-da",
 				BatchNumber:       strconv.Itoa(PodNumber),
 				PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
 				CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
@@ -365,7 +365,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 
 			da := types.DAStruct{
 				DAKey:             daCheck,
-				DAClientName:      "mock-da",
+				DAClientName:      "eigen-da",
 				BatchNumber:       strconv.Itoa(PodNumber),
 				PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
 				CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
