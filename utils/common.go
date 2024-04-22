@@ -172,7 +172,9 @@ func GenerateRandomWithFavour(lowerBound, upperBound int, favourableSet [2]int, 
 }
 
 func Bech32Decoder(value string) string {
+	fmt.Println("gey" + value)
 	_, bytes, err := bech32.Decode(value)
+
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error decoding Bech32 value: %v", err))
 	}

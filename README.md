@@ -6,7 +6,7 @@ sudo rm -rf ~/.tracks
 
 ### Init sequencer
 ```shell
-go run cmd/main.go init --daRpc "mock-rpc" --daKey "mockKey" --daType "mock"  --moniker "monkey" --stationRpc "http://127.0.0.1:8545" --stationAPI "http://127.0.0.1:8545" --stationType "evm" 
+go run cmd/main.go init --daRpc "mock-rpc" --daKey "mockKey" --daType "mock"  --moniker "monkey" --stationRpc "http://127.0.0.1:23377" --stationAPI "http://127.0.0.1:1234" --stationType "wasm" 
 ```
 
 ### Create Keys for Junction
@@ -16,7 +16,7 @@ go run cmd/main.go keys junction --accountName dummy --accountPath ./accounts/ke
 
 ### Init Prover
 ```shell
-go run cmd/main.go prover v1EVM
+go run cmd/main.go prover v1WASM
 ```
 
 ### Create station on junction

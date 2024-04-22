@@ -23,6 +23,7 @@ func main() {
 
 	command.KeyGenCmd.AddCommand(keys.JunctionKeyGenCmd)
 	command.ProverGenCMD.AddCommand(zkpCmd.V1ZKP)
+	command.ProverGenCMD.AddCommand(zkpCmd.V1ZKPWasm)
 
 	keys.JunctionKeyGenCmd.Flags().String("accountName", "", "Account Name")
 	keys.JunctionKeyGenCmd.Flags().String("accountPath", "", "Account Path")

@@ -145,8 +145,7 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 }
 
 func StoreWasmTransaction(txn []interface{}, db *leveldb.DB, JsonAPI string) {
-	for i, tx := range txn {
-		_ = i
+	for _, tx := range txn {
 		hash, err := ComputeTransactionHash(tx.(string))
 		if err != nil {
 			log.Println("Error computing transaction hash:", err)
@@ -164,6 +163,20 @@ func StoreWasmTransaction(txn []interface{}, db *leveldb.DB, JsonAPI string) {
 			if err != nil {
 				return
 			}
+
+			var txns Transaction
+			err = json.Unmarshal(bodyTxnHash, &txns)
+			if err != nil {
+				logs.Log.Error(fmt.Sprintf("Failed to unmarshal transaction: %s", err))
+				os.Exit(0)
+			}
+
+			if len(txns.TxResponse.Tx.Body.Messages) == 0 {
+				logs.Log.Warn(fmt.Sprintf("Failed to unmarshal transaction: %s", err))
+				time.Sleep(2 * time.Second)
+				continue
+			}
+
 			// get transaction number from database
 			transactionNumberBytes, err := db.Get([]byte("txnCount"), nil)
 			if err != nil {

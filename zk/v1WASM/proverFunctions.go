@@ -188,13 +188,13 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 
 	currentStatusHash := GetMerkleRootCheck(transactions)
 
-	if _, err := os.Stat("provingKey.txt"); os.IsNotExist(err) {
-		fmt.Println("Proving key does not exist. Please run the command 'sequencer-sdk create-vk-pk' to generate the proving key")
+	homeDir, _ := os.UserHomeDir()
+	provingKeyFile := homeDir + "/.tracks/config/provingKey.txt"
+	pk, err := ReadProvingKeyFromFile(provingKeyFile)
+	if err != nil {
+		fmt.Println("Error reading proving key:", err)
 		return nil, "", nil, err
-
 	}
-
-	pk, err := ReadProvingKeyFromFile("provingKey.txt")
 
 	fmt.Println("STEP 4: Generating proof")
 
