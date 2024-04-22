@@ -49,6 +49,7 @@ type Connections struct {
 	StaticDatabaseConnection           *leveldb.DB
 	StateDatabaseConnection            *leveldb.DB
 	MockDatabaseConnection             *leveldb.DB
+	PublicWitnessConnection            *leveldb.DB
 }
 
 type NodeS struct {
@@ -95,6 +96,7 @@ func InitializeDatabaseConnections() *Connections {
 		DataAvailabilityDatabaseConnection: blocksync.GetDaDbInstance(),
 		StaticDatabaseConnection:           blocksync.GetStaticDbInstance(),
 		MockDatabaseConnection:             blocksync.GetMockDbInstance(),
+		PublicWitnessConnection:            blocksync.GetPublicWitnessDbInstance(),
 	}
 }
 
@@ -132,6 +134,12 @@ func (c *Connections) GetStateDatabaseConnection() *leveldb.DB {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.StateDatabaseConnection
+}
+
+func (c *Connections) GetPublicWitnessDbInstance() *leveldb.DB {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.PublicWitnessConnection
 }
 
 func CheckAndInitializeDBCounters(staticDB *leveldb.DB) {

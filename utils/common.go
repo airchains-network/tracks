@@ -2,9 +2,11 @@ package utils
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/btcsuite/btcd/btcutil/bech32"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"io"
 	"math/big"
@@ -38,17 +40,17 @@ func GetBalance(address string, blockNumber uint64, stationRPC string) (string, 
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("Error reading response body: %w", err)
+		return "", fmt.Errorf("error reading response body: %w", err)
 	}
 
 	var jsonResponse map[string]interface{}
 	err = json.Unmarshal(body, &jsonResponse)
 	if err != nil {
-		return "", fmt.Errorf("Error unmarshalling JSON response: %w", err)
+		return "", fmt.Errorf("error unmarshalling JSON response: %w", err)
 	}
 
 	if errMsg, ok := jsonResponse["error"]; ok {
-		return "", fmt.Errorf("Error from Ethereum node: %v", errMsg)
+		return "", fmt.Errorf("error from Ethereum node: %v", errMsg)
 	}
 
 	if result, ok := jsonResponse["result"].(string); ok {
@@ -58,14 +60,14 @@ func GetBalance(address string, blockNumber uint64, stationRPC string) (string, 
 		}
 		return balance.String(), nil
 	} else {
-		return "", fmt.Errorf("Failed to parse balance")
+		return "", fmt.Errorf("failed to parse balance")
 	}
 }
 
 func GetAccountNonce(ctx context.Context, address string, blockNumber uint64, stationRPC string) (string, error) {
 	client, err := rpc.Dial(stationRPC)
 	if err != nil {
-		return "0", fmt.Errorf("Error dialing RPC: %w", err)
+		return "0", fmt.Errorf("error dialing RPC: %w", err)
 	}
 
 	accountAddress := common.HexToAddress(address)
@@ -142,7 +144,7 @@ func GenerateRandomWithFavour(lowerBound, upperBound int, favourableSet [2]int, 
 	}
 
 	// Check if the favourable set is within the total range
-	if favourableSet[0] < lowerBound || favourableSet[1] > upperBound || favourableRange <= 0 {
+	if favourableSet[0] < lowerBound || favourableSet[1] > upperBound {
 		fmt.Println("Invalid favourable set")
 		return 0
 	}
@@ -167,4 +169,91 @@ func GenerateRandomWithFavour(lowerBound, upperBound int, favourableSet [2]int, 
 	}
 
 	return randNum
+}
+
+func Bech32Decoder(value string) string {
+	_, bytes, err := bech32.Decode(value)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error decoding Bech32 value: %v", err))
+	}
+
+	decodedBigInt := new(big.Int).SetBytes(bytes)
+	return decodedBigInt.String()
+}
+
+func TXHashCheck(value string) string {
+	byteSlice, err := hex.DecodeString(value)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error decoding hex value: %v", err))
+	}
+
+	decodedBigInt := new(big.Int).SetBytes(byteSlice)
+	return decodedBigInt.String()
+}
+func AccountBalanceCheck(walletAddress string, blockHeight string, JsonAPI string) string {
+
+	height, err := strconv.Atoi(blockHeight)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error converting block height to integer: %v", err))
+	}
+
+	res, resErr := http.Get(
+		fmt.Sprintf(
+			"%s/cosmos/bank/v1beta1/balances/%s?height=%d", JsonAPI, walletAddress, height-1,
+		),
+	)
+	if resErr != nil {
+		logs.Log.Error(fmt.Sprintf("Error making HTTP request: %v", resErr))
+	}
+	defer res.Body.Close()
+
+	var accountBalance struct {
+		Balances []struct {
+			Denom  string `json:"denom"`
+			Amount string `json:"amount"`
+		} `json:"balances"`
+		Pagination struct {
+			NextKey string `json:"next_key"`
+			Total   string `json:"total"`
+		} `json:"pagination"`
+	}
+
+	decodeError := json.NewDecoder(res.Body).Decode(&accountBalance)
+	if decodeError != nil {
+		logs.Log.Error(fmt.Sprintf("Error decoding JSON response: %v", decodeError))
+	}
+
+	return accountBalance.Balances[0].Amount
+}
+
+func AccountNounceCheck(walletAddress string, JsonAPI string) string {
+	res, resErr := http.Get(
+		fmt.Sprintf(
+			"%s/cosmos/auth/v1beta1/accounts/%s", JsonAPI, walletAddress,
+		),
+	)
+	if resErr != nil {
+		logs.Log.Error(fmt.Sprintf("Error making HTTP request: %v", resErr))
+	}
+	defer res.Body.Close()
+
+	var accountNounce struct {
+		Account struct {
+			Type    string `json:"@type"`
+			Address string `json:"address"`
+			PubKey  struct {
+				Type string `json:"@type"`
+				Key  string `json:"key"`
+			} `json:"pub_key"`
+			AccountNumber string `json:"account_number"`
+			Sequence      string `json:"sequence"`
+		} `json:"account"`
+	}
+
+	decodeError := json.NewDecoder(res.Body).Decode(&accountNounce)
+	if decodeError != nil {
+		logs.Log.Error(fmt.Sprintf("Error decoding JSON response: %v", decodeError))
+	}
+
+	return accountNounce.Account.Sequence
 }

@@ -2,8 +2,10 @@ package p2p
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/ComputerKeeda/sslogger"
 	"github.com/airchains-network/decentralized-sequencer/config"
 	"github.com/airchains-network/decentralized-sequencer/da/avail"
 	"github.com/airchains-network/decentralized-sequencer/da/celestia"
@@ -16,6 +18,7 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/types"
 	utilis "github.com/airchains-network/decentralized-sequencer/utils"
 	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1EVM"
+	v1Wasm "github.com/airchains-network/decentralized-sequencer/zk/v1WASM"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/rand"
@@ -32,53 +35,82 @@ func BatchGeneration(wg *sync.WaitGroup) {
 	GenerateUnverifiedPods()
 }
 
+const (
+	Mock               = "mock"
+	Avail              = "avail"
+	Celestia           = "celestia"
+	Eigen              = "eigen"
+	BatchCountKey      = "batchCount"
+	BatchStartIndexKey = "batchStartIndex"
+)
+
+func checkErrorAndExit(log sslogger.Logger, err error, message string, exitCode int) {
+	if err != nil {
+		log.Error(fmt.Sprintf("%s : %s", message, err.Error()))
+		os.Exit(exitCode)
+	}
+}
+
+func getValueOrDefault(db *leveldb.DB, key []byte, defaultValue []byte) ([]byte, error) {
+	val, err := db.Get(key, nil)
+	log := logs.Log
+	if err != nil {
+		log.Warn(fmt.Sprintf("%s not found in static db", string(key)))
+		err = db.Put(key, defaultValue, nil)
+		checkErrorAndExit(log, err, fmt.Sprintf("Error in saving %s in static db", string(key)), 0)
+	}
+	return val, nil
+}
+
 func GenerateUnverifiedPods() {
-	logs.Log.Info("Generating new POD")
-	lds := shared.Node.NodeConnections.GetStaticDatabaseConnection()
-	ldt := shared.Node.NodeConnections.GetTxnDatabaseConnection()
+	log := logs.Log
+	log.Info("Generating new POD")
+	connection := shared.Node.NodeConnections
+	staticDBConnection := connection.GetStaticDatabaseConnection()
+	txnDBConnection := connection.GetTxnDatabaseConnection()
 
-	ConfirmendTransactionIndex, err := lds.Get([]byte("batchStartIndex"), nil)
-	if err != nil {
-		logs.Log.Warn("ConfirmendTransactionIndex not found in static db")
-		err = lds.Put([]byte("batchStartIndex"), []byte("0"), nil)
-		if err != nil {
-			logs.Log.Error(fmt.Sprintf("Error in saving batchStartIndex in static db : %s", err.Error()))
-			os.Exit(0)
-		}
-	}
+	rawConfirmedTransactionIndex, err := getValueOrDefault(staticDBConnection, []byte(BatchStartIndexKey), []byte("0"))
+	checkErrorAndExit(log, err, "Error in getting confirmedTransactionIndex from static db", 0)
 
-	currentPodNumber, err := lds.Get([]byte("batchCount"), nil)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in getting currentPodNumber from static db : %s", err.Error()))
-		os.Exit(0)
-	}
+	rawCurrentPodNumber, err := getValueOrDefault(staticDBConnection, []byte(BatchCountKey), []byte("0"))
+	checkErrorAndExit(log, err, "Error in getting currentPodNumber from static db", 0)
 
 	previousStateData, err := getPodStateFromDatabase()
+	checkErrorAndExit(log, err, "Error in getting previous station data", 0)
+
+	previousTrackAppHash := previousStateData.TracksAppHash
+	if previousTrackAppHash == nil {
+		previousTrackAppHash = []byte("nil")
+	}
+
+	selectedMaster := MasterTracksSelection(Node, string(previousTrackAppHash))
+
+	decodedMaster, err := peer.Decode(selectedMaster)
+	checkErrorAndExit(log, err, "Error in decoding master", 0)
+
+	currentPodNumber, _ := strconv.Atoi(strings.TrimSpace(string(rawCurrentPodNumber)))
+	batchNumber := currentPodNumber + 1
+
+	baseCfg, err := shared.LoadConfig()
 	if err != nil {
-		logs.Log.Error("Error in getting previous station data")
-		os.Exit(0)
+		log.Error(fmt.Sprintf("Error in loading config: %s", err.Error()))
 	}
-	PreviousTrackAppHash := previousStateData.TracksAppHash
-	if PreviousTrackAppHash == nil {
-		PreviousTrackAppHash = []byte("nil")
-	}
-
-	SelectedMaster := MasterTracksSelection(Node, string(PreviousTrackAppHash))
-	decodedMaster, err := peer.Decode(SelectedMaster)
-
-	currentPodNumberInt, _ := strconv.Atoi(strings.TrimSpace(string(currentPodNumber)))
-	batchNumber := currentPodNumberInt + 1
-
-	//var batchInput *types.BatchStruct
-	Witness, uZKP, MRH, batchInput, err := createPOD(ldt, ConfirmendTransactionIndex, currentPodNumber)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in creating POD : %s", err.Error()))
-		os.Exit(0)
+	stationVariant := baseCfg.Station.StationType
+	stationVariantLowerCase := strings.ToLower(stationVariant)
+	var witness []byte
+	var uZKP []byte
+	var mRH []byte
+	var batchInput *types.BatchStruct
+	if stationVariantLowerCase == "evm" {
+		witness, uZKP, mRH, batchInput, err = createEVMPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+		checkErrorAndExit(log, err, "Error in creating POD", 0)
+	} else if stationVariantLowerCase == "wasm" {
+		witness, uZKP, mRH, batchInput, err = createWasmPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+		checkErrorAndExit(log, err, "Error in creating POD", 0)
 	}
 
-	TrackAppHash := generatePodHash(Witness, uZKP, MRH, currentPodNumber)
-
-	updateNewPodState(TrackAppHash, Witness, uZKP, MRH, uint64(batchNumber), batchInput)
+	trackAppHash := generatePodHash(witness, uZKP, mRH, rawCurrentPodNumber)
+	updateNewPodState(trackAppHash, witness, uZKP, mRH, uint64(batchNumber), batchInput)
 
 	if decodedMaster == Node.ID() {
 		podState := shared.GetPodState()
@@ -93,7 +125,7 @@ func GenerateUnverifiedPods() {
 		peerCount := len(Peers)
 		if peerCount == 1 {
 			DaData := shared.GetPodState().Batch.TransactionHash
-			daDataByte := []byte{}
+			var daDataByte []byte
 			for _, str := range DaData {
 				daDataByte = append(daDataByte, []byte(str)...)
 			}
@@ -295,7 +327,6 @@ func GenerateUnverifiedPods() {
 			GenerateUnverifiedPods() // generate next pod
 
 		} else {
-			// call VRF -> if success: broadcast peerId of node who will verify VRF [not randomly]
 
 			PodNumber := int(shared.GetPodState().LatestPodHeight)
 
@@ -354,9 +385,10 @@ func GenerateUnverifiedPods() {
 			BroadcastMessage(CTX, Node, gossipMsgByte)
 		}
 	}
+
 }
 
-func createPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
+func createEVMPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
 	baseConfig, err := shared.LoadConfig()
 	if err != nil {
 		return
@@ -454,6 +486,94 @@ func createPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness [
 	return witnessVectorByte, proofByte, currentStatusHashByte, &batch, nil
 }
 
+func createWasmPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
+	baseConfig, err := shared.LoadConfig()
+	if err != nil {
+		return
+	}
+	limitInt, _ := strconv.Atoi(strings.TrimSpace(string(limit)))
+	batchStartIndexInt, _ := strconv.Atoi(strings.TrimSpace(string(batchStartIndex)))
+
+	var batch types.BatchStruct
+
+	var From []string
+	var To []string
+	var Amounts []string
+	var TransactionHash []string
+	var SenderBalances []string
+	var ReceiverBalances []string
+	var Messages []string
+	var TransactionNonces []string
+	var AccountNonces []string
+
+	for i := batchStartIndexInt; i < (config.PODSize * (limitInt + 1)); i++ {
+		findKey := fmt.Sprintf("txns-%d", i+1)
+		txData, err := ldt.Get([]byte(findKey), nil)
+
+		if err != nil {
+			i--
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		var txn types.BatchTransaction
+		err = json.Unmarshal(txData, &txn)
+		if err != nil {
+			logs.Log.Info(fmt.Sprintf("Error in unmarshalling tx data : %s", err.Error()))
+		}
+
+		fromCheck := utilis.Bech32Decoder(txn.Tx.Body.Messages[0].FromAddress)
+		toCheck := utilis.Bech32Decoder(txn.Tx.Body.Messages[0].ToAddress)
+		transactionHashCheck := utilis.TXHashCheck(txn.TxResponse.TxHash)
+
+		senderBalancesCheck := utilis.AccountBalanceCheck(txn.Tx.Body.Messages[0].FromAddress, txn.TxResponse.Height, baseConfig.Station.StationAPI)
+		receiverBalancesCheck := utilis.AccountBalanceCheck(txn.Tx.Body.Messages[0].ToAddress, txn.TxResponse.Height, baseConfig.Station.StationAPI)
+		accountNoncesCheck := utilis.AccountNounceCheck(txn.Tx.Body.Messages[0].FromAddress, baseConfig.Station.StationAPI)
+
+		From = append(From, fromCheck)
+		To = append(To, toCheck)
+		Amounts = append(Amounts, txn.Tx.Body.Messages[0].Amount[0].Amount)
+		SenderBalances = append(SenderBalances, senderBalancesCheck)
+		ReceiverBalances = append(ReceiverBalances, receiverBalancesCheck)
+		TransactionHash = append(TransactionHash, transactionHashCheck)
+		Messages = append(Messages, fmt.Sprint(txn.Tx.Body.Messages[0]))
+		TransactionNonces = append(TransactionNonces, "0")
+		AccountNonces = append(AccountNonces, accountNoncesCheck)
+	}
+
+	batch.From = From
+	batch.To = To
+	batch.Amounts = Amounts
+	batch.TransactionHash = TransactionHash
+	batch.SenderBalances = SenderBalances
+	batch.ReceiverBalances = ReceiverBalances
+	batch.Messages = Messages
+	batch.TransactionNonces = TransactionNonces
+	batch.AccountNonces = AccountNonces
+
+	// add prover here
+	witnessVector, currentStatusHash, proofByte, pkErr := v1Wasm.GenerateProof(batch, limitInt+1)
+	if pkErr != nil {
+		logs.Log.Error("Error in generating proof : %s" + pkErr.Error())
+		os.Exit(0)
+	}
+
+	witnessVectorByte, err := json.Marshal(witnessVector)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in marshalling witness vector : %s", err.Error()))
+	}
+
+	// string to []byte currentStatusHash
+	currentStatusHashByte, err := json.Marshal(currentStatusHash)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in marshalling current status hash : %s", err.Error()))
+		os.Exit(0)
+	}
+
+	return witnessVectorByte, proofByte, currentStatusHashByte, &batch, nil
+
+}
+
 func saveVerifiedPOD() {
 
 	podState := shared.GetPodState()
@@ -495,14 +615,17 @@ func saveVerifiedPOD() {
 }
 
 func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
-	return MRH
+	hash := sha256.New()
+	hash.Write(Witness)
+	hash.Write(uZKP)
+	hash.Write(MRH)
+	hash.Write(podNumber)
+	return hash.Sum(nil)
 }
 
 func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uint64, batchInput *types.BatchStruct) {
 	var podState *shared.PodState
-	// empty votes
 	votes := make(map[string]shared.Votes)
-
 	podState = &shared.PodState{
 		LatestPodHeight:     podNumber,
 		LatestPodHash:       MRH,
@@ -513,13 +636,8 @@ func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uin
 		TracksAppHash:       CombinedPodHash,
 		Batch:               batchInput,
 	}
-
-	// save pod state to database
 	shared.SetPodState(podState)
-
-	// save pod data in local state
 	updatePodStateInDatabase(podState)
-
 }
 
 func updatePodStateInDatabase(podState *shared.PodState) {
@@ -534,7 +652,6 @@ func updatePodStateInDatabase(podState *shared.PodState) {
 	err = stateConnection.Put([]byte("podState"), podStateByte, nil)
 	if err != nil {
 		logs.Log.Error(err.Error())
-		os.Exit(0)
 	}
 }
 

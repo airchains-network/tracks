@@ -8,6 +8,7 @@ sudo rm -rf ~/.tracks
 ```shell
 go run cmd/main.go init --daRpc "mock-rpc" --daKey "mockKey" --daType "mock"  --moniker "monkey" --stationRpc "http://127.0.0.1:8545" --stationAPI "http://127.0.0.1:8545" --stationType "evm" 
 ```
+
 ### Create Keys for Junction
 ```shell
 go run cmd/main.go keys junction --accountName dummy --accountPath ./accounts/keys

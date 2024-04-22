@@ -1,4 +1,4 @@
-package v1EVM
+package prover
 
 import (
 	"encoding/json"
@@ -8,8 +8,7 @@ import (
 	"os"
 )
 
-// CreateVkPkNew generates and saves a new Proving Key and Verification Key if either file doesn't exist
-func CreateVkPkNew() {
+func CreateVkPkWasm() {
 	homeDir, _ := os.UserHomeDir()
 	provingKeyFile := homeDir + "/.tracks/config/provingKey.txt"
 	verificationKeyFile := homeDir + "/.tracks/config/verificationKey.json"
