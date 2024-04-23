@@ -521,8 +521,6 @@ func createWasmPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witne
 		if err != nil {
 			logs.Log.Info(fmt.Sprintf("Error in unmarshalling tx data : %s", err.Error()))
 		}
-		fmt.Println(txn)
-		fmt.Println(txn.Tx.Body)
 		fromCheck := utilis.Bech32Decoder(txn.Tx.Body.Messages[0].FromAddress)
 		toCheck := utilis.Bech32Decoder(txn.Tx.Body.Messages[0].ToAddress)
 		transactionHashCheck := utilis.TXHashCheck(txn.TxResponse.TxHash)

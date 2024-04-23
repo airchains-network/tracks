@@ -170,9 +170,7 @@ func GenerateVerificationKey() (groth16.ProvingKey, groth16.VerifyingKey, error)
 // and returns the proof and the error
 // batchDbCount is the number of batches in the database and it will be passed as batchNum here
 func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []byte, error) {
-
 	ccs := ComputeCCS()
-
 	var transactions []types.GetTransactionStruct
 	for i := 0; i < config.PODSize; i++ {
 		transaction := types.GetTransactionStruct{
@@ -185,9 +183,7 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		}
 		transactions = append(transactions, transaction)
 	}
-
 	currentStatusHash := GetMerkleRootCheck(transactions)
-
 	homeDir, _ := os.UserHomeDir()
 	provingKeyFile := homeDir + "/.tracks/config/provingKey.txt"
 	pk, err := ReadProvingKeyFromFile(provingKeyFile)
@@ -195,16 +191,10 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		fmt.Println("Error reading proving key:", err)
 		return nil, "", nil, err
 	}
-
-	fmt.Println("STEP 4: Generating proof")
-
 	if err != nil {
 		fmt.Println("Error reading proving key:", err)
 		return nil, "", nil, err
-
 	}
-	fmt.Println("STEP 5: Generating proof")
-
 	seed := time.Now().Unix()
 	randomness := rand.New(rand.NewSource(seed))
 	hFunc := hash.MIMC_BLS12_381.New()
@@ -212,10 +202,8 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 	if err != nil {
 		fmt.Println("Error getting snark field")
 		return nil, "", nil, err
-
 	}
 	var inputValueLength int
-
 	fromLength := len(inputData.From)
 	toLength := len(inputData.To)
 	amountsLength := len(inputData.Amounts)
@@ -225,7 +213,6 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 	messagesLength := len(inputData.Messages)
 	txNoncesLength := len(inputData.TransactionNonces)
 	accountNoncesLength := len(inputData.AccountNonces)
-
 	if fromLength == toLength &&
 		fromLength == amountsLength &&
 		fromLength == txHashLength &&
@@ -267,7 +254,6 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		Messages:        [config.PODSize]frontend.Variable{},
 	}
 
-	fmt.Println("STEP 6: Generating proof")
 	for i := 0; i < config.PODSize; i++ {
 		inputs.To[i] = frontend.Variable(inputData.To[i])
 		inputs.From[i] = frontend.Variable(inputData.From[i])
@@ -298,7 +284,6 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		inputs.Signatures[i].Assign(tedwards.BLS12_381, signature)
 	}
 
-	fmt.Println("STEP 7: Generating proof")
 	// witness definition
 	witness, err := frontend.NewWitness(&inputs, ecc.BLS12_381.ScalarField())
 	if err != nil {
@@ -306,13 +291,10 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		return nil, "", nil, err
 
 	}
-
 	witnessVector := witness.Vector()
-
 	publicWitness, _ := witness.Public()
 	publicWitnessDb := blocksync.GetPublicWitnessDbInstance()
 	publicWitnessDbKey := fmt.Sprintf("public_witness_%d", batchNum)
-	fmt.Println("public witness db key:", publicWitnessDbKey)
 	publicWitnessDbValue, err := json.Marshal(publicWitness)
 	if err != nil {
 		fmt.Println("Error marshalling public witness:", err)
@@ -325,7 +307,6 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		return nil, "", nil, err
 
 	}
-	fmt.Println("STEP 8: Generating proof")
 	proof, err := groth16.Prove(ccs, pk, witness)
 	if err != nil {
 		fmt.Printf("Error generating proof: %v\n", err)
@@ -347,7 +328,6 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		return nil, "", nil, err
 
 	}
-	fmt.Println("STEP 9: Generating proof")
 
 	return witnessVector, currentStatusHash, proofDbValue, nil
 
