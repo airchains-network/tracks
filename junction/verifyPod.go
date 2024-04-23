@@ -13,8 +13,7 @@ import (
 
 func VerifyCurrentPod() (success bool) {
 
-	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := GetJunctionDetails()
-	_ = tracks
+	jsonRpc, stationId, accountPath, accountName, addressPrefix, _, err := GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
 		return false

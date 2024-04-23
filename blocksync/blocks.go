@@ -8,23 +8,25 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/airchains-network/decentralized-sequencer/utils"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/syndtr/goleveldb/leveldb"
 	"io"
-	"log"
 	"math/big"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
 
 func StoreEVMBlock(client *ethclient.Client, ctx context.Context, blockIndex int, ldb *leveldb.DB, ldt *leveldb.DB) {
-
+	zerolog.TimeFieldFormat = time.RFC3339
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	blockData, err := client.BlockByNumber(ctx, big.NewInt(int64(blockIndex)))
 	if err != nil {
 
 		errMessage := fmt.Sprintf("Failed to get block data for block number %d: %s", blockIndex, err)
-		logs.Log.Error(errMessage)
-		logs.Log.Info("Waiting for the next station block..")
+		log.Error().Str("module", "blocksync").Err(err).Msg(errMessage)
 		time.Sleep(3 * time.Second)
 		StoreEVMBlock(client, ctx, blockIndex, ldb, ldt)
 	}
@@ -55,18 +57,19 @@ func StoreEVMBlock(client *ethclient.Client, ctx context.Context, blockIndex int
 	data, err := json.Marshal(block)
 	if err != nil {
 		errMessage := fmt.Sprintf("Error marshalling block data: %s", err)
-		logs.Log.Error(errMessage)
+		log.Error().Str("module", "blocksync").Err(err).Msg(errMessage)
+
 	}
 	key := fmt.Sprintf("block_%s", block.Number)
 	err = ldb.Put([]byte(key), data, nil)
 	if err != nil {
 		errMessage := fmt.Sprintf("Error inserting block data into database: %s", err)
-		logs.Log.Error(errMessage)
+		log.Error().Str("module", "blocksync").Err(err).Msg(errMessage)
 	}
 
 	transactions := blockData.Transactions()
 	if transactions == nil {
-		fmt.Println("No transactions found in block number", blockIndex)
+		log.Info().Str("module", "blocksync").Msg(fmt.Sprintf("No Txn In  %s", block.Number))
 	}
 
 	for i := 0; i < block.TransactionCount; i++ {
@@ -76,7 +79,8 @@ func StoreEVMBlock(client *ethclient.Client, ctx context.Context, blockIndex int
 	blockCount := blockIndex + 1
 	err = ldb.Put([]byte("blockCount"), []byte(strconv.Itoa(blockCount)), nil)
 	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error in saving latestBlock in block db : %s", err.Error()))
+		errMessage := fmt.Sprintf("Error inserting block count into database: %s", err)
+		log.Error().Str("module", "blocksync").Err(err).Msg(errMessage)
 	}
 	StoreEVMBlock(client, ctx, blockIndex+1, ldb, ldt)
 }
@@ -99,26 +103,24 @@ func StoreWasmBlock(ldb *leveldb.DB, ldt *leveldb.DB, JsonRPC string, JsonAPI st
 	rpcUrl := fmt.Sprintf("%s/cosmos/base/tendermint/v1beta1/blocks/latest", JsonAPI)
 	res, resErr := http.Get(rpcUrl)
 	if resErr != nil {
-		logs.Log.Error(resErr.Error())
+		log.Error().Str("module", "blocksync").Err(resErr).Msg("")
 	}
 	defer res.Body.Close()
 	bodyBlockHeight, bodyBlockHeightErr := io.ReadAll(res.Body)
 	if bodyBlockHeightErr != nil {
-		logs.Log.Error(bodyBlockHeightErr.Error())
+		log.Error().Str("module", "blocksync").Err(bodyBlockHeightErr).Msg("")
 	}
 
 	var blockHeight BlockObject
 	error := json.Unmarshal(bodyBlockHeight, &blockHeight)
 	if error != nil {
-		logs.Log.Error(error.Error())
-
+		log.Error().Str("module", "blocksync").Err(error).Msg("")
 	}
 	latestBlock := blockHeight.Block.Header.Height
 
 	numLatestBlock, err := strconv.Atoi(latestBlock)
 	if err != nil {
-		logs.Log.Error(err.Error())
-
+		log.Error().Str("module", "blocksync").Err(err).Msg("")
 	}
 	lastBlock := getLastProcessedBlock(ldb)
 	startBlock := lastBlock + 1
@@ -147,8 +149,7 @@ func OldWasmBlocks(JsonRPC string, JsonAPI string, startBlock int, numLatestBloc
 
 		jsonErr := json.Unmarshal(body, &blockData)
 		if jsonErr != nil {
-			logs.Log.Error(err.Error())
-
+			log.Error().Str("module", "blocksync").Err(jsonErr).Msg("")
 		}
 		if len(blockData.Result.Block.Data.Txs) > 0 {
 			StoreWasmTransaction(blockData.Result.Block.Data.Txs, txnDB, JsonAPI)
@@ -156,25 +157,25 @@ func OldWasmBlocks(JsonRPC string, JsonAPI string, startBlock int, numLatestBloc
 
 		var responseMap map[string]interface{}
 		if err := json.Unmarshal(body, &responseMap); err != nil {
-			logs.Log.Error("Error While Unmarshalling " + err.Error())
-
+			logs.Log.Error(fmt.Sprintf("Error in response: %v", err))
+			continue
 		}
 		if result, ok := responseMap["result"]; ok {
 			resultJSON, err := json.MarshalIndent(result, "", "  ")
 			if err != nil {
-				logs.Log.Error("Error marshalling JSON" + err.Error())
+				log.Error().Str("module", "blocksync").Err(err).Msg("")
 			}
 
 			blockKey := []byte("Block" + strconv.Itoa(i))
 
 			if err = db.Put(blockKey, resultJSON, nil); err != nil {
-				logs.Log.Error(err.Error())
+				log.Error().Str("module", "blocksync").Err(err).Msg("")
 			}
 
 			blockCount := i + 1
 			err = db.Put([]byte("blockCount"), []byte(strconv.Itoa(blockCount)), nil)
 			if err != nil {
-				logs.Log.Error(fmt.Sprintf("Error in saving latestBlock in block db : %s", err.Error()))
+				log.Error().Str("module", "blocksync").Err(err).Msg("")
 			}
 		}
 
@@ -211,7 +212,7 @@ func watchWasmBlocks(JsonRPC string, JsonAPI string, currentBlockHeight int, db 
 			time.Sleep(7 * time.Second)
 			continue
 		}
-		logs.Log.Info("New blocks Found")
+		log.Info().Str("module", "blocksync").Msg("New Block Found")
 		rpcUrl := fmt.Sprintf("%s/block?height=%s", JsonRPC, latestBlock.Block.Header.Height)
 		resp, err := http.Get(rpcUrl)
 		if err != nil {
@@ -239,28 +240,29 @@ func watchWasmBlocks(JsonRPC string, JsonAPI string, currentBlockHeight int, db 
 
 		var responseMap map[string]interface{}
 		if err := json.Unmarshal(body, &responseMap); err != nil {
-			log.Fatal("Error unmarshalling JSON:", err)
+			log.Fatal().Str("body", string(body)).Msg(err.Error())
 		}
 
 		if result, ok := responseMap["result"]; ok {
 			resultJSON, err := json.MarshalIndent(result, "", "  ")
 			if err != nil {
-				log.Fatal("Error marshalling JSON:", err)
+				log.Fatal().Str("body", string(body)).Msg(err.Error())
 			}
 
 			blockKey := []byte("Block" + latestBlock.Block.Header.Height)
 			if err = db.Put(blockKey, resultJSON, nil); err != nil {
-				log.Println("Error saving block to LevelDB:", err)
+
 			}
 
 			height, err := strconv.Atoi(latestBlock.Block.Header.Height)
 			if err != nil {
-				log.Fatal("Error converting block height to integer:", err)
+				log.Error().Str("module", "blocksync").Err(err).Msg("")
+				continue
 			}
 			blockCount := height + 1
 			err = db.Put([]byte("blockCount"), []byte(strconv.Itoa(blockCount)), nil)
 			if err != nil {
-				logs.Log.Error(fmt.Sprintf("Error in saving latestBlock in block db : %s", err.Error()))
+
 			}
 		} else {
 			fmt.Println("Result key not found in response")

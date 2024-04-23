@@ -55,19 +55,10 @@ func savePrivateKey(filePath string, privateKey []byte) error {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("unable to create directory: %v", err)
 	}
-	fmt.Println(privateKey)
 	err := os.WriteFile(filePath, privateKey, 0644)
 	if err != nil {
 		return fmt.Errorf("unable to write private key to file: %v", err)
 	}
-	serializedPrivKey, err := os.ReadFile(filePath)
-	if err != nil {
-		fmt.Println(err)
-	}
-	a, err := crypto.UnmarshalPrivateKey(serializedPrivKey)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(a)
+
 	return nil
 }

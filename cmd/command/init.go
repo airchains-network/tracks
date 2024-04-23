@@ -26,12 +26,12 @@ func InitConfigs(cmd *cobra.Command) (*Configs, error) {
 
 	configs.moniker, err = cmd.Flags().GetString("moniker")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get flag 'moniker': %w", err)
+		return nil, fmt.Errorf("failed to get flag 'moniker': %w", err)
 	}
 
 	configs.stationType, err = cmd.Flags().GetString("stationType")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get flag 'stationType': %w", err)
+		return nil, fmt.Errorf("failed to get flag 'stationType': %w", err)
 	}
 
 	configs.daType, err = cmd.Flags().GetString("daType")
@@ -51,12 +51,12 @@ func InitConfigs(cmd *cobra.Command) (*Configs, error) {
 
 	configs.stationRPC, err = cmd.Flags().GetString("stationRpc")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get flag 'stationRPC': %w", err)
+		return nil, fmt.Errorf("failed to get flag 'stationRPC': %w", err)
 	}
 
 	configs.stationAPI, err = cmd.Flags().GetString("stationAPI")
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get flag 'stationAPI': %w", err)
+		return nil, fmt.Errorf("failed to get flag 'stationAPI': %w", err)
 	}
 
 	return &configs, nil

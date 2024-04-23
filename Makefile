@@ -4,33 +4,39 @@ BUILD := $(shell git rev-parse --short HEAD)
 PROJECTNAME := "tracks"
 BINARYNAME := "tracks"
 
-# Go related variables.
+# Go-related variables
 GOBASE := $(shell pwd)
-GOPATH := $(GOBASE)/vendor:$(GOBASE)
 GOBIN := $(GOBASE)/bin
 
-# Use linker flags to provide version/build settings to the target
-LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
+# Linker flags to provide version/build settings to the target
+LDFLAGS := -ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
 
 # Make is verbose in Linux. Make it silent.
 MAKEFLAGS += --silent
 
-## build: Compile the binary.
+# Build the binary
+.PHONY: build
+## Build the binary
 build:
-	@echo "  >  Building binary..."
-	 go build -o ./$(BINARYNAME) ./cmd/main.go
+	@echo "  > Building binary..."
+	go build $(LDFLAGS) -o ./$(BINARYNAME) ./cmd/main.go
 
-## install: Install missing dependencies.
+# Install dependencies
+.PHONY: install
+## Install missing dependencies
 install:
-	@GOPATH=$(GOPATH) GOBIN=$(GOBIN) go mod download
+	@echo "  > Installing dependencies..."
+	go mod download
 
-## clean: Clean build files. Runs `go clean` internally
+# Clean build files
+.PHONY: clean
+## Clean build cache
 clean:
-	@echo "  >  Cleaning build cache"
-	@GOPATH=$(GOPATH) GOBIN=$(GOBIN) go clean
+	@echo "  > Cleaning build cache..."
+	go clean
 
-
-
-## help: Show this help screen
-help : Makefile
-	@sed -n 's/^##//p' $<
+# Show help information
+.PHONY: help
+## Show this help screen
+help:
+	@sed -n 's/^##//p' Makefile

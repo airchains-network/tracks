@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/ComputerKeeda/sslogger"
 	"github.com/airchains-network/decentralized-sequencer/config"
 	"github.com/airchains-network/decentralized-sequencer/da/avail"
 	"github.com/airchains-network/decentralized-sequencer/da/celestia"
@@ -20,6 +19,8 @@ import (
 	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1EVM"
 	v1Wasm "github.com/airchains-network/decentralized-sequencer/zk/v1WASM"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/syndtr/goleveldb/leveldb"
 	"math/rand"
 	"os"
@@ -44,9 +45,9 @@ const (
 	BatchStartIndexKey = "batchStartIndex"
 )
 
-func checkErrorAndExit(log sslogger.Logger, err error, message string, exitCode int) {
+func checkErrorAndExit(err error, message string, exitCode int) {
 	if err != nil {
-		log.Error(fmt.Sprintf("%s : %s", message, err.Error()))
+		log.Log().Str("module", "p2p").Msg("error: " + message)
 		os.Exit(exitCode)
 	}
 }
@@ -57,26 +58,30 @@ func getValueOrDefault(db *leveldb.DB, key []byte, defaultValue []byte) ([]byte,
 	if err != nil {
 		log.Warn(fmt.Sprintf("%s not found in static db", string(key)))
 		err = db.Put(key, defaultValue, nil)
-		checkErrorAndExit(log, err, fmt.Sprintf("Error in saving %s in static db", string(key)), 0)
+		checkErrorAndExit(err, fmt.Sprintf("Error in saving %s in static db", string(key)), 0)
 	}
 	return val, nil
 }
 
 func GenerateUnverifiedPods() {
-	log := logs.Log
-	log.Info("Generating new POD")
+	zerolog.TimeFieldFormat = time.RFC3339
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	log.Info().
+		Str("module", "p2p").
+		Msg("Generating New unverified pods")
+
 	connection := shared.Node.NodeConnections
 	staticDBConnection := connection.GetStaticDatabaseConnection()
 	txnDBConnection := connection.GetTxnDatabaseConnection()
 
 	rawConfirmedTransactionIndex, err := getValueOrDefault(staticDBConnection, []byte(BatchStartIndexKey), []byte("0"))
-	checkErrorAndExit(log, err, "Error in getting confirmedTransactionIndex from static db", 0)
+	checkErrorAndExit(err, "Error in getting confirmedTransactionIndex from static db", 0)
 
 	rawCurrentPodNumber, err := getValueOrDefault(staticDBConnection, []byte(BatchCountKey), []byte("0"))
-	checkErrorAndExit(log, err, "Error in getting currentPodNumber from static db", 0)
+	checkErrorAndExit(err, "Error in getting currentPodNumber from static db", 0)
 
 	previousStateData, err := getPodStateFromDatabase()
-	checkErrorAndExit(log, err, "Error in getting previous station data", 0)
+	checkErrorAndExit(err, "Error in getting previous station data", 0)
 
 	previousTrackAppHash := previousStateData.TracksAppHash
 	if previousTrackAppHash == nil {
@@ -86,14 +91,14 @@ func GenerateUnverifiedPods() {
 	selectedMaster := MasterTracksSelection(Node, string(previousTrackAppHash))
 
 	decodedMaster, err := peer.Decode(selectedMaster)
-	checkErrorAndExit(log, err, "Error in decoding master", 0)
+	checkErrorAndExit(err, "Error in decoding master", 0)
 
 	currentPodNumber, _ := strconv.Atoi(strings.TrimSpace(string(rawCurrentPodNumber)))
 	batchNumber := currentPodNumber + 1
 
 	baseCfg, err := shared.LoadConfig()
 	if err != nil {
-		log.Error(fmt.Sprintf("Error in loading config: %s", err.Error()))
+		log.Error().Str("module", "p2p").Msg("Error in loading config")
 	}
 	stationVariant := baseCfg.Station.StationType
 	stationVariantLowerCase := strings.ToLower(stationVariant)
@@ -103,10 +108,10 @@ func GenerateUnverifiedPods() {
 	var batchInput *types.BatchStruct
 	if stationVariantLowerCase == "evm" {
 		witness, uZKP, mRH, batchInput, err = createEVMPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
-		checkErrorAndExit(log, err, "Error in creating POD", 0)
+		checkErrorAndExit(err, "Error in creating POD", 0)
 	} else if stationVariantLowerCase == "wasm" {
 		witness, uZKP, mRH, batchInput, err = createWasmPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
-		checkErrorAndExit(log, err, "Error in creating POD", 0)
+		checkErrorAndExit(err, "Error in creating POD", 0)
 	}
 
 	trackAppHash := generatePodHash(witness, uZKP, mRH, rawCurrentPodNumber)
@@ -148,15 +153,13 @@ func GenerateUnverifiedPods() {
 				logs.Log.Error("Failed to Init VRF")
 				return
 			}
-			logs.Log.Info("VRF initiated")
-
+			log.Info().Str("module", "p2p").Msg("VRF Initiated Successfully ")
 			success = junction.ValidateVRF(addr)
 			if !success {
 				logs.Log.Error("Failed to Validate VRF")
 				return
 			}
-			logs.Log.Info("validate vrf success")
-
+			log.Info().Str("module", "p2p").Msg("VRF Validated Successfully")
 			// check if VRF is successfully validated
 			var vrfRecord *junctionTypes.VrfRecord
 			vrfRecord = junction.QueryVRF()
@@ -178,7 +181,7 @@ func GenerateUnverifiedPods() {
 				return
 			}
 			_ = dbName
-			logs.Log.Info("data in DA submitted")
+
 			DaBatchSaver := connection.DataAvailabilityDatabaseConnection
 			baseConfig, err := shared.LoadConfig()
 			if err != nil {
