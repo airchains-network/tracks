@@ -215,7 +215,8 @@ func GenerateUnverifiedPods() {
 					logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
 				}
 
-				logs.Log.Info("data in DA submitted")
+				log.Info().Str("module", "p2p").Msg("Data Saved in DA")
+
 			} else if Datype == "avail" {
 				daCheck, daCheckErr := avail.Avail(daDataByte, baseConfig.DA.DaRPC)
 				if daCheckErr != nil {
@@ -242,7 +243,7 @@ func GenerateUnverifiedPods() {
 					logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
 				}
 
-				logs.Log.Info("data in DA submitted")
+				log.Info().Str("module", "p2p").Msg("Data Saved in DA")
 
 			} else if Datype == "celestia" {
 				daCheck, daCheckErr := celestia.Celestia(daDataByte, baseConfig.DA.DaRPC, baseConfig.DA.DaRPC)
@@ -271,7 +272,7 @@ func GenerateUnverifiedPods() {
 					logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
 				}
 
-				logs.Log.Info("data in DA submitted")
+				log.Info().Str("module", "p2p").Msg("Data Saved in DA")
 
 			} else if Datype == "eigen" {
 				daCheck, daCheckErr := eigen.Eigen(daDataByte,
@@ -302,7 +303,7 @@ func GenerateUnverifiedPods() {
 					logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
 				}
 
-				logs.Log.Info("data in DA submitted")
+				log.Info().Str("module", "p2p").Msg("Data Saved in DA")
 
 			} else {
 				logs.Log.Error("Unknown layer. Please use 'avail' or 'celestia' as argument.")
@@ -315,7 +316,7 @@ func GenerateUnverifiedPods() {
 				logs.Log.Error("Failed to submit pod")
 				return
 			}
-			logs.Log.Info("pod submitted")
+			log.Info().Str("module", "p2p").Msg("Pod Submitted  Successfully")
 
 			// verify pod
 			success = junction.VerifyCurrentPod()
@@ -613,7 +614,8 @@ func saveVerifiedPOD() {
 
 	podState.MasterTrackAppHash = nil
 	shared.SetPodState(podState)
-	logs.Log.Warn("present pod data saved to database")
+
+	log.Info().Str("module", "p2p").Msg("Present Pod has been saved Locally")
 }
 
 func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {

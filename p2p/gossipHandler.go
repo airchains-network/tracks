@@ -14,7 +14,10 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
 )
@@ -223,6 +226,9 @@ func processVerifiedVRF(VRFInitiatedMsg *VRFInitiatedMsgData, ad *AccountDetails
 
 func VRNValidatedMsgHandler(dataByte []byte) {
 	fmt.Println("VRN Validated Msg Handler called")
+	zerolog.TimeFieldFormat = time.RFC3339
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
 	var VRNVerifiedMsg VRFVerifiedMsg
 	if err := json.Unmarshal(dataByte, &VRNVerifiedMsg); err != nil {
 		logs.Log.Error("Error in extracting VRFVerifiedMsg")
@@ -295,7 +301,8 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 				logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
 			}
 
-			logs.Log.Info("data in DA submitted")
+			log.Info().Str("module", "p2p").Msg("Data Saved in DA")
+
 		} else if Datype == "avail" {
 			daCheck, daCheckErr := avail.Avail(daDataByte, baseConfig.DA.DaRPC)
 			if daCheckErr != nil {
@@ -322,7 +329,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 				logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
 			}
 
-			logs.Log.Info("data in DA submitted")
+			log.Info().Str("module", "p2p").Msg("Data Saved in DA")
 
 		} else if Datype == "celestia" {
 			daCheck, daCheckErr := celestia.Celestia(daDataByte, baseConfig.DA.DaRPC, baseConfig.DA.DaRPC)
@@ -351,7 +358,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 				logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
 			}
 
-			logs.Log.Info("data in DA submitted")
+			log.Info().Str("module", "p2p").Msg("Data Saved in DA")
 
 		} else if Datype == "eigen" {
 			daCheck, daCheckErr := eigen.Eigen(daDataByte,
@@ -382,7 +389,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 				logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
 			}
 
-			logs.Log.Info("data in DA submitted")
+			log.Info().Str("module", "p2p").Msg("Data Saved in DA")
 
 		} else {
 			logs.Log.Error("Unknown layer. Please use 'avail' or 'celestia' as argument.")
@@ -395,7 +402,6 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 			logs.Log.Error("Failed to submit pod")
 			return
 		}
-		logs.Log.Info("pod submitted")
 
 		var filteredTracks []string
 		for _, track := range tracks {

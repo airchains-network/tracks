@@ -11,11 +11,17 @@ import (
 	mainTypes "github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/group/edwards25519"
+	"os"
+	"time"
 )
 
 func InitVRF() (success bool, addr string) {
+	zerolog.TimeFieldFormat = time.RFC3339
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
@@ -43,7 +49,7 @@ func InitVRF() (success bool, addr string) {
 
 	ctx := context.Background()
 	gasFees := fmt.Sprintf("%damf", 213)
-	logs.Log.Info(fmt.Sprintf("Gas Fees Used for init VRF transaction is: %s\n", gasFees))
+	log.Info().Str("module", "junction").Str("Gas Fees Used for Vrf Initialization", gasFees)
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
 		logs.Log.Error("Error creating account client")
@@ -118,8 +124,7 @@ func InitVRF() (success bool, addr string) {
 		return false, ""
 	}
 
-	logs.Log.Info("Transaction Hash: " + txRes.TxHash)
-
+	log.Info().Str("module", "junction").Str("Transaction Hash", txRes.TxHash)
 	return true, newTempAddr
 
 }

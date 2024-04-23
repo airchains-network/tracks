@@ -2,18 +2,23 @@ package junction
 
 import (
 	"context"
-	"github.com/airchains-network/decentralized-sequencer/node/shared"
-	mainTypes "github.com/airchains-network/decentralized-sequencer/types"
-	utilis "github.com/airchains-network/decentralized-sequencer/utils"
-
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/junction/types"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/airchains-network/decentralized-sequencer/node/shared"
+	mainTypes "github.com/airchains-network/decentralized-sequencer/types"
+	utilis "github.com/airchains-network/decentralized-sequencer/utils"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"os"
+	"time"
 )
 
 func ValidateVRF(addr string) bool {
+	zerolog.TimeFieldFormat = time.RFC3339
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
@@ -55,7 +60,7 @@ func ValidateVRF(addr string) bool {
 	ctx := context.Background()
 	gas := utilis.GenerateRandomWithFavour(510, 1000, [2]int{520, 700}, 0.7)
 	gasFees := fmt.Sprintf("%damf", gas)
-	logs.Log.Info(fmt.Sprintf("Gas Fees Used for validate VRF transaction is: %s\n", gasFees))
+	log.Info().Str("module", "junction").Str("Gas Fees Used to Validate VRF", gasFees)
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
 		logs.Log.Error("Error creating account client")
@@ -76,7 +81,7 @@ func ValidateVRF(addr string) bool {
 		return false
 	}
 
-	logs.Log.Info("Transaction Hash For VRF Validation: " + txRes.TxHash)
+	log.Info().Str("module", "junction").Str("Transaction Hash", txRes.TxHash)
 
 	return true
 }
