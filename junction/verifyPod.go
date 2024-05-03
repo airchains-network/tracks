@@ -9,12 +9,16 @@ import (
 	utilis "github.com/airchains-network/decentralized-sequencer/utils"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"os"
+	"time"
 )
 
 func VerifyCurrentPod() (success bool) {
-
-	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := GetJunctionDetails()
-	_ = tracks
+	zerolog.TimeFieldFormat = time.RFC3339
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	jsonRpc, stationId, accountPath, accountName, addressPrefix, _, err := GetJunctionDetails()
 	if err != nil {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
 		return false
@@ -40,7 +44,8 @@ func VerifyCurrentPod() (success bool) {
 	ctx := context.Background()
 	gas := utilis.GenerateRandomWithFavour(510, 1000, [2]int{520, 700}, 0.7)
 	gasFees := fmt.Sprintf("%damf", gas)
-	logs.Log.Info(fmt.Sprintf("Gas Fees Used for verifyPod transaction is: %s\n", gasFees))
+	log.Info().Str("module", "junction").Str("Gas Fees Used to Validate VRF", gasFees)
+
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
 		logs.Log.Error("Error creating account client")
@@ -78,7 +83,13 @@ func VerifyCurrentPod() (success bool) {
 		logs.Log.Error("error in transaction" + errTxRes.Error())
 		return false
 	}
-	logs.Log.Info("Transaction Hash for VerifyPod: " + txRes.TxHash)
+	log.Info().Str("module", "junction").Str("Transaction Hash", txRes.TxHash)
+
+	// update verified transaction hash in current pod state
+	currentPodState := shared.GetPodState()
+	VerifyPodTxHash := txRes.TxHash
+	currentPodState.VerifyPodTxHash = VerifyPodTxHash
+	shared.SetPodState(currentPodState)
 
 	return true
 

@@ -20,7 +20,7 @@ const (
 
 func Celestia(daData []byte, daRpc string, rpcAUTH string) (string, error) {
 
-	namespace := GenerateNamespace()
+	//namespace := GenerateNamespace()
 	encodedDataString := base64.StdEncoding.EncodeToString(daData)
 
 	//* Create the payload struct
@@ -30,7 +30,7 @@ func Celestia(daData []byte, daRpc string, rpcAUTH string) (string, error) {
 		"method":  "blob.Submit",
 		"params": []interface{}{
 			[]interface{}{map[string]interface{}{
-				"namespace":     namespace,
+				"namespace":     "AAAAAAAAAAAAAAAAAAAAAAAAAICj+khUlIv2W7g=",
 				"data":          encodedDataString,
 				"share_version": 0,
 				"commitment":    "AD5EzbG0/EMvpw0p8NIjMVnoCP4Bv6K+V6gjmwdXUKU=",

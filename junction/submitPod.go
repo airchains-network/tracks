@@ -9,10 +9,15 @@ import (
 	utilis "github.com/airchains-network/decentralized-sequencer/utils"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"os"
 	"time"
 )
 
 func SubmitCurrentPod() (success bool) {
+	zerolog.TimeFieldFormat = time.RFC3339
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	jsonRpc, stationId, accountPath, accountName, addressPrefix, tracks, err := GetJunctionDetails()
 	_ = tracks
 	if err != nil {
@@ -60,8 +65,7 @@ func SubmitCurrentPod() (success bool) {
 	ctx := context.Background()
 	gas := utilis.GenerateRandomWithFavour(510, 1000, [2]int{520, 700}, 0.7)
 	gasFees := fmt.Sprintf("%damf", gas)
-
-	logs.Log.Info(fmt.Sprintf("Gas Fees Used for submitPod transaction is: %s\n", gasFees))
+	log.Info().Str("module", "junction").Str("Gas Fees Used to Validate VRF", gasFees)
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
 		logs.Log.Error("Error creating account client")
@@ -70,10 +74,6 @@ func SubmitCurrentPod() (success bool) {
 
 	unixTime := time.Now().Unix()
 	currentTime := fmt.Sprintf("%d", unixTime)
-
-	//Error Solve kar
-	//pMrh := shared.GetPodState().PreviousPodHash
-
 	msg := types.MsgSubmitPod{
 		Creator:                newTempAddr,
 		StationId:              stationId,
@@ -89,7 +89,13 @@ func SubmitCurrentPod() (success bool) {
 		logs.Log.Error("error in transaction" + errTxRes.Error())
 		return false
 	}
-	logs.Log.Info("Transaction Hash for SubmitPod: " + txRes.TxHash)
+	log.Info().Str("module", "junction").Str("Transaction Hash", txRes.TxHash)
+
+	// update tx hash of submit pod in pod state
+	currentPodState := shared.GetPodState()
+	currentPodState.InitPodTxHash = txRes.TxHash
+	shared.SetPodState(currentPodState)
+
 	return true
 
 }

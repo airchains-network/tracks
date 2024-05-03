@@ -39,6 +39,11 @@ type PodState struct {
 	Batch               *types.BatchStruct
 	MasterTrackAppHash  []byte
 	Timestamp           *time.Time `json:"timestamp,omitempty"`
+
+	VRFInitiationTxHash string
+	VRFValidationTxHash string
+	InitPodTxHash       string
+	VerifyPodTxHash     string
 }
 type Connections struct {
 	mu                                 sync.Mutex
