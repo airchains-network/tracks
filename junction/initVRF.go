@@ -59,7 +59,8 @@ func InitVRF() (success bool, addr string) {
 	// get variables required to generate or call verifiable random number
 	suite := edwards25519.NewBlakeSHA256Ed25519()
 
-	podNumber := shared.GetPodState().LatestPodHeight
+	currentPodState := shared.GetPodState()
+	podNumber := currentPodState.LatestPodHeight
 
 	privateKeyStr := GetVRFPrivateKey()
 	if privateKeyStr == "" {
@@ -125,6 +126,12 @@ func InitVRF() (success bool, addr string) {
 	}
 
 	log.Info().Str("module", "junction").Str("Transaction Hash", txRes.TxHash)
+
+	// update transaction hash in current pod
+	currentPodState.VRFInitiationTxHash = txRes.TxHash
+	// update pod state: update tx hash
+	shared.SetPodState(currentPodState)
+
 	return true, newTempAddr
 
 }

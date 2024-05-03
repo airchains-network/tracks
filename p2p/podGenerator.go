@@ -365,10 +365,13 @@ func GenerateUnverifiedPods() {
 			selectedTrackAddress := filteredTracks[rand.Intn(len(filteredTracks))]
 			fmt.Println("Selected random address:", selectedTrackAddress)
 
+			// get tx hash of vrfInit
+			VrfInitTxHash := shared.GetPodState().VRFInitiationTxHash
 			// send verify VRF message to selected node
 			VRFInitiatedMsg := VRFInitiatedMsgData{
 				PodNumber:            uint64(PodNumber),
 				SelectedTrackAddress: selectedTrackAddress,
+				VrfInitTxHash:        VrfInitTxHash,
 				VrfInitiatorAddress:  addr,
 			}
 

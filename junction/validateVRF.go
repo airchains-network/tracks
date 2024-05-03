@@ -83,5 +83,10 @@ func ValidateVRF(addr string) bool {
 
 	log.Info().Str("module", "junction").Str("Transaction Hash", txRes.TxHash)
 
+	// update VRN verified hash
+	currentPodState := shared.GetPodState()
+	currentPodState.VRFValidationTxHash = txRes.TxHash
+	shared.SetPodState(currentPodState)
+
 	return true
 }

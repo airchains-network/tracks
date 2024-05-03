@@ -31,14 +31,6 @@ type JunctionConfig struct {
 
 func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationInfo types.StationInfo, accountName, accountPath, jsonRPC string, verificationKey groth16.VerifyingKey, addressPrefix string, tracks []string, bootstrapNode []string) bool {
 
-	// convert station info to string
-	stationJsonBytes, err := json.Marshal(stationInfo)
-	if err != nil {
-		logs.Log.Error("Error marshaling to JSON: " + err.Error())
-		return false
-	}
-	stationInfoStr := string(stationJsonBytes)
-
 	verificationKeyByte, err := json.Marshal(verificationKey)
 	if err != nil {
 		logs.Log.Error("Failed to unmarshal Verification key" + err.Error())
@@ -117,7 +109,7 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 		Tracks:            tracks,
 		VerificationKey:   verificationKeyByte,
 		StationId:         stationId,
-		StationInfo:       stationInfoStr,
+		StationInfo:       stationInfo.StationType,
 		TracksVotingPower: tracksVotingPower,
 		ExtraArg:          extraArgBytes,
 	}

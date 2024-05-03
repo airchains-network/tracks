@@ -61,6 +61,10 @@ func HandleGetPodByNumber(c *gin.Context, Params []interface{}) {
 		Timestamp           *time.Time `json:"timestamp,omitempty"`
 		DAKey               string
 		DAClientName        string
+		InitPodTxHash       string
+		VerifyPodTxHash     string
+		VRFValidationTxHash string
+		VRFInitiationTxHash string
 	}
 
 	responseData.LatestPodHeight = podData.LatestPodHeight
@@ -75,6 +79,10 @@ func HandleGetPodByNumber(c *gin.Context, Params []interface{}) {
 	responseData.Timestamp = podData.Timestamp
 	responseData.DAKey = daData.DAKey
 	responseData.DAClientName = daData.DAClientName
+	responseData.InitPodTxHash = podData.InitPodTxHash
+	responseData.VerifyPodTxHash = podData.VerifyPodTxHash
+	responseData.VRFValidationTxHash = podData.VRFValidationTxHash
+	responseData.VRFInitiationTxHash = podData.VRFInitiationTxHash
 
 	respondWithSuccess(c, Log, responseData, "success")
 	return

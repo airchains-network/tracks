@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/airchains-network/decentralized-sequencer/rpc/handler"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -19,10 +20,20 @@ type Server struct {
 }
 
 func NewServer() *Server {
+	// Create a new logger instance
+	logger := logrus.New()
+	// Set logrus to only log the warning severity or above.
+	logger.SetLevel(logrus.WarnLevel)
+	// Use the JSON formatter
+	logger.SetFormatter(&logrus.JSONFormatter{})
+
 	server := &Server{
-		Log:    logrus.New(),
-		router: gin.Default(),
+		Log: logger,
 	}
+
+	// Set gin to release mode
+	gin.SetMode(gin.ReleaseMode)
+	server.router = gin.Default()
 
 	server.router.POST("/", func(c *gin.Context) {
 		handler.RouterHandler(c)
@@ -38,7 +49,6 @@ func NewServer() *Server {
 
 func (s *Server) Start() error {
 	go func() {
-
 		if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
 			s.Log.WithField("error", err).Error("Error starting server")
 		}
@@ -62,11 +72,11 @@ func StartRPC(wg *sync.WaitGroup) {
 		server.Log.WithField("error", err).Fatal("Failed to start server")
 	}
 	server.Log.Info("Server Started Successfully on Port 2024")
+	log.Info().Str("module", "rpc").Msg("Pod Submitted  Successfully")
 
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan, syscall.SIGTERM)
 
 	<-stopChan
 	server.Log.Info("Received shutdown signal")
-
 }

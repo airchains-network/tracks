@@ -131,6 +131,13 @@ func (h *VRFInitiatedMessageHandler) HandleVRFInitiatedMessage() {
 		return
 	}
 
+	// all nodes: update vrn init hash
+	currentPodState := shared.GetPodState()
+	VrfInitTxHash := h.message.VrfInitTxHash
+	currentPodState.VRFInitiationTxHash = VrfInitTxHash
+	shared.SetPodState(currentPodState)
+
+	// selected node
 	if h.message.SelectedTrackAddress == accountDetails.MyAddress {
 		processVerifiedVRF(h.message, accountDetails)
 	}
@@ -177,8 +184,9 @@ func getAccountDetails() (*AccountDetails, error) {
 
 func processVerifiedVRF(VRFInitiatedMsg *VRFInitiatedMsgData, ad *AccountDetails) {
 	logs.Log.Info("This Track Address is selected to verify VRN")
-	VrfInitiatorAddress := VRFInitiatedMsg.VrfInitiatorAddress
 
+	// verify
+	VrfInitiatorAddress := VRFInitiatedMsg.VrfInitiatorAddress
 	success := junction.ValidateVRF(VrfInitiatorAddress)
 	if !success {
 		logs.Log.Error("Failed to Validate VRF")
@@ -199,9 +207,11 @@ func processVerifiedVRF(VRFInitiatedMsg *VRFInitiatedMsgData, ad *AccountDetails
 
 	PodNumber := int(shared.GetPodState().LatestPodHeight)
 	SelectedTrackAddress := ad.Tracks[vrfRecord.SelectedTrackIndex]
+	VrnValidatedTxHash := shared.GetPodState().VRFValidationTxHash
 	VRFVerifiedMsg := VRFVerifiedMsg{
 		PodNumber:            uint64(PodNumber),
 		SelectedTrackAddress: SelectedTrackAddress,
+		VRFVerifiedTxHash:    VrnValidatedTxHash,
 	}
 	VRFVerifiedMsgByte, err := json.Marshal(VRFVerifiedMsg)
 	if err != nil {
@@ -244,6 +254,12 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 		fmt.Println(VRNVerifiedMsg.PodNumber, podState.LatestPodHeight)
 		time.Sleep(3 * time.Second)
 	}
+
+	// all nodes: update txHash of vrn validated
+	VRFValidationTxHash := VRNVerifiedMsg.VRFVerifiedTxHash
+	currentPodState := shared.GetPodState()
+	currentPodState.VRFValidationTxHash = VRFValidationTxHash
+	shared.SetPodState(currentPodState)
 
 	// check if this node is selected to submit pod & da
 	_, _, accountPath, accountName, addressPrefix, tracks, err := junction.GetJunctionDetails()
@@ -413,10 +429,12 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 		SelectedTrackAddress := filteredTracks[rand.Intn(len(filteredTracks))]
 
 		podNumber := shared.GetPodState().LatestPodHeight
+		InitPodTxHash := shared.GetPodState().InitPodTxHash
 		// broadcast pod submitted msg
 		PodSubmittedMsg := PodSubmittedMsgData{
 			PodNumber:            podNumber,
 			SelectedTrackAddress: SelectedTrackAddress,
+			InitPodTxHash:        InitPodTxHash,
 		}
 		PodSubmittedMsgByte, err := json.Marshal(PodSubmittedMsg)
 		if err != nil {
@@ -477,6 +495,13 @@ func (h *PodSubmittedMessageHandler) processPodSubmission() {
 		logs.Log.Error(LogJunctionAccFail)
 		return
 	}
+
+	// all nodes: update initPodTxHash
+	currentPodState := shared.GetPodState()
+	InitPodTxHash := h.message.InitPodTxHash
+	currentPodState.InitPodTxHash = InitPodTxHash
+	shared.SetPodState(currentPodState)
+
 	if h.message.SelectedTrackAddress == myAddress {
 		h.verifyAndBroadcastPod()
 	}
@@ -503,9 +528,11 @@ func (h *PodSubmittedMessageHandler) verifyAndBroadcastPod() {
 
 func (h *PodSubmittedMessageHandler) broadcastPodVerifiedMessage() {
 	podNumber := shared.GetPodState().LatestPodHeight
+	VerifyPodTxHash := shared.GetPodState().VerifyPodTxHash
 	PodVerifiedMsg := PodVerifiedMsgData{
 		PodNumber:          podNumber,
 		VerificationResult: true,
+		PodVerifiedTxHash:  VerifyPodTxHash,
 	}
 	PodVerifiedMsgByte, err := json.Marshal(PodVerifiedMsg)
 	if err != nil {
@@ -552,6 +579,13 @@ func (h *PodVerifiedMessageHandler) HandlePodMessage() {
 		}
 		h.logAndSleep(LogPodMismatch, h.message.PodNumber, podState.LatestPodHeight)
 	}
+
+	// update pod verified
+	podState := shared.GetPodState()
+	VerifyPodTxHash := shared.GetPodState().VerifyPodTxHash
+	podState.VerifyPodTxHash = VerifyPodTxHash
+	shared.SetPodState(podState)
+
 	logs.Log.Warn(LogPodMatchSuccess)
 	h.handleVerificationResult()
 }
@@ -563,6 +597,8 @@ func (h *PodVerifiedMessageHandler) logAndSleep(message string, number, height u
 }
 
 func (h *PodVerifiedMessageHandler) handleVerificationResult() {
+	// update verified hash in all nodes
+
 	if h.message.VerificationResult {
 		logs.Log.Info(LogPodSave)
 		saveVerifiedPOD() // save the latest pod details and make next pod

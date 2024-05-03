@@ -85,6 +85,12 @@ func VerifyCurrentPod() (success bool) {
 	}
 	log.Info().Str("module", "junction").Str("Transaction Hash", txRes.TxHash)
 
+	// update verified transaction hash in current pod state
+	currentPodState := shared.GetPodState()
+	VerifyPodTxHash := txRes.TxHash
+	currentPodState.VerifyPodTxHash = VerifyPodTxHash
+	shared.SetPodState(currentPodState)
+
 	return true
 
 }

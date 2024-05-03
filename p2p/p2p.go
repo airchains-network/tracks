@@ -366,8 +366,6 @@ func MasterTracksSelection(host host.Host, sharedInput string) string {
 	randomIndex = hashedInt.Mod(hashedInt, big.NewInt(int64(numPeers)))
 	randomPeer = peers[int(randomIndex.Int64())]
 
-	fmt.Printf("Selected peer ID: %s\n", randomPeer.ID.String())
-
 	return randomPeer.ID.String()
 }
 func PeerConnectionStatus(host host.Host) bool {

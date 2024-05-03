@@ -91,6 +91,11 @@ func SubmitCurrentPod() (success bool) {
 	}
 	log.Info().Str("module", "junction").Str("Transaction Hash", txRes.TxHash)
 
+	// update tx hash of submit pod in pod state
+	currentPodState := shared.GetPodState()
+	currentPodState.InitPodTxHash = txRes.TxHash
+	shared.SetPodState(currentPodState)
+
 	return true
 
 }
