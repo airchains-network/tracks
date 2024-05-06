@@ -84,7 +84,7 @@ var InitCmd = &cobra.Command{
 		peerGen := p2p.NewPeerGenerator("/ip4/0.0.0.0/tcp/2300", false)
 		peerID, err := peerGen.GeneratePeerID()
 
-		conf.RootDir = tracksDir
+		conf.BaseConfig.RootDir = tracksDir
 		conf.DA.DaType = configs.daType
 		conf.DA.DaRPC = configs.daRPC
 		conf.DA.DaKey = configs.daKey
@@ -92,9 +92,9 @@ var InitCmd = &cobra.Command{
 		conf.Station.StationRPC = configs.stationRPC
 		conf.Station.StationAPI = configs.stationAPI
 		conf.P2P.NodeId = peerID
-		conf.SetRoot(conf.RootDir)
+		conf.SetRoot(conf.BaseConfig.RootDir)
 
-		success := config.CreateConfigFile(conf.RootDir, conf)
+		success := config.CreateConfigFile(conf.BaseConfig.RootDir, conf)
 		if !success {
 			logs.Log.Warn("Unable to generate a config file. Please check the error and try again.")
 			return

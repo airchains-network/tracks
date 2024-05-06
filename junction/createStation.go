@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/BurntSushi/toml"
+	"github.com/pelletier/go-toml"
+
+	//"github.com/BurntSushi/toml"
 	"github.com/airchains-network/decentralized-sequencer/config"
 	junctionTypes "github.com/airchains-network/decentralized-sequencer/junction/types"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
@@ -157,17 +159,99 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 	if err != nil {
 		logs.Log.Error("Error reading sequencer.toml")
 		return false
-
 	}
 
+	//var check struct {
+	//	Version string `toml:"version"`
+	//	RPC     struct {
+	//		Laddr                                string        `toml:"laddr"`
+	//		CorsAllowedOrigins                   []interface{} `toml:"cors_allowed_origins"`
+	//		CorsAllowedMethods                   []string      `toml:"cors_allowed_methods"`
+	//		CorsAllowedHeaders                   []string      `toml:"cors_allowed_headers"`
+	//		GrpcLaddr                            string        `toml:"grpc_laddr"`
+	//		GrpcMaxOpenConnections               int           `toml:"grpc_max_open_connections"`
+	//		Unsafe                               bool          `toml:"unsafe"`
+	//		MaxOpenConnections                   int           `toml:"max_open_connections"`
+	//		MaxSubscriptionClients               int           `toml:"max_subscription_clients"`
+	//		MaxSubscriptionsPerClient            int           `toml:"max_subscriptions_per_client"`
+	//		ExperimentalSubscriptionBufferSize   int           `toml:"experimental_subscription_buffer_size"`
+	//		ExperimentalWebsocketWriteBufferSize int           `toml:"experimental_websocket_write_buffer_size"`
+	//		ExperimentalCloseOnSlowClient        bool          `toml:"experimental_close_on_slow_client"`
+	//		TimeoutBroadcastTxCommit             string        `toml:"timeout_broadcast_tx_commit"`
+	//		MaxBodyBytes                         int           `toml:"max_body_bytes"`
+	//		MaxHeaderBytes                       int           `toml:"max_header_bytes"`
+	//		TLSCertFile                          string        `toml:"tls_cert_file"`
+	//		TLSKeyFile                           string        `toml:"tls_key_file"`
+	//		PprofLaddr                           string        `toml:"pprof_laddr"`
+	//	} `toml:"rpc"`
+	//	P2P struct {
+	//		RootDir         string        `toml:"root_dir"`
+	//		NodeID          string        `toml:"node_id"`
+	//		ListenAddress   string        `toml:"listen_address"`
+	//		ExternalAddress string        `toml:"external_address"`
+	//		Seeds           string        `toml:"seeds"`
+	//		PersistentPeers []interface{} `toml:"persistent_peers"`
+	//	} `toml:"p2p"`
+	//	Statesync struct {
+	//		Enable            bool          `toml:"enable"`
+	//		TempDir           string        `toml:"temp_dir"`
+	//		RPCServers        []interface{} `toml:"rpc_servers"`
+	//		PodTrustPeriod    string        `toml:"pod_trust_period"`
+	//		PodTrustHeight    int           `toml:"pod_trust_height"`
+	//		PodTrustHash      string        `toml:"pod_trust_hash"`
+	//		PodDiscoveryTime  string        `toml:"pod_discovery_time"`
+	//		PodRequestTimeout string        `toml:"pod_request_timeout"`
+	//		PodChunkFetchers  int           `toml:"pod_chunk_fetchers"`
+	//	} `toml:"statesync"`
+	//	Consensus struct {
+	//		TimeoutPropose        string `toml:"timeout_propose"`
+	//		TimeoutProposeDelta   string `toml:"timeout_propose_delta"`
+	//		TimeoutPrevote        string `toml:"timeout_prevote"`
+	//		TimeoutPrevoteDelta   string `toml:"timeout_prevote_delta"`
+	//		TimeoutPrecommit      string `toml:"timeout_precommit"`
+	//		TimeoutPrecommitDelta string `toml:"timeout_precommit_delta"`
+	//		TimeoutCommit         string `toml:"timeout_commit"`
+	//		SkipTimeoutCommit     bool   `toml:"skip_timeout_commit"`
+	//		DoubleSignCheckHeight int    `toml:"double_sign_check_height"`
+	//	} `toml:"consensus"`
+	//	Da struct {
+	//		DaType string `toml:"daType"`
+	//		DaRPC  string `toml:"daRPC"`
+	//		DaKey  string `toml:"daKey"`
+	//	} `toml:"da"`
+	//	Station struct {
+	//		StationType string `toml:"stationType"`
+	//		StationRPC  string `toml:"stationRPC"`
+	//		StationAPI  string `toml:"stationAPI"`
+	//	} `toml:"station"`
+	//	Junction struct {
+	//		JunctionRPC   string        `toml:"junctionRPC"`
+	//		JunctionAPI   string        `toml:"junctionAPI"`
+	//		StationID     string        `toml:"stationId"`
+	//		VRFPrivateKey string        `toml:"VRFPrivateKey"`
+	//		VRFPublicKey  string        `toml:"VRFPublicKey"`
+	//		AddressPrefix string        `toml:"AddressPrefix"`
+	//		Tracks        []interface{} `toml:"Tracks"`
+	//	} `toml:"junction"`
+	//}
+	//
+	//if err = toml.Unmarshal(bytes, &check); err != nil {
+	//	logs.Log.Error(fmt.Sprintf("Error unmarshalling config: %v", err))
+	//	return false
+	//}
+	//
+	//fmt.Println(check)
+
 	var conf config.Config // JunctionConfig
-	err = toml.Unmarshal(bytes, &conf)
-	if err != nil {
-		logs.Log.Error("error in unmarshalling file")
+	if err = toml.Unmarshal(bytes, &conf); err != nil {
+		logs.Log.Error(fmt.Sprintf("Error unmarshalling config: %v", err))
 		return false
 	}
 
+	//fmt.Println(conf.P2P)
+
 	// Update the values
+
 	conf.P2P.PersistentPeers = bootstrapNode
 	conf.Junction.JunctionRPC = jsonRPC
 	conf.Junction.JunctionAPI = ""
@@ -193,6 +277,8 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 	}(f)
 	newData := toml.NewEncoder(f)
 	if err := newData.Encode(conf); err != nil {
+		logs.Log.Error(fmt.Sprintf("Error encoding config: %v", err))
+		return false
 	}
 
 	return true

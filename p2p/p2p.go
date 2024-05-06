@@ -373,15 +373,16 @@ func PeerConnectionStatus(host host.Host) bool {
 	numPeers := len(peers)
 	baseConfig, err := shared.LoadConfig()
 	if err != nil {
-		fmt.Println("Error loading configuration")
+		logs.Log.Warn(fmt.Sprintf("Error loading config: %s", err))
 		return false
 	}
+
 	persistentPeers := baseConfig.P2P.PersistentPeers
 
 	if len(persistentPeers) == numPeers {
 		return true
 	} else {
-		logs.Log.Warn("ALl Node Not Connected to Persistent Peers")
+		logs.Log.Warn("All Node Not Connected to Persistent Peers")
 		logs.Log.Warn("Number of Persistent Peers: " + string(rune(len(persistentPeers))))
 		logs.Log.Warn("Number of Connected Peers: " + string(rune(numPeers)))
 		return false

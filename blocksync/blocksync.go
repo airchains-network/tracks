@@ -25,6 +25,10 @@ func StartIndexer(wg *sync.WaitGroup, client *ethclient.Client, ctx context.Cont
 		JsonRPC := bsgConfig.Station.StationRPC
 		JsonAPI := bsgConfig.Station.StationAPI
 		StoreWasmBlock(blockDatabaseConnection, txnDatabaseConnection, JsonRPC, JsonAPI)
+	} else if bsgConfig.Station.StationType == "SVM" || bsgConfig.Station.StationType == "svm" {
+		JsonRPC := bsgConfig.Station.StationRPC
+		JsonAPI := bsgConfig.Station.StationAPI
+		StoreSVMBlock(blockDatabaseConnection, txnDatabaseConnection, JsonRPC, JsonAPI)
 	}
 
 }

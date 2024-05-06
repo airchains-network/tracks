@@ -26,7 +26,7 @@ func StoreEVMBlock(client *ethclient.Client, ctx context.Context, blockIndex int
 	if err != nil {
 
 		errMessage := fmt.Sprintf("Failed to get block data for block number %d: %s", blockIndex, err)
-		log.Error().Str("module", "blocksync").Err(err).Msg(errMessage)
+		log.Warn().Str("module", "blocksync").Err(err).Msg(errMessage)
 		time.Sleep(3 * time.Second)
 		StoreEVMBlock(client, ctx, blockIndex, ldb, ldt)
 	}
@@ -274,4 +274,79 @@ func watchWasmBlocks(JsonRPC string, JsonAPI string, currentBlockHeight int, db 
 
 func NewWasmBlocks(JsonRPC string, JsonAPI string, currentBlock int, db *leveldb.DB, txnDB *leveldb.DB) {
 	watchWasmBlocks(JsonRPC, JsonAPI, currentBlock, db, txnDB)
+}
+
+// * SVM chain
+
+func StoreSVMBlock(ldb *leveldb.DB, ldt *leveldb.DB, JsonRPC, JsonAPI string) {
+	initSVMRPC(JsonRPC)
+
+	latestIndex, latestIndexErr := SVMLatestBlockCheck()
+	if latestIndexErr != nil {
+		log.Error().Str("module", "blocksync").Err(latestIndexErr).Msg("")
+		//return fmt.Errorf("error while fetching latest block: %v", latestIndexErr)
+	}
+
+	lastBlock := getLastProcessedBlock(ldb)
+	startBlock := lastBlock + 1
+
+	OldSVMBlock(startBlock, latestIndex, ldb, ldt)
+	NewSVMBlock(latestIndex, ldb, ldt)
+}
+
+func OldSVMBlock(startIndex, latestIndex int, ldb, ldt *leveldb.DB) {
+	for i := startIndex; i <= latestIndex; i++ {
+		SVMBlockStore(i, ldb, ldt)
+		fmt.Println("old block store : ", i)
+	}
+}
+
+func NewSVMBlock(currentIndex int, ldb, ldt *leveldb.DB) {
+	for {
+		latestIndex, latestIndexErr := SVMLatestBlockCheck()
+		if latestIndexErr != nil {
+			log.Error().Str("module", "blocksync").Err(latestIndexErr).Msg("")
+			//return fmt.Errorf("error while fetching latest block: %v", latestIndexErr)
+		}
+
+		if currentIndex == latestIndex {
+			fmt.Println("wait for new block...")
+			time.Sleep(2 * time.Second)
+			continue
+		} else {
+			for i := currentIndex; i < latestIndex; i++ {
+				SVMBlockStore(latestIndex, ldb, ldt)
+				fmt.Println("new block store : ", i)
+			}
+			currentIndex = latestIndex
+		}
+	}
+
+}
+
+func SVMBlockStore(blockNumber int, ldb, ldt *leveldb.DB) {
+	res, resErr := SVMBlockCall(blockNumber)
+	if resErr != nil {
+		log.Error().Str("module", "blocksync").Err(resErr).Msg("")
+	}
+
+	resJson, err := json.Marshal(res.Result)
+	if err != nil {
+		log.Error().Str("module", "blocksync").Err(err).Msg("")
+	}
+
+	blockKey := []byte("Block" + strconv.Itoa(blockNumber))
+	if err = ldb.Put(blockKey, resJson, nil); err != nil {
+		log.Error().Str("module", "blocksync").Err(err).Msg("")
+	}
+
+	for i := 0; i < len(res.Result.Transactions); i++ {
+		StoreSVMTransaction(ldt, res.Result.Transactions[i])
+	}
+
+	blockCount := blockNumber + 1
+	err = ldb.Put([]byte("blockCount"), []byte(strconv.Itoa(blockCount)), nil)
+	if err != nil {
+		log.Error().Str("module", "blocksync").Err(err).Msg("")
+	}
 }

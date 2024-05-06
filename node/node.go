@@ -9,7 +9,6 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/p2p"
 	"github.com/airchains-network/decentralized-sequencer/rpc"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/spf13/viper"
 	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
 	"time"
@@ -51,7 +50,9 @@ func beginDBIndexingOperations(wg *sync.WaitGroup) {
 	txnDB := connection.GetTxnDatabaseConnection()
 	shared.CheckAndInitializeDBCounters(staticDB)
 	latestBlock := shared.GetLatestBlock(blockDB)
-	client, err := ethclient.Dial(viper.GetString("station.stationRPC")) // viper.GetString("station.stationRPC"))
+	baseConfig, err := shared.LoadConfig()
+
+	client, err := ethclient.Dial(baseConfig.Station.StationRPC) // viper.GetString("station.stationRPC"))
 	if err != nil {
 		logs.Log.Error("Error in connecting to the network")
 		return
@@ -63,6 +64,7 @@ func beginDBIndexingOperations(wg *sync.WaitGroup) {
 	ctx = context.Background()
 	var wgnm *sync.WaitGroup
 	wgnm = &sync.WaitGroup{}
+	//wgnm.Add(1)
 	wgnm.Add(3)
 
 	go blocksync.StartIndexer(wgnm, client, ctx, blockDB, txnDB, latestBlock)

@@ -8,7 +8,7 @@ import (
 	"github.com/airchains-network/decentralized-sequencer/config"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/types"
-	"github.com/spf13/viper"
+	"github.com/pelletier/go-toml"
 	"github.com/syndtr/goleveldb/leveldb"
 	"os"
 	"path/filepath"
@@ -185,26 +185,41 @@ func NewNode(conf *config.Config) {
 	}
 }
 
-func LoadConfig() (config config.Config, err error) {
+func LoadConfig() (cnf *config.Config, err error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return config, err // Return error, perhaps log it as well
+		return nil, fmt.Errorf("%v", err) // Return error, perhaps log it as well
 	}
-	configDir := filepath.Join(homeDir, ".tracks/config")
+	configDir := filepath.Join(homeDir, config.DefaultTracksDir, config.DefaultConfigDir)
 
 	_, err = os.Stat(configDir)
 	if os.IsNotExist(err) {
-		return config, fmt.Errorf("config directory not found: %s", configDir)
+		return nil, fmt.Errorf("config directory not found: %s", configDir)
+	}
+	//
+	//viper.AddConfigPath(configDir)
+	//viper.SetConfigName("sequencer")
+	//viper.SetConfigType("toml")
+	//
+	//if err = viper.ReadInConfig(); err != nil {
+	//	return nil, err
+	//}
+	//
+	//if err = viper.Unmarshal(&config); err != nil {
+	//	return nil, err
+	//}
+	//
+	//fmt.Println(config)
+	ConfigFilePath := filepath.Join(configDir, config.DefaultConfigFileName)
+	bytes, err := os.ReadFile(ConfigFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("error in reading config file: %s : %v", ConfigFilePath, err)
 	}
 
-	viper.AddConfigPath(configDir)
-	viper.SetConfigName("sequencer")
-	viper.SetConfigType("toml")
-
-	if err = viper.ReadInConfig(); err != nil {
-		return config, err
+	var conf config.Config // JunctionConfig
+	if err = toml.Unmarshal(bytes, &conf); err != nil {
+		return nil, fmt.Errorf("error unmarshalling config: %v", err)
 	}
 
-	err = viper.Unmarshal(&config)
-	return config, err
+	return &conf, nil
 }
