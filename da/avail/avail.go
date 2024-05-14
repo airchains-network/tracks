@@ -24,7 +24,7 @@ func Avail(daData []byte, daRpc string) (string, error) {
 	}
 
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", fmt.Sprintf("%sv2/submit", daRpc), bytes.NewBuffer(payloadJSON))
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v2/submit", daRpc), bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		return "", fmt.Errorf("HTTP Req Error: %v", err)
 	}

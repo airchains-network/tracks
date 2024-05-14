@@ -51,8 +51,9 @@ func Eigen(daData []byte, rpcUrl string, accountKey string) (string, error) {
 	ctx := context.Background()
 
 	credential := credentials.NewTLS(&tls.Config{})
+	addr := fmt.Sprintf("%v:%v", rpcUrl, 443)
 	dialOptions := grpc.WithTransportCredentials(credential)
-	conn, err := grpc.Dial(rpcUrl, dialOptions)
+	conn, err := grpc.Dial(addr, dialOptions)
 	if err != nil {
 		fmt.Println(err)
 		return "nil", err
@@ -68,6 +69,7 @@ func Eigen(daData []byte, rpcUrl string, accountKey string) (string, error) {
 	blobKey := string(d[:])
 
 	//TODO Add DA check Status
+	fmt.Println("Eigen DA Blob KEY", blobKey)
 	return blobKey, nil
 
 }

@@ -25,14 +25,14 @@ var (
 )
 
 type Config struct {
-	BaseConfig `mapstructure:",squash"`
-	RPC        *RPCConfig
-	P2P        *P2PConfig
-	StateSync  *StateSyncConfig
-	Consensus  *ConsensusConfig
-	DA         *DAConfig
-	Station    *StationConfig
-	Junction   *JunctionConfig
+	BaseConfig *BaseConfig      `toml:"base_config"`
+	RPC        *RPCConfig       `toml:"rpc"`
+	P2P        *P2PConfig       `toml:"p2p"`
+	StateSync  *StateSyncConfig `toml:"state_sync"`
+	Consensus  *ConsensusConfig `toml:"consensus"`
+	DA         *DAConfig        `toml:"da"`
+	Station    *StationConfig   `toml:"station"`
+	Junction   *JunctionConfig  `toml:"junction"`
 }
 
 func DefaultConfig() *Config {
@@ -58,17 +58,17 @@ func (cfg *Config) SetRoot(root string) *Config {
 }
 
 type BaseConfig struct {
-	Version     string
-	RootDir     string
-	ProxyApp    string
-	Moniker     string
-	DBBackend   string
-	DBPath      string
-	FilterPeers bool
+	Version     string `toml:"version"`
+	RootDir     string `toml:"root_dir"`
+	ProxyApp    string `toml:"proxy_app"`
+	Moniker     string `toml:"moniker"`
+	DBBackend   string `toml:"db_backend"`
+	DBPath      string `toml:"db_path"`
+	FilterPeers bool   `toml:"filter_peers"`
 }
 
-func DefaultBaseConfig() BaseConfig {
-	return BaseConfig{
+func DefaultBaseConfig() *BaseConfig {
+	return &BaseConfig{
 		Version:     "0.0.1",
 		Moniker:     defaultMoniker,
 		FilterPeers: false,
@@ -79,26 +79,26 @@ func DefaultBaseConfig() BaseConfig {
 
 type RPCConfig struct {
 	mu                        sync.RWMutex
-	RootDir                   string
-	ListenAddress             string
-	CORSAllowedOrigins        []string
-	CORSAllowedMethods        []string
-	CORSAllowedHeaders        []string
-	GRPCListenAddress         string
-	GRPCMaxOpenConnections    int
-	Unsafe                    bool
-	MaxOpenConnections        int
-	MaxSubscriptionClients    int
-	MaxSubscriptionsPerClient int
-	SubscriptionBufferSize    int
-	WebSocketWriteBufferSize  int
-	CloseOnSlowClient         bool
-	TimeoutBroadcastTxCommit  time.Duration
-	MaxBodyBytes              int64
-	MaxHeaderBytes            int
-	TLSCertFile               string
-	TLSKeyFile                string
-	PprofListenAddress        string
+	RootDir                   string        `toml:"root_dir"`
+	ListenAddress             string        `toml:"listen_address"`
+	CORSAllowedOrigins        []string      `toml:"cors_allowed_origins"`
+	CORSAllowedMethods        []string      `toml:"cors_allowed_methods"`
+	CORSAllowedHeaders        []string      `toml:"cors_allowed_headers"`
+	GRPCListenAddress         string        `toml:"grpc_listen_address"`
+	GRPCMaxOpenConnections    int           `toml:"grpc_max_open_connections"`
+	Unsafe                    bool          `toml:"unsafe"`
+	MaxOpenConnections        int           `toml:"max_open_connections"`
+	MaxSubscriptionClients    int           `toml:"max_subscription_clients"`
+	MaxSubscriptionsPerClient int           `toml:"max_subscriptions_per_client"`
+	SubscriptionBufferSize    int           `toml:"subscription_buffer_size"`
+	WebSocketWriteBufferSize  int           `toml:"web_socket_write_buffer_size"`
+	CloseOnSlowClient         bool          `toml:"close_on_slow_client"`
+	TimeoutBroadcastTxCommit  time.Duration `toml:"timeout_broadcast_tx_commit"`
+	MaxBodyBytes              int64         `toml:"max_body_bytes"`
+	MaxHeaderBytes            int           `toml:"max_header_bytes"`
+	TLSCertFile               string        `toml:"tls_cert_file"`
+	TLSKeyFile                string        `toml:"tls_key_file"`
+	PprofListenAddress        string        `toml:"pprof_listen_address"`
 }
 
 // DefaultRPCConfig returns a default configuration for the RPC server
@@ -130,17 +130,18 @@ func DefaultRPCConfig() *RPCConfig {
 
 // P2P COnfiguration
 type P2PConfig struct {
-	RootDir                 string
-	NodeId                  peer.ID
-	ListenAddress           string
-	ExternalAddress         string
-	Seeds                   string
-	PersistentPeers         []string
-	CurrentlyConnectedPeers []string
+	RootDir                 string   `toml:"root_dir,omitempty"`
+	NodeId                  peer.ID  `toml:"node_id"`
+	ListenAddress           string   `toml:"listen_address"`
+	ExternalAddress         string   `toml:"external_address"`
+	Seeds                   string   `toml:"seeds"`
+	PersistentPeers         []string `toml:"persistent_peers"`
+	CurrentlyConnectedPeers []string `toml:"currently_connected_peers"`
 }
 
 func DefaultP2PConfig() *P2PConfig {
 	return &P2PConfig{
+		RootDir:         DefaultDataDir,
 		ListenAddress:   "tcp://0.0.0.0:2300",
 		ExternalAddress: "",
 		NodeId:          "",

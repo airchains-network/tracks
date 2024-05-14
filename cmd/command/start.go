@@ -39,7 +39,7 @@ func initSequencer() error {
 		return errors.New("VRF keys not setup properly")
 	}
 
-	shared.NewNode(&config)
+	shared.NewNode(config)
 
 	return nil
 }

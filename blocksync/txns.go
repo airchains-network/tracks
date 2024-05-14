@@ -9,6 +9,7 @@ import (
 	"fmt"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	stationTypes "github.com/airchains-network/decentralized-sequencer/types"
+	"github.com/airchains-network/decentralized-sequencer/types/svmTypes"
 	utilis "github.com/airchains-network/decentralized-sequencer/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -42,11 +43,31 @@ func insertTxnEVM(db *leveldb.DB, txns stationTypes.TransactionStruct, transacti
 
 	return nil
 }
+
 func insertTxnWASM(db *leveldb.DB, txns []byte, transactionNumber int) error {
 
 	txnsKey := fmt.Sprintf("txns-%d", transactionNumber+1)
 	err := db.Put([]byte(txnsKey), txns, nil)
 	if err != nil {
+		return err
+	}
+
+	err = db.Put([]byte("txnCount"), []byte(strconv.Itoa(transactionNumber+1)), nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func insertTxnSVM(db *leveldb.DB, txn svmTypes.SVMTransactionStruct, transactionNumber int) error {
+	data, err := json.Marshal(txn)
+	if err != nil {
+		return err
+	}
+
+	txnsKey := fmt.Sprintf("txns-%d", transactionNumber+1)
+	if err := db.Put([]byte(txnsKey), data, nil); err != nil {
 		return err
 	}
 
@@ -209,4 +230,24 @@ func ComputeTransactionHash(base64Tx string) (string, error) {
 	hash := sha256.Sum256(txBytes)
 	txHash := hex.EncodeToString(hash[:])
 	return txHash, nil
+}
+
+func StoreSVMTransaction(db *leveldb.DB, txn svmTypes.SVMTransactionStruct) {
+	// get transaction number from database
+	transactionNumberBytes, err := db.Get([]byte("txnCount"), nil)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Failed to get transaction number: %s" + err.Error()))
+		os.Exit(0)
+	}
+
+	transactionNumber, err := strconv.Atoi(strings.TrimSpace(string(transactionNumberBytes)))
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Invalid transaction number : %s" + err.Error()))
+		os.Exit(0)
+	}
+
+	if insertErr := insertTxnSVM(db, txn, transactionNumber); insertErr != nil {
+		logs.Log.Error(fmt.Sprintf("Invalid transaction number : %s" + err.Error()))
+		os.Exit(0)
+	}
 }

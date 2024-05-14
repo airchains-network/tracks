@@ -68,82 +68,94 @@ func WriteConfigFile(configFilePath string, config *Config) {
 	utils.MustWriteFile(configFilePath, buffer.Bytes(), 0644)
 }
 
-const defaultConfigTemplate = `# This is a TOML config file.
+/*
+# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
+*/
 
-version = "0.1"  
+const defaultConfigTemplate = `[base_config]
+db_backend="goleveldb"
+db_path="{{ .BaseConfig.DBPath }}"
+filter_peers={{ .BaseConfig.FilterPeers }}
+moniker="{{ .BaseConfig.Moniker }}"
+proxy_app="{{ .BaseConfig.ProxyApp }}"
+root_dir="{{ .BaseConfig.RootDir }}"
+version="0.0.1"
+
+[consensus]
+double_sign_check_height = {{ .Consensus.DoubleSignCheckHeight }}
+pod_validation_sleep_duration = "{{ .Consensus.PodValidationSleepDuration }}"
+skip_timeout_commit = {{ .Consensus.SkipTimeoutCommit }}
+timeout_commit = "{{ .Consensus.TimeoutCommit }}"
+timeout_precommit = "{{ .Consensus.TimeoutPrecommit }}"
+timeout_precommit_delta = "{{ .Consensus.TimeoutPrecommitDelta }}"
+timeout_prevote = "{{ .Consensus.TimeoutPrevote }}"
+timeout_prevote_delta = "{{ .Consensus.TimeoutPrevoteDelta }}"
+timeout_propose = "{{ .Consensus.TimeoutPropose }}"
+timeout_propose_delta = "{{ .Consensus.TimeoutProposeDelta }}"
+validatePods = {{ .Consensus.ValidatePods }}
+
+[da]
+daKey = "{{ .DA.DaKey }}"
+daRPC = "{{ .DA.DaRPC }}"
+daType = "{{ .DA.DaType }}"
+
+[junction]
+accountName = "{{ .Junction.AccountName }}"
+accountPath = "{{ .Junction.AccountPath }}"
+AddressPrefix = "{{ .Junction.AddressPrefix }}"
+junctionAPI =  "{{ .Junction.JunctionAPI }}"
+junctionRPC =  "{{ .Junction.JunctionRPC }}"
+stationId = "{{ .Junction.StationId }}"
+Tracks = {{ .Junction.Tracks }}
+VRFPrivateKey = "{{ .Junction.VRFPrivateKey }}"
+VRFPublicKey = "{{ .Junction.VRFPublicKey }}"
+
+[p2p]
+currently_connected_peers = {{ .P2P.CurrentlyConnectedPeers }}
+external_address = "{{ .P2P.ExternalAddress }}"
+listen_address = "{{ .P2P.ListenAddress }}"
+node_id = "{{ .P2P.NodeId }}"
+persistent_peers = {{ .P2P.PersistentPeers }}
+root_dir = "{{ .P2P.RootDir }}"
+seeds = "{{ .P2P.Seeds }}"
 
 [rpc]
-laddr = "{{ .RPC.ListenAddress }}"
-cors_allowed_origins = [{{ range .RPC.CORSAllowedOrigins }} "{{ . }}", {{ end }}]
-cors_allowed_methods = [{{ range .RPC.CORSAllowedMethods }} "{{ . }}", {{ end }}]
+close_on_slow_client = {{ .RPC.CloseOnSlowClient }}
 cors_allowed_headers = [{{ range .RPC.CORSAllowedHeaders }} "{{ . }}", {{ end }}]
-grpc_laddr = "{{ .RPC.GRPCListenAddress }}"
+cors_allowed_methods = [{{ range .RPC.CORSAllowedMethods }} "{{ . }}", {{ end }}]
+cors_allowed_origins = [{{ range .RPC.CORSAllowedOrigins }} "{{ . }}", {{ end }}]
+grpc_listen_address = "{{ .RPC.GRPCListenAddress }}"
 grpc_max_open_connections = {{ .RPC.GRPCMaxOpenConnections }}
-unsafe = {{ .RPC.Unsafe }}
+listen_address="{{ .RPC.ListenAddress }}"
+max_body_bytes = {{ .RPC.MaxBodyBytes }}
+max_header_bytes = {{ .RPC.MaxHeaderBytes }}
 max_open_connections = {{ .RPC.MaxOpenConnections }}
 max_subscription_clients = {{ .RPC.MaxSubscriptionClients }}
 max_subscriptions_per_client = {{ .RPC.MaxSubscriptionsPerClient }}
-experimental_subscription_buffer_size = {{ .RPC.SubscriptionBufferSize }}
-experimental_websocket_write_buffer_size = {{ .RPC.WebSocketWriteBufferSize }}
-experimental_close_on_slow_client = {{ .RPC.CloseOnSlowClient }}
+pprof_listen_address = "{{ .RPC.PprofListenAddress }}"
+root_dir="{{ .RPC.RootDir }}"
+subscription_buffer_size = {{ .RPC.SubscriptionBufferSize }}
 timeout_broadcast_tx_commit = "{{ .RPC.TimeoutBroadcastTxCommit }}"
-max_body_bytes = {{ .RPC.MaxBodyBytes }}
-max_header_bytes = {{ .RPC.MaxHeaderBytes }}
 tls_cert_file = "{{ .RPC.TLSCertFile }}"
 tls_key_file = "{{ .RPC.TLSKeyFile }}"
-pprof_laddr = "{{ .RPC.PprofListenAddress }}"
-
-[p2p]
-root_dir = "{{ .RootDir }}"
-node_id = "{{ .P2P.NodeId }}"
-listen_address = "{{ .P2P.ListenAddress }}"
-external_address = "{{ .P2P.ExternalAddress }}"
-seeds = "{{ .P2P.Seeds }}"
-persistent_peers = {{ .P2P.PersistentPeers }}
+unsafe = {{ .RPC.Unsafe }}
+web_socket_write_buffer_size = {{ .RPC.WebSocketWriteBufferSize }}
 
 [statesync]
 enable = {{ .StateSync.Enable }}
-temp_dir = "{{ .StateSync.TempDir }}"
-rpc_servers = [{{ range .StateSync.RPCServers }} "{{ . }}", {{ end }}]
-pod_trust_period = "{{ .StateSync.PodTrustPeriod }}"
-pod_trust_height = {{ .StateSync.PodTrustHeight }}
-pod_trust_hash = "{{ .StateSync.PodTrustHash }}"
+pod_chunk_fetchers = {{ .StateSync.PodChunkFetchers }}
 pod_discovery_time = "{{ .StateSync.PodDiscoveryTime }}"
 pod_request_timeout = "{{ .StateSync.PodRequestTimeout }}"
-pod_chunk_fetchers = {{ .StateSync.PodChunkFetchers }}
+pod_trust_hash = "{{ .StateSync.PodTrustHash }}"
+pod_trust_height = {{ .StateSync.PodTrustHeight }}
+pod_trust_period = "{{ .StateSync.PodTrustPeriod }}"
+rpc_servers = [{{ range .StateSync.RPCServers }} "{{ . }}", {{ end }}]
+temp_dir = "{{ .StateSync.TempDir }}"
 
-[consensus]
-timeout_propose = "{{ .Consensus.TimeoutPropose }}"
-timeout_propose_delta = "{{ .Consensus.TimeoutProposeDelta }}"
-timeout_prevote = "{{ .Consensus.TimeoutPrevote }}"
-timeout_prevote_delta = "{{ .Consensus.TimeoutPrevoteDelta }}"
-timeout_precommit = "{{ .Consensus.TimeoutPrecommit }}"
-timeout_precommit_delta = "{{ .Consensus.TimeoutPrecommitDelta }}"
-timeout_commit = "{{ .Consensus.TimeoutCommit }}"
-skip_timeout_commit = {{ .Consensus.SkipTimeoutCommit }}
-
-double_sign_check_height = {{ .Consensus.DoubleSignCheckHeight }}
-
-# Data Availability Layer Configuration
-[da]
-daType = "{{ .DA.DaType }}"
-daRPC = "{{ .DA.DaRPC }}"
-daKey = "{{ .DA.DaKey }}"
-
-# Station Configuration
 [station]
-stationType = "{{ .Station.StationType }}"
-stationRPC = "{{ .Station.StationRPC }}"
 stationAPI = "{{ .Station.StationAPI }}"
+stationRPC = "{{ .Station.StationRPC }}"
+stationType = "{{ .Station.StationType }}"
 
-# Junction Configuration
-[junction]
-junctionRPC =  "{{ .Junction.JunctionRPC }}"
-junctionAPI =  "{{ .Junction.JunctionAPI }}"
-stationId = "{{ .Junction.StationId }}"
-VRFPrivateKey = "{{ .Junction.VRFPrivateKey }}"
-VRFPublicKey = "{{ .Junction.VRFPublicKey }}"
-AddressPrefix = "{{ .Junction.AddressPrefix }}"
-Tracks = {{ .Junction.Tracks }}
 `
