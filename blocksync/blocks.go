@@ -4,6 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"math/big"
+	"net/http"
+	"os"
+	"strconv"
+	"time"
+
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/airchains-network/decentralized-sequencer/utils"
@@ -11,12 +18,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/syndtr/goleveldb/leveldb"
-	"io"
-	"math/big"
-	"net/http"
-	"os"
-	"strconv"
-	"time"
 )
 
 func StoreEVMBlock(client *ethclient.Client, ctx context.Context, blockIndex int, ldb *leveldb.DB, ldt *leveldb.DB) {
@@ -25,8 +26,8 @@ func StoreEVMBlock(client *ethclient.Client, ctx context.Context, blockIndex int
 	blockData, err := client.BlockByNumber(ctx, big.NewInt(int64(blockIndex)))
 	if err != nil {
 
-		errMessage := fmt.Sprintf("Failed to get block data for block number %d: %s", blockIndex, err)
-		log.Warn().Str("module", "blocksync").Err(err).Msg(errMessage)
+		// errMessage := fmt.Sprintf("Failed to get block data for block number %d: %s", blockIndex, err)
+		// log.Warn().Str("module", "blocksync").Err(err).Msg(errMessage)
 		time.Sleep(3 * time.Second)
 		StoreEVMBlock(client, ctx, blockIndex, ldb, ldt)
 	}

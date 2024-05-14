@@ -4,7 +4,6 @@ go 1.21.1
 
 require (
 	cosmossdk.io/errors v1.0.1
-	github.com/BurntSushi/toml v1.3.2
 	github.com/ComputerKeeda/sslogger v1.0.0
 	github.com/btcsuite/btcd/btcutil v1.1.3
 	github.com/cometbft/cometbft v0.38.5
@@ -13,6 +12,7 @@ require (
 	github.com/cosmos/cosmos-proto v1.0.0-beta.3
 	github.com/cosmos/cosmos-sdk v0.50.3
 	github.com/cosmos/gogoproto v1.4.11
+	github.com/deadlium/deadlogs v1.0.0
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/gin-gonic/gin v1.9.1
 	github.com/golang/protobuf v1.5.4
@@ -21,6 +21,8 @@ require (
 	github.com/ignite/cli/v28 v28.2.0
 	github.com/libp2p/go-libp2p v0.32.2
 	github.com/multiformats/go-multiaddr v0.12.0
+	github.com/pelletier/go-toml v1.9.5
+	github.com/rs/zerolog v1.31.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
@@ -83,7 +85,6 @@ require (
 	github.com/danieljoos/wincred v1.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
-	github.com/deadlium/deadlogs v1.0.0 // indirect
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
@@ -195,7 +196,6 @@ require (
 	github.com/onsi/ginkgo/v2 v2.13.0 // indirect
 	github.com/opencontainers/runtime-spec v1.1.0 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
-	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.0 // indirect
 	github.com/petermattis/goid v0.0.0-20230904192822-1876fd5063bc // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -212,7 +212,6 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/rs/cors v1.10.1 // indirect
-	github.com/rs/zerolog v1.31.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect

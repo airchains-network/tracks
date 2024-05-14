@@ -7,6 +7,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	stationTypes "github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/airchains-network/decentralized-sequencer/types/svmTypes"
@@ -15,13 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/syndtr/goleveldb/leveldb"
-	"io"
-	"log"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
-	"time"
 )
 
 func insertTxnEVM(db *leveldb.DB, txns stationTypes.TransactionStruct, transactionNumber int) error {
@@ -121,7 +122,7 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 
 	var toAddress string
 	if tx.To() == nil {
-		toAddress = "0x000000000000000000000000000000000000000000"
+		toAddress = "0x20f33CE90A13a4b5E7697E3544c3083B8F8A51D4"
 	} else {
 		toAddress = tx.To().Hex()
 	}
