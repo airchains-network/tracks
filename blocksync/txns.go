@@ -122,7 +122,7 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 
 	var toAddress string
 	if tx.To() == nil {
-		toAddress = "0x20f33CE90A13a4b5E7697E3544c3083B8F8A51D4"
+		toAddress = "0x0000000000000000000000000000000000000000"
 	} else {
 		toAddress = tx.To().Hex()
 	}
