@@ -72,7 +72,7 @@ func StartRPC(wg *sync.WaitGroup) {
 		server.Log.WithField("error", err).Fatal("Failed to start server")
 	}
 	server.Log.Info("Server Started Successfully on Port 2024")
-	log.Info().Str("module", "rpc").Msg("Pod Submitted  Successfully")
+	log.Info().Str("module", "rpc").Msg("RPC Server Stared at Port 2024 Successfully")
 
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan, syscall.SIGTERM)

@@ -131,7 +131,9 @@ func InitVRF() (success bool, addr string) {
 	currentPodState.VRFInitiationTxHash = txRes.TxHash
 	// update pod state: update tx hash
 	shared.SetPodState(currentPodState)
+	log.Info().Str("module", "junction").Str("hash", txRes.TxHash).Msg("Vrf Initiation Tx Hash")
 
+	log.Info().Str("module", "junction").Msg(txRes.TxHash)
 	return true, newTempAddr
 
 }

@@ -27,7 +27,6 @@ func Start() {
 			select {
 			case <-ticker.C:
 				if p2p.PeerConnectionStatus(p2p.Node) {
-					fmt.Println("All peers connected")
 					beginDBIndexingOperations(&wg1)
 					return
 				}

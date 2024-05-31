@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pelletier/go-toml"
+	"math"
+	"strconv"
 
 	//"github.com/BurntSushi/toml"
 	"github.com/airchains-network/decentralized-sequencer/config"
@@ -73,9 +75,16 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 		logs.Log.Error("Not enough balance on " + newTempAddr + " to create station")
 		return false
 	}
-	amountStr := fmt.Sprintf("%damf", amount)
-	logs.Log.Info("Currently user have " + amountStr)
+	amountDiv, err := strconv.ParseFloat(strconv.FormatInt(amount, 10), 64)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
 
+	dividedAmount := amountDiv / math.Pow(10, 6)
+	dividedAmountStr := strconv.FormatFloat(dividedAmount, 'f', 6, 64)
+
+	logs.Log.Info("Currently user have " + dividedAmountStr + "AMF")
 	// Voting powers: almost equal.
 	var tracksVotingPower []uint64
 	totalPower := uint64(100)
