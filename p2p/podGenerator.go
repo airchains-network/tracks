@@ -80,42 +80,68 @@ func GenerateUnverifiedPods() {
 	rawCurrentPodNumber, err := getValueOrDefault(staticDBConnection, []byte(BatchCountKey), []byte("0"))
 	checkErrorAndExit(err, "Error in getting currentPodNumber from static db", 0)
 
-	previousStateData, err := getPodStateFromDatabase()
+	//previousStateData
+	podStateData, err := getPodStateFromDatabase()
 	checkErrorAndExit(err, "Error in getting previous station data", 0)
 
-	previousTrackAppHash := previousStateData.TracksAppHash
-	if previousTrackAppHash == nil {
-		previousTrackAppHash = []byte("nil")
+	var (
+		previousTrackAppHash []byte
+		trackAppHash         []byte
+		witness              []byte
+		uZKP                 []byte
+		mRH                  []byte
+		batchInput           *types.BatchStruct
+		txState              string
+		batchNumber          int
+	)
+	currentPodNumber, _ := strconv.Atoi(strings.TrimSpace(string(rawCurrentPodNumber)))
+
+	if podStateData.LatestTxState == shared.TxStateInitVRF {
+
+		previousTrackAppHash = podStateData.TracksAppHash
+		if previousTrackAppHash == nil {
+			previousTrackAppHash = []byte("nil")
+		}
+
+		txState = podStateData.LatestTxState
+		if txState == "" {
+			txState = shared.TxStateInitVRF
+		}
+
+		batchNumber = currentPodNumber + 1
+
+		baseCfg, err := shared.LoadConfig()
+		if err != nil {
+			log.Error().Str("module", "p2p").Msg("Error in loading config")
+		}
+		stationVariant := baseCfg.Station.StationType
+		stationVariantLowerCase := strings.ToLower(stationVariant)
+
+		if stationVariantLowerCase == "evm" {
+			witness, uZKP, mRH, batchInput, err = createEVMPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+			checkErrorAndExit(err, "Error in creating POD", 0)
+		} else if stationVariantLowerCase == "wasm" {
+			witness, uZKP, mRH, batchInput, err = createWasmPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+			checkErrorAndExit(err, "Error in creating POD", 0)
+		}
+
+		trackAppHash = generatePodHash(witness, uZKP, mRH, rawCurrentPodNumber)
+		updateNewPodState(trackAppHash, witness, uZKP, mRH, uint64(batchNumber), batchInput, txState)
+	} else {
+		trackAppHash = podStateData.TracksAppHash
+		witness = podStateData.LatestPublicWitness
+		uZKP = podStateData.LatestPodProof
+		mRH = podStateData.LatestPodHash
+		batchInput = podStateData.Batch
+		batchNumber = currentPodNumber + 1
+		txState = podStateData.LatestTxState
+
+		updateNewPodState(trackAppHash, witness, uZKP, mRH, uint64(batchNumber), batchInput, txState)
 	}
 
 	selectedMaster := MasterTracksSelection(Node, string(previousTrackAppHash))
-
 	decodedMaster, err := peer.Decode(selectedMaster)
 	checkErrorAndExit(err, "Error in decoding master", 0)
-
-	currentPodNumber, _ := strconv.Atoi(strings.TrimSpace(string(rawCurrentPodNumber)))
-	batchNumber := currentPodNumber + 1
-
-	baseCfg, err := shared.LoadConfig()
-	if err != nil {
-		log.Error().Str("module", "p2p").Msg("Error in loading config")
-	}
-	stationVariant := baseCfg.Station.StationType
-	stationVariantLowerCase := strings.ToLower(stationVariant)
-	var witness []byte
-	var uZKP []byte
-	var mRH []byte
-	var batchInput *types.BatchStruct
-	if stationVariantLowerCase == "evm" {
-		witness, uZKP, mRH, batchInput, err = createEVMPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
-		checkErrorAndExit(err, "Error in creating POD", 0)
-	} else if stationVariantLowerCase == "wasm" {
-		witness, uZKP, mRH, batchInput, err = createWasmPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
-		checkErrorAndExit(err, "Error in creating POD", 0)
-	}
-
-	trackAppHash := generatePodHash(witness, uZKP, mRH, rawCurrentPodNumber)
-	updateNewPodState(trackAppHash, witness, uZKP, mRH, uint64(batchNumber), batchInput)
 
 	if decodedMaster == Node.ID() {
 		podState := shared.GetPodState()
@@ -148,192 +174,230 @@ func GenerateUnverifiedPods() {
 				return
 			}
 
-			success, addr := junction.InitVRF()
-			if !success {
-				logs.Log.Error("Failed to Init VRF")
-				return
-			}
-			log.Info().Str("module", "p2p").Msg("VRF Initiated Successfully ")
-			success = junction.ValidateVRF(addr)
-			if !success {
-				logs.Log.Error("Failed to Validate VRF")
-				return
-			}
-			log.Info().Str("module", "p2p").Msg("VRF Validated Successfully")
-			// check if VRF is successfully validated
-			var vrfRecord *junctionTypes.VrfRecord
-			vrfRecord = junction.QueryVRF()
-			if vrfRecord == nil {
-				logs.Log.Error("VRF record is nil")
-				return
-			}
-			if !vrfRecord.IsVerified {
-				logs.Log.Error("Verification of VRF is failed, need Voting for correct VRN")
+			addr, err := junction.GetAddress()
+			if err != nil {
+				logs.Log.Error("Error in getting address")
 				return
 			}
 
-			// DA submit
-			connection := shared.Node.NodeConnections
-			mdb := connection.GetDataAvailabilityDatabaseConnection()
-			dbName, err := mock.MockDA(mdb, daDataByte, PodNumber)
-			if err != nil {
-				logs.Log.Error("Error in submitting data to DA")
-				return
-			}
-			_ = dbName
+			if shared.GetPodState().LatestTxState == shared.TxStateInitVRF {
+				success, _ := junction.InitVRF()
+				if !success {
+					logs.Log.Error("Failed to Init VRF")
+					return
+				}
 
-			DaBatchSaver := connection.DataAvailabilityDatabaseConnection
-			baseConfig, err := shared.LoadConfig()
-			if err != nil {
-				fmt.Println("Error loading configuration")
+				updateTxState(shared.TxStateVerifyVRF)
+				log.Info().Str("module", "p2p").Msg("VRF Initiated Successfully ")
+			} else {
+				logs.Log.Warn("VRF is already initiated, moving to next step")
 			}
-			Datype := baseConfig.DA.DaType
-			if Datype == "mock" {
-				mdb := connection.MockDatabaseConnection
-				daCheck, daCheckErr := mock.MockDA(mdb, daDataByte, PodNumber)
-				if daCheckErr != nil {
+
+			//os.Exit(0)
+
+			if shared.GetPodState().LatestTxState == shared.TxStateVerifyVRF {
+				success := junction.ValidateVRF(addr)
+				if !success {
+					logs.Log.Error("Failed to Validate VRF")
+					return
+				}
+				updateTxState(shared.TxStateSubmitPod)
+				log.Info().Str("module", "p2p").Msg("VRF Validated Successfully")
+
+				// check if VRF is successfully validated
+				var vrfRecord *junctionTypes.VrfRecord
+				vrfRecord = junction.QueryVRF()
+				if vrfRecord == nil {
+					logs.Log.Error("VRF record is nil")
+					return
+				}
+				if !vrfRecord.IsVerified {
+					logs.Log.Error("Verification of VRF is failed, need Voting for correct VRN")
+					return
+				}
+			} else {
+				logs.Log.Warn("VRF is already validated, moving to next step")
+			}
+			//os.Exit(0)
+
+			if shared.GetPodState().LatestTxState == shared.TxStateSubmitPod {
+				fmt.Println("submitting pod")
+				// DA submit
+				connection := shared.Node.NodeConnections
+				mdb := connection.GetDataAvailabilityDatabaseConnection()
+				dbName, err := mock.MockDA(mdb, daDataByte, PodNumber)
+				if err != nil {
 					logs.Log.Error("Error in submitting data to DA")
 					return
 				}
+				_ = dbName
 
-				da := types.DAStruct{
-					DAKey:             daCheck,
-					DAClientName:      "mock-da",
-					BatchNumber:       strconv.Itoa(PodNumber),
-					PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
-					CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
+				DaBatchSaver := connection.DataAvailabilityDatabaseConnection
+				baseConfig, err := shared.LoadConfig()
+				if err != nil {
+					fmt.Println("Error loading configuration")
 				}
+				Datype := baseConfig.DA.DaType
+				if Datype == "mock" {
+					mdb := connection.MockDatabaseConnection
+					daCheck, daCheckErr := mock.MockDA(mdb, daDataByte, PodNumber)
+					if daCheckErr != nil {
+						logs.Log.Error("Error in submitting data to DA")
+						return
+					}
 
-				daStoreKey := fmt.Sprintf("da-%d", PodNumber)
-				daStoreData, daStoreDataErr := json.Marshal(da)
-				if daStoreDataErr != nil {
-					logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
-				}
+					da := types.DAStruct{
+						DAKey:             daCheck,
+						DAClientName:      "mock-da",
+						BatchNumber:       strconv.Itoa(PodNumber),
+						PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
+						CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
+					}
 
-				storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
-				if storeErr != nil {
-					logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
-				}
+					daStoreKey := fmt.Sprintf("da-%d", PodNumber)
+					daStoreData, daStoreDataErr := json.Marshal(da)
+					if daStoreDataErr != nil {
+						logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+					}
 
-				log.Info().Str("module", "p2p").Msg("Data Saved in DA")
+					storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
+					if storeErr != nil {
+						logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+					}
 
-			} else if Datype == "avail" {
-				daCheck, daCheckErr := avail.Avail(daDataByte, baseConfig.DA.DaRPC)
-				if daCheckErr != nil {
-					logs.Log.Warn("Error in submitting data to DA")
+					log.Info().Str("module", "p2p").Msg("Data Saved in DA")
+
+				} else if Datype == "avail" {
+					daCheck, daCheckErr := avail.Avail(daDataByte, baseConfig.DA.DaRPC)
+					if daCheckErr != nil {
+						logs.Log.Warn("Error in submitting data to DA")
+						return
+					}
+
+					da := types.DAStruct{
+						DAKey:             daCheck,
+						DAClientName:      "avail-da",
+						BatchNumber:       strconv.Itoa(PodNumber),
+						PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
+						CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
+					}
+
+					daStoreKey := fmt.Sprintf("da-%d", PodNumber)
+					daStoreData, daStoreDataErr := json.Marshal(da)
+					if daStoreDataErr != nil {
+						logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+					}
+
+					storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
+					if storeErr != nil {
+						logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+					}
+
+					log.Info().Str("module", "p2p").Msg("Data Saved in DA")
+
+				} else if Datype == "celestia" {
+					daCheck, daCheckErr := celestia.Celestia(daDataByte, baseConfig.DA.DaRPC, baseConfig.DA.DaRPC)
+
+					if daCheckErr != nil {
+						logs.Log.Warn("Error in submitting data to DA")
+						return
+					}
+
+					da := types.DAStruct{
+						DAKey:             daCheck,
+						DAClientName:      "celestia-da",
+						BatchNumber:       strconv.Itoa(PodNumber),
+						PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
+						CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
+					}
+
+					daStoreKey := fmt.Sprintf("da-%d", PodNumber)
+					daStoreData, daStoreDataErr := json.Marshal(da)
+					if daStoreDataErr != nil {
+						logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+					}
+
+					storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
+					if storeErr != nil {
+						logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+					}
+
+					log.Info().Str("module", "p2p").Msg("Data Saved in DA")
+
+				} else if Datype == "eigen" {
+					daCheck, daCheckErr := eigen.Eigen(daDataByte,
+						baseConfig.DA.DaRPC, baseConfig.DA.DaRPC,
+					)
+
+					if daCheckErr != nil {
+						logs.Log.Warn("Error in submitting data to DA")
+						return
+					}
+
+					da := types.DAStruct{
+						DAKey:             daCheck,
+						DAClientName:      "eigen-da",
+						BatchNumber:       strconv.Itoa(PodNumber),
+						PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
+						CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
+					}
+
+					daStoreKey := fmt.Sprintf("da-%d", PodNumber)
+					daStoreData, daStoreDataErr := json.Marshal(da)
+					if daStoreDataErr != nil {
+						logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+					}
+
+					storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
+					if storeErr != nil {
+						logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+					}
+
+					log.Info().Str("module", "p2p").Msg("Data Saved in DA")
+
+				} else {
+					logs.Log.Error("Unknown layer. Please use 'avail' or 'celestia' as argument.")
 					return
 				}
 
-				da := types.DAStruct{
-					DAKey:             daCheck,
-					DAClientName:      "avail-da",
-					BatchNumber:       strconv.Itoa(PodNumber),
-					PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
-					CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
-				}
-
-				daStoreKey := fmt.Sprintf("da-%d", PodNumber)
-				daStoreData, daStoreDataErr := json.Marshal(da)
-				if daStoreDataErr != nil {
-					logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
-				}
-
-				storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
-				if storeErr != nil {
-					logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
-				}
-
-				log.Info().Str("module", "p2p").Msg("Data Saved in DA")
-
-			} else if Datype == "celestia" {
-				daCheck, daCheckErr := celestia.Celestia(daDataByte, baseConfig.DA.DaRPC, baseConfig.DA.DaRPC)
-
-				if daCheckErr != nil {
-					logs.Log.Warn("Error in submitting data to DA")
+				// submit pod
+				success := junction.SubmitCurrentPod()
+				if !success {
+					logs.Log.Error("Failed to submit pod")
 					return
 				}
-
-				da := types.DAStruct{
-					DAKey:             daCheck,
-					DAClientName:      "celestia-da",
-					BatchNumber:       strconv.Itoa(PodNumber),
-					PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
-					CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
-				}
-
-				daStoreKey := fmt.Sprintf("da-%d", PodNumber)
-				daStoreData, daStoreDataErr := json.Marshal(da)
-				if daStoreDataErr != nil {
-					logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
-				}
-
-				storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
-				if storeErr != nil {
-					logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
-				}
-
-				log.Info().Str("module", "p2p").Msg("Data Saved in DA")
-
-			} else if Datype == "eigen" {
-				daCheck, daCheckErr := eigen.Eigen(daDataByte,
-					baseConfig.DA.DaRPC, baseConfig.DA.DaRPC,
-				)
-
-				if daCheckErr != nil {
-					logs.Log.Warn("Error in submitting data to DA")
-					return
-				}
-
-				da := types.DAStruct{
-					DAKey:             daCheck,
-					DAClientName:      "eigen-da",
-					BatchNumber:       strconv.Itoa(PodNumber),
-					PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
-					CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
-				}
-
-				daStoreKey := fmt.Sprintf("da-%d", PodNumber)
-				daStoreData, daStoreDataErr := json.Marshal(da)
-				if daStoreDataErr != nil {
-					logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
-				}
-
-				storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
-				if storeErr != nil {
-					logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
-				}
-
-				log.Info().Str("module", "p2p").Msg("Data Saved in DA")
-
+				updateTxState(shared.TxStateVerifyPod)
+				log.Info().Str("module", "p2p").Msg("Pod Submitted  Successfully")
 			} else {
-				logs.Log.Error("Unknown layer. Please use 'avail' or 'celestia' as argument.")
-				return
+				logs.Log.Warn("Pod already submitted, moving to next step")
 			}
-
-			// submit pod
-			success = junction.SubmitCurrentPod()
-			if !success {
-				logs.Log.Error("Failed to submit pod")
-				return
-			}
-			log.Info().Str("module", "p2p").Msg("Pod Submitted  Successfully")
+			//os.Exit(0)
 
 			// verify pod
-			success = junction.VerifyCurrentPod()
-			if !success {
-				logs.Log.Error("Failed to Transact Verify pod")
-				return
+			if shared.GetPodState().LatestTxState == shared.TxStateVerifyPod {
+				fmt.Println("Verifying pod")
+
+				success := junction.VerifyCurrentPod()
+				if !success {
+					logs.Log.Error("Failed to Transact Verify pod")
+					return
+				}
+				logs.Log.Info("pod verification transaction done")
+				updateTxState(shared.TxStateInitVRF)
+			} else {
+				logs.Log.Error("Its incorrect if LatestTxState is not equal to TxStateVerifyPod at this point")
+				logs.Log.Error("LatestTxState: " + shared.GetPodState().LatestTxState)
+				return // stop sequencer, there is some error
 			}
-			logs.Log.Info("pod verification transaction done")
 
 			saveVerifiedPOD() // save data to database
+
+			//os.Exit(0)
 
 			GenerateUnverifiedPods() // generate next pod
 
 		} else {
-
 			PodNumber := int(shared.GetPodState().LatestPodHeight)
-
 			success, addr := junction.InitVRF()
 			if !success {
 				logs.Log.Error("Failed to Init VRF")
@@ -614,7 +678,6 @@ func saveVerifiedPOD() {
 	if err != nil {
 		panic("Failed to update pod data: " + err.Error())
 	}
-
 	podState.MasterTrackAppHash = nil
 	shared.SetPodState(podState)
 
@@ -630,11 +693,12 @@ func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
 	return hash.Sum(nil)
 }
 
-func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uint64, batchInput *types.BatchStruct) {
+func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uint64, batchInput *types.BatchStruct, txState string) {
 	var podState *shared.PodState
 	votes := make(map[string]shared.Votes)
 	podState = &shared.PodState{
 		LatestPodHeight:     podNumber,
+		LatestTxState:       txState,
 		LatestPodHash:       MRH,
 		PreviousPodHash:     shared.GetPodState().LatestPodHash,
 		LatestPodProof:      uZKP,
@@ -643,6 +707,14 @@ func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uin
 		TracksAppHash:       CombinedPodHash,
 		Batch:               batchInput,
 	}
+	shared.SetPodState(podState)
+
+	updatePodStateInDatabase(podState)
+}
+
+func updateTxState(txState string) {
+	podState := shared.GetPodState()
+	podState.LatestTxState = txState
 	shared.SetPodState(podState)
 	updatePodStateInDatabase(podState)
 }

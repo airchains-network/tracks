@@ -18,6 +18,7 @@ type Votes struct {
 }
 type PodState struct {
 	LatestPodHeight     uint64
+	LatestTxState       string // InitVRF / VerifyVRF / InitPod / VerifyPod
 	LatestPodHash       []byte
 	PreviousPodHash     []byte
 	LatestPodProof      []byte

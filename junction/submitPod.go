@@ -84,6 +84,9 @@ func SubmitCurrentPod() (success bool) {
 		Timestamp:              currentTime,
 	}
 
+	fmt.Println(LatestPodStatusHashStr)
+	fmt.Println(PreviousPodStatusHashStr)
+
 	txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
 	if errTxRes != nil {
 		logs.Log.Error("error in transaction" + errTxRes.Error())

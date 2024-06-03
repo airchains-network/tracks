@@ -21,6 +21,12 @@ import (
 var (
 	Node *NodeS
 	mu   sync.Mutex
+
+	// txStates
+	TxStateInitVRF   = "InitVRF"
+	TxStateVerifyVRF = "VerifyVRF"
+	TxStateSubmitPod = "InitPod"
+	TxStateVerifyPod = "VerifyPod"
 )
 
 type Votes struct {
@@ -30,6 +36,7 @@ type Votes struct {
 }
 type PodState struct {
 	LatestPodHeight     uint64
+	LatestTxState       string // InitVRF / VerifyVRF / InitPod / VerifyPod
 	LatestPodHash       []byte
 	PreviousPodHash     []byte
 	LatestPodProof      []byte
