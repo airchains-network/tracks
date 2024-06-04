@@ -22,6 +22,7 @@ func main() {
 	rootCmd.AddCommand(command.CreateStation)
 
 	command.KeyGenCmd.AddCommand(keys.JunctionKeyGenCmd)
+	command.KeyGenCmd.AddCommand(keys.JunctionKeyImportCmd)
 	command.ProverGenCMD.AddCommand(zkpCmd.V1ZKP)
 	command.ProverGenCMD.AddCommand(zkpCmd.V1ZKPWasm)
 
@@ -29,6 +30,13 @@ func main() {
 	keys.JunctionKeyGenCmd.Flags().String("accountPath", "", "Account Path")
 	keys.JunctionKeyGenCmd.MarkFlagRequired("accountName")
 	keys.JunctionKeyGenCmd.MarkFlagRequired("accountPath")
+
+	keys.JunctionKeyImportCmd.Flags().String("accountName", "", "Account Name")
+	keys.JunctionKeyImportCmd.Flags().String("accountPath", "", "Account Path")
+	keys.JunctionKeyImportCmd.Flags().String("mnemonic", "", "Mnemonic Key")
+	keys.JunctionKeyImportCmd.MarkFlagRequired("accountName")
+	keys.JunctionKeyImportCmd.MarkFlagRequired("accountPath")
+	keys.JunctionKeyImportCmd.MarkFlagRequired("mnemonic")
 
 	command.InitCmd.Flags().String("moniker", "", "Moniker for the Tracks")
 	command.InitCmd.Flags().String("stationType", "", "Station Type for the Tracks (evm | cosmwasm | svm)")

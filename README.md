@@ -13,7 +13,10 @@ go run cmd/main.go init --daRpc "mock-rpc" --daKey "mockKey" --daType "mock"  --
 ```shell
 go run cmd/main.go keys junction --accountName dummy --accountPath .tracks/junction-accounts/keys
 ```
-
+OR `Import with mnemonic`
+```shell 
+go run cmd/main.go keys import --accountName dummy --accountPath .tracks/junction-accounts/keys --mnemonic "huge bounce thing settle diet mobile fruit skill call roast offer soap other upset toward sand dress moral pole smile limb round vacant ecology"
+```
 
 ### Init Prover
 ```shell
