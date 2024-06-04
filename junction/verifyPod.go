@@ -52,16 +52,18 @@ func VerifyCurrentPod() (success bool) {
 		return false
 	}
 
-	podNumber := shared.GetPodState().LatestPodHeight
-	LatestPodProof := shared.GetPodState().LatestPodProof
+	currentPodState := shared.GetPodState()
+
+	podNumber := currentPodState.LatestPodHeight
+	LatestPodProof := currentPodState.LatestPodProof
 
 	// get latest pod hash
-	LatestPodStatusHash := shared.GetPodState().LatestPodHash
+	LatestPodStatusHash := currentPodState.LatestPodHash
 	var LatestPodStatusHashStr string
 	LatestPodStatusHashStr = string(LatestPodStatusHash)
 
 	// previous pod hash
-	PreviousPodHash := shared.GetPodState().PreviousPodHash
+	PreviousPodHash := currentPodState.PreviousPodHash
 	var PreviousPodStatusHashStr string
 	if PreviousPodHash == nil {
 		PreviousPodStatusHashStr = ""
@@ -78,19 +80,32 @@ func VerifyCurrentPod() (success bool) {
 		ZkProof:                LatestPodProof,
 	}
 
+	// check if pod is already verified
+	fmt.Println(podNumber)
+	podDetails := QueryPod(podNumber)
+	if podDetails == nil {
+		// pod already submitted
+		log.Debug().Str("module", "junction").Msg("TxError: Pod not submitted, can not verify")
+		return false
+	} else if podDetails.IsVerified == true {
+		// pod already verified
+		log.Debug().Str("module", "junction").Msg("Pod already verified")
+		return true
+	}
+
 	txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &verifyPodStruct)
 	if errTxRes != nil {
-		logs.Log.Error("error in transaction" + errTxRes.Error())
+		errTxResStr := errTxRes.Error()
+		log.Error().Str("module", "junction").Str("Error", errTxResStr).Msg("TxError: Error in VerifyPod transaction")
 		return false
+	} else {
+
+		VerifyPodTxHash := txRes.TxHash
+		currentPodState.VerifyPodTxHash = VerifyPodTxHash
+		shared.SetPodState(currentPodState)
+		log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Verify Pod")
+		return true
+
 	}
-	log.Info().Str("module", "junction").Str("Tx Hash", txRes.TxHash).Msg("Verify Pod")
-
-	// update verified transaction hash in current pod state
-	currentPodState := shared.GetPodState()
-	VerifyPodTxHash := txRes.TxHash
-	currentPodState.VerifyPodTxHash = VerifyPodTxHash
-	shared.SetPodState(currentPodState)
-
-	return true
 
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -67,7 +68,8 @@ func ValidateVRF(addr string) bool {
 		return false
 	}
 
-	podNumber := shared.GetPodState().LatestPodHeight
+	currentPodState := shared.GetPodState()
+	podNumber := currentPodState.LatestPodHeight
 	msg := types.MsgValidateVrf{
 		Creator:      newTempAddr,
 		StationId:    stationId,
@@ -77,16 +79,21 @@ func ValidateVRF(addr string) bool {
 
 	txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
 	if errTxRes != nil {
-		logs.Log.Error("error in transaction" + errTxRes.Error())
-		return false
+		errStr := errTxRes.Error()
+		if strings.Contains(errStr, VRFValidatedErrorContains) {
+			log.Debug().Str("module", "junction").Msg("TxError: VRF already verified for this pod number")
+			return true
+		} else {
+			log.Error().Str("module", "junction").Str("Error", errStr).Msg("TxError: Error in ValidateVRF transaction")
+			return false
+		}
+	} else {
+		// update VRN verified hash
+		currentPodState.VRFValidationTxHash = txRes.TxHash
+		shared.SetPodState(currentPodState)
+
+		log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("ValidateVRF")
+		return true
 	}
 
-	log.Info().Str("module", "junction").Str("Tx Hash", txRes.TxHash).Msg("VRF Validated")
-
-	// update VRN verified hash
-	currentPodState := shared.GetPodState()
-	currentPodState.VRFValidationTxHash = txRes.TxHash
-	shared.SetPodState(currentPodState)
-
-	return true
 }

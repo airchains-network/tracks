@@ -7,6 +7,11 @@ import (
 	"fmt"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/btcsuite/btcd/btcutil/bech32"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"io"
 	"math/big"
@@ -14,9 +19,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rpc"
 )
 
 func GetBalance(address string, blockNumber uint64, stationRPC string) (string, error) {
@@ -124,6 +126,41 @@ func CreateAccount(accountName string, accountPath string) {
 	logs.Log.Info(fmt.Sprintf("Address: %s", newCreatedAccountAddr))
 	logs.Log.Info("Please save this mnemonic key for account recovery")
 	logs.Log.Info("Please save this address for future reference")
+
+}
+
+func ImportAccountByMnemonic(accountName string, accountPath string, mnemonic string) {
+	registry, err := cosmosaccount.New(cosmosaccount.WithHome(accountPath))
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error creating account registry: %v", err))
+		return
+	}
+
+	algos, _ := registry.Keyring.SupportedAlgorithms()
+	algo, err := keyring.NewSigningAlgoFromString(string(hd.Secp256k1Type), algos)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error getting signing algorithm: %v", err))
+		return
+	}
+
+	registryPath := hd.CreateHDPath(sdktypes.GetConfig().GetCoinType(), 0, 0).String()
+	record, err := registry.Keyring.NewAccount(accountName, mnemonic, "", registryPath, algo)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error Importing account: %v", err))
+		return
+	}
+	account := cosmosaccount.Account{
+		Name:   accountName,
+		Record: record,
+	}
+
+	// account to address
+	accountAddr, err := account.Address("air")
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error getting address: %v", err))
+		return
+	}
+	logs.Log.Info(fmt.Sprintf("Account imported: " + accountAddr))
 
 }
 
