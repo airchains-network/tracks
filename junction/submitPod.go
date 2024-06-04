@@ -84,15 +84,12 @@ func SubmitCurrentPod() (success bool) {
 		Timestamp:              currentTime,
 	}
 
-	fmt.Println(LatestPodStatusHashStr)
-	fmt.Println(PreviousPodStatusHashStr)
-
 	txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
 	if errTxRes != nil {
 		logs.Log.Error("error in transaction" + errTxRes.Error())
 		return false
 	}
-	log.Info().Str("module", "junction").Str("Transaction Hash", txRes.TxHash)
+	log.Info().Str("module", "junction").Str("Tx Hash", txRes.TxHash).Msg("Pod Submitted")
 
 	// update tx hash of submit pod in pod state
 	currentPodState := shared.GetPodState()

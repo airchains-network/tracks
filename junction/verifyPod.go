@@ -83,7 +83,7 @@ func VerifyCurrentPod() (success bool) {
 		logs.Log.Error("error in transaction" + errTxRes.Error())
 		return false
 	}
-	log.Info().Str("module", "junction").Str("Transaction Hash", txRes.TxHash)
+	log.Info().Str("module", "junction").Str("Tx Hash", txRes.TxHash).Msg("Verify Pod")
 
 	// update verified transaction hash in current pod state
 	currentPodState := shared.GetPodState()

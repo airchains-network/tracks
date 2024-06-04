@@ -188,9 +188,9 @@ func GenerateUnverifiedPods() {
 				}
 
 				updateTxState(shared.TxStateVerifyVRF)
-				log.Info().Str("module", "p2p").Msg("VRF Initiated Successfully ")
+				log.Info().Str("module", "p2p").Msg("VRF Initiated Successfully")
 			} else {
-				logs.Log.Warn("VRF is already initiated, moving to next step")
+				log.Warn().Str("module", "p2p").Msg("VRF is already initiated, moving to next step")
 			}
 
 			//os.Exit(0)
@@ -202,7 +202,6 @@ func GenerateUnverifiedPods() {
 					return
 				}
 				updateTxState(shared.TxStateSubmitPod)
-				log.Info().Str("module", "p2p").Msg("VRF Validated Successfully")
 
 				// check if VRF is successfully validated
 				var vrfRecord *junctionTypes.VrfRecord
@@ -215,15 +214,15 @@ func GenerateUnverifiedPods() {
 					logs.Log.Error("Verification of VRF is failed, need Voting for correct VRN")
 					return
 				}
+
+				log.Info().Str("module", "p2p").Msg("VRF Validated Successfully")
 			} else {
-				logs.Log.Warn("VRF is already validated, moving to next step")
+				log.Warn().Str("module", "p2p").Msg("VRF is already validated, moving to next step")
 			}
 			//os.Exit(0)
 
 			if shared.GetPodState().LatestTxState == shared.TxStateSubmitPod {
-				fmt.Println("submitting pod")
 				// DA submit
-				connection := shared.Node.NodeConnections
 				mdb := connection.GetDataAvailabilityDatabaseConnection()
 				dbName, err := mock.MockDA(mdb, daDataByte, PodNumber)
 				if err != nil {
@@ -375,14 +374,12 @@ func GenerateUnverifiedPods() {
 
 			// verify pod
 			if shared.GetPodState().LatestTxState == shared.TxStateVerifyPod {
-				fmt.Println("Verifying pod")
-
 				success := junction.VerifyCurrentPod()
 				if !success {
 					logs.Log.Error("Failed to Transact Verify pod")
 					return
 				}
-				logs.Log.Info("pod verification transaction done")
+				log.Info().Str("module", "p2p").Msg("pod verification transaction done")
 				updateTxState(shared.TxStateInitVRF)
 			} else {
 				logs.Log.Error("Its incorrect if LatestTxState is not equal to TxStateVerifyPod at this point")
@@ -539,7 +536,7 @@ func createEVMPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witnes
 		logs.Log.Error(fmt.Sprintf("Error in generating proof : %s", pkErr.Error()))
 		return nil, nil, nil, nil, pkErr
 	}
-	logs.Log.Warn(fmt.Sprintf("Successfully generated  Unverified proof for Batch %s in the latest phase", strconv.Itoa(limitInt+1)))
+	log.Info().Str("module", "p2p").Msg(fmt.Sprintf("Successfully generated  Unverified proof for Batch %s in the latest phase", strconv.Itoa(limitInt+1)))
 
 	// marshal witnessVector
 	witnessVectorByte, err := json.Marshal(witnessVector)

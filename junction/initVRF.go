@@ -125,17 +125,13 @@ func InitVRF() (success bool, addr string) {
 		return false, ""
 	}
 
-	log.Info().Str("module", "junction").Str("Transaction Hash", txRes.TxHash)
-
 	// update transaction hash in current pod
 	currentPodState.VRFInitiationTxHash = txRes.TxHash
 	// update pod state: update tx hash
 	shared.SetPodState(currentPodState)
-	log.Info().Str("module", "junction").Str("hash", txRes.TxHash).Msg("Vrf Initiation Tx Hash")
+	log.Info().Str("module", "junction").Str("Tx Hash", txRes.TxHash).Msg("VRF Initiated")
 
-	log.Info().Str("module", "junction").Msg(txRes.TxHash)
 	return true, newTempAddr
-
 }
 
 func LoadHexPrivateKey(hexPrivateKey string) (privateKey kyber.Scalar, err error) {
