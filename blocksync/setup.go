@@ -106,7 +106,7 @@ func InitStateDb() bool {
 	if podStateByte == nil || err != nil {
 
 		emptyPodState := types.PodState{
-			LatestPodHeight:     0,
+			LatestPodHeight:     1,
 			LatestTxState:       "InitVRF",
 			LatestPodHash:       nil,
 			PreviousPodHash:     nil,

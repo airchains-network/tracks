@@ -24,16 +24,17 @@ func SubmitCurrentPod() (success bool) {
 		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
 		return false
 	}
+	currentPodState := shared.GetPodState()
 
-	podNumber := shared.GetPodState().LatestPodHeight
+	podNumber := currentPodState.LatestPodHeight
 
 	// get latest pod hash
-	LatestPodStatusHash := shared.GetPodState().LatestPodHash
+	LatestPodStatusHash := currentPodState.LatestPodHash
 	var LatestPodStatusHashStr string
 	LatestPodStatusHashStr = string(LatestPodStatusHash)
 
 	// previous pod hash
-	PreviousPodHash := shared.GetPodState().PreviousPodHash
+	PreviousPodHash := currentPodState.PreviousPodHash
 	var PreviousPodStatusHashStr string
 	if PreviousPodHash == nil {
 		PreviousPodStatusHashStr = ""
@@ -42,7 +43,7 @@ func SubmitCurrentPod() (success bool) {
 	}
 
 	// get witness
-	witnessByte := shared.GetPodState().LatestPublicWitness
+	witnessByte := currentPodState.LatestPublicWitness
 
 	registry, err := cosmosaccount.New(cosmosaccount.WithHome(accountPath))
 	if err != nil {
@@ -84,18 +85,28 @@ func SubmitCurrentPod() (success bool) {
 		Timestamp:              currentTime,
 	}
 
+	// check if pod is already submitted
+	podDetails := QueryPod(podNumber)
+	if podDetails != nil {
+		// pod already submitted
+		log.Debug().Str("module", "junction").Msg("TxError: Pod already submitted")
+		return true
+	} else {
+		log.Info().Str("module", "junction").Msg("Pod not submitted, Submitting pod")
+	}
+
 	txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
 	if errTxRes != nil {
-		logs.Log.Error("error in transaction" + errTxRes.Error())
+		errStr := errTxRes.Error()
+		log.Error().Str("module", "junction").Str("Error", errStr).Msg("Error in SubmitPod Transaction")
 		return false
+	} else {
+		//os.Exit(0)
+		// update txHash of submit pod in pod state
+		currentPodState.InitPodTxHash = txRes.TxHash
+		shared.SetPodState(currentPodState)
+		log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Pod Submitted")
+		return true
 	}
-	log.Info().Str("module", "junction").Str("Tx Hash", txRes.TxHash).Msg("Pod Submitted")
-
-	// update tx hash of submit pod in pod state
-	currentPodState := shared.GetPodState()
-	currentPodState.InitPodTxHash = txRes.TxHash
-	shared.SetPodState(currentPodState)
-
-	return true
 
 }

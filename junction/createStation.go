@@ -131,7 +131,7 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 		logs.Log.Error(err.Error())
 		return false
 	}
-	logs.Log.Info("tx hash: " + txResp.TxHash)
+	logs.Log.Info("txHash: " + txResp.TxHash)
 
 	timestamp := time.Now().String()
 	successGenesis := CreateGenesisJson(stationInfo, verificationKey, stationId, tracks, tracksVotingPower, txResp.TxHash, timestamp, extraArg, newTempAddr)

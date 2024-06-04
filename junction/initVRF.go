@@ -16,6 +16,7 @@ import (
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/group/edwards25519"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -121,17 +122,23 @@ func InitVRF() (success bool, addr string) {
 
 	txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
 	if errTxRes != nil {
-		logs.Log.Error("error in transaction" + errTxRes.Error())
-		return false, ""
+		errStr := errTxRes.Error()
+		if strings.Contains(errStr, VRFInitiatedErrorContains) {
+			log.Debug().Str("module", "junction").Msg("TxError: VRF already initiated for this pod number")
+			return true, newTempAddr
+		} else {
+			log.Error().Str("module", "junction").Str("Error", errStr).Msg("TxError: Error in InitVRF transaction")
+
+			return false, ""
+		}
+	} else {
+		// update transaction hash in current pod
+		currentPodState.VRFInitiationTxHash = txRes.TxHash
+		shared.SetPodState(currentPodState)
+
+		log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("InitiateVRf")
+		return true, newTempAddr
 	}
-
-	// update transaction hash in current pod
-	currentPodState.VRFInitiationTxHash = txRes.TxHash
-	// update pod state: update tx hash
-	shared.SetPodState(currentPodState)
-	log.Info().Str("module", "junction").Str("Tx Hash", txRes.TxHash).Msg("VRF Initiated")
-
-	return true, newTempAddr
 }
 
 func LoadHexPrivateKey(hexPrivateKey string) (privateKey kyber.Scalar, err error) {

@@ -89,12 +89,30 @@ func GenerateUnverifiedPods() {
 		trackAppHash         []byte
 		witness              []byte
 		uZKP                 []byte
-		mRH                  []byte
+		MRH                  []byte
 		batchInput           *types.BatchStruct
 		txState              string
 		batchNumber          int
 	)
+
 	currentPodNumber, _ := strconv.Atoi(strings.TrimSpace(string(rawCurrentPodNumber)))
+	txState = podStateData.LatestTxState
+	if txState == "" {
+		txState = shared.TxStateInitVRF
+	}
+
+	if currentPodNumber == 0 {
+		currentPodNumber = 1
+	}
+
+	podData := junction.QueryPod(uint64(currentPodNumber))
+	if podData != nil {
+		if podData.IsVerified == true {
+			currentPodNumber++
+		}
+	}
+
+	batchNumber = currentPodNumber
 
 	if podStateData.LatestTxState == shared.TxStateInitVRF {
 
@@ -102,13 +120,6 @@ func GenerateUnverifiedPods() {
 		if previousTrackAppHash == nil {
 			previousTrackAppHash = []byte("nil")
 		}
-
-		txState = podStateData.LatestTxState
-		if txState == "" {
-			txState = shared.TxStateInitVRF
-		}
-
-		batchNumber = currentPodNumber + 1
 
 		baseCfg, err := shared.LoadConfig()
 		if err != nil {
@@ -118,25 +129,24 @@ func GenerateUnverifiedPods() {
 		stationVariantLowerCase := strings.ToLower(stationVariant)
 
 		if stationVariantLowerCase == "evm" {
-			witness, uZKP, mRH, batchInput, err = createEVMPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+			witness, uZKP, MRH, batchInput, err = createEVMPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
 			checkErrorAndExit(err, "Error in creating POD", 0)
 		} else if stationVariantLowerCase == "wasm" {
-			witness, uZKP, mRH, batchInput, err = createWasmPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+			witness, uZKP, MRH, batchInput, err = createWasmPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
 			checkErrorAndExit(err, "Error in creating POD", 0)
 		}
 
-		trackAppHash = generatePodHash(witness, uZKP, mRH, rawCurrentPodNumber)
-		updateNewPodState(trackAppHash, witness, uZKP, mRH, uint64(batchNumber), batchInput, txState)
+		trackAppHash = generatePodHash(witness, uZKP, MRH, rawCurrentPodNumber)
+		updateNewPodState(trackAppHash, witness, uZKP, MRH, uint64(batchNumber), batchInput, txState)
 	} else {
 		trackAppHash = podStateData.TracksAppHash
 		witness = podStateData.LatestPublicWitness
 		uZKP = podStateData.LatestPodProof
-		mRH = podStateData.LatestPodHash
+		MRH = podStateData.LatestPodHash
+		pMRH := podStateData.PreviousPodHash
 		batchInput = podStateData.Batch
-		batchNumber = currentPodNumber + 1
-		txState = podStateData.LatestTxState
 
-		updateNewPodState(trackAppHash, witness, uZKP, mRH, uint64(batchNumber), batchInput, txState)
+		storeNewPodState(trackAppHash, witness, uZKP, pMRH, MRH, uint64(batchNumber), batchInput, txState)
 	}
 
 	selectedMaster := MasterTracksSelection(Node, string(previousTrackAppHash))
@@ -186,7 +196,6 @@ func GenerateUnverifiedPods() {
 					logs.Log.Error("Failed to Init VRF")
 					return
 				}
-
 				updateTxState(shared.TxStateVerifyVRF)
 				log.Info().Str("module", "p2p").Msg("VRF Initiated Successfully")
 			} else {
@@ -368,7 +377,7 @@ func GenerateUnverifiedPods() {
 				updateTxState(shared.TxStateVerifyPod)
 				log.Info().Str("module", "p2p").Msg("Pod Submitted  Successfully")
 			} else {
-				logs.Log.Warn("Pod already submitted, moving to next step")
+				log.Warn().Str("module", "p2p").Msg("Pod already submitted, moving to next step")
 			}
 			//os.Exit(0)
 
@@ -382,8 +391,8 @@ func GenerateUnverifiedPods() {
 				log.Info().Str("module", "p2p").Msg("pod verification transaction done")
 				updateTxState(shared.TxStateInitVRF)
 			} else {
-				logs.Log.Error("Its incorrect if LatestTxState is not equal to TxStateVerifyPod at this point")
-				logs.Log.Error("LatestTxState: " + shared.GetPodState().LatestTxState)
+				log.Error().Str("module", "p2p").Msg("Database Error. LatestTxState should equal to TxStateVerifyPod at this point")
+				log.Error().Str("module", "p2p").Msg("LatestTxState: " + shared.GetPodState().LatestTxState)
 				return // stop sequencer, there is some error
 			}
 
@@ -426,7 +435,7 @@ func GenerateUnverifiedPods() {
 			selectedTrackAddress := filteredTracks[rand.Intn(len(filteredTracks))]
 			fmt.Println("Selected random address:", selectedTrackAddress)
 
-			// get tx hash of vrfInit
+			// get txHash of vrfInit
 			VrfInitTxHash := shared.GetPodState().VRFInitiationTxHash
 			// send verify VRF message to selected node
 			VRFInitiatedMsg := VRFInitiatedMsgData{
@@ -689,7 +698,23 @@ func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
 	hash.Write(podNumber)
 	return hash.Sum(nil)
 }
-
+func storeNewPodState(CombinedPodHash, Witness, uZKP, previousMRH, MRH []byte, podNumber uint64, batchInput *types.BatchStruct, txState string) {
+	var podState *shared.PodState
+	votes := make(map[string]shared.Votes)
+	podState = &shared.PodState{
+		LatestPodHeight:     podNumber,
+		LatestTxState:       txState,
+		LatestPodHash:       MRH,
+		PreviousPodHash:     previousMRH,
+		LatestPodProof:      uZKP,
+		LatestPublicWitness: Witness,
+		Votes:               votes,
+		TracksAppHash:       CombinedPodHash,
+		Batch:               batchInput,
+	}
+	shared.SetPodState(podState)
+	updatePodStateInDatabase(podState)
+}
 func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uint64, batchInput *types.BatchStruct, txState string) {
 	var podState *shared.PodState
 	votes := make(map[string]shared.Votes)
