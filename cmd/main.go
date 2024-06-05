@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/cmd/command"
 	"github.com/airchains-network/decentralized-sequencer/cmd/command/keys"
 	"github.com/airchains-network/decentralized-sequencer/cmd/command/zkpCmd"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -66,7 +66,7 @@ func main() {
 	command.CreateStation.MarkFlagRequired("tracks")
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		log.Error(err.Error())
 		os.Exit(1)
 	}
 

@@ -89,24 +89,27 @@ func SubmitCurrentPod() (success bool) {
 	podDetails := QueryPod(podNumber)
 	if podDetails != nil {
 		// pod already submitted
-		log.Debug().Str("module", "junction").Msg("TxError: Pod already submitted")
+		log.Debug().Str("module", "junction").Msg("Pod already submitted")
 		return true
 	} else {
 		log.Info().Str("module", "junction").Msg("Pod not submitted, Submitting pod")
 	}
 
-	txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
-	if errTxRes != nil {
-		errStr := errTxRes.Error()
-		log.Error().Str("module", "junction").Str("Error", errStr).Msg("Error in SubmitPod Transaction")
-		return false
-	} else {
-		//os.Exit(0)
-		// update txHash of submit pod in pod state
-		currentPodState.InitPodTxHash = txRes.TxHash
-		shared.SetPodState(currentPodState)
-		log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Pod Submitted")
-		return true
-	}
+	for {
+		txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
+		if errTxRes != nil {
+			errStr := errTxRes.Error()
+			log.Error().Str("module", "junction").Str("Error", errStr).Msg("Error in SubmitPod Transaction")
 
+			log.Debug().Str("module", "junction").Msg("Retrying SubmitPod transaction after 10 seconds..")
+			time.Sleep(10 * time.Second)
+			//return false
+		} else {
+			// update txHash of submit pod in pod state
+			currentPodState.InitPodTxHash = txRes.TxHash
+			shared.SetPodState(currentPodState)
+			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Pod Submitted")
+			return true
+		}
+	}
 }

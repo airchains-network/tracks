@@ -19,24 +19,6 @@ MAKEFLAGS += --silent
 ## Build the binary
 build:
 	@echo "  > Building binary..."
-	go build $(LDFLAGS) -o ./$(BINARYNAME) ./cmd/main.go
+	go build  -o ./build/$(BINARYNAME) ./cmd/main.go
+	@echo "  > Binary Build at ./build/tracks..."
 
-# Install dependencies
-.PHONY: install
-## Install missing dependencies
-install:
-	@echo "  > Installing dependencies..."
-	go mod download
-
-# Clean build files
-.PHONY: clean
-## Clean build cache
-clean:
-	@echo "  > Cleaning build cache..."
-	go clean
-
-# Show help information
-.PHONY: help
-## Show this help screen
-help:
-	@sed -n 's/^##//p' Makefile

@@ -81,7 +81,6 @@ func VerifyCurrentPod() (success bool) {
 	}
 
 	// check if pod is already verified
-	fmt.Println(podNumber)
 	podDetails := QueryPod(podNumber)
 	if podDetails == nil {
 		// pod already submitted
@@ -93,19 +92,21 @@ func VerifyCurrentPod() (success bool) {
 		return true
 	}
 
-	txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &verifyPodStruct)
-	if errTxRes != nil {
-		errTxResStr := errTxRes.Error()
-		log.Error().Str("module", "junction").Str("Error", errTxResStr).Msg("TxError: Error in VerifyPod transaction")
-		return false
-	} else {
-
-		VerifyPodTxHash := txRes.TxHash
-		currentPodState.VerifyPodTxHash = VerifyPodTxHash
-		shared.SetPodState(currentPodState)
-		log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Verify Pod")
-		return true
-
+	for {
+		txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &verifyPodStruct)
+		if errTxRes != nil {
+			errTxResStr := errTxRes.Error()
+			log.Error().Str("module", "junction").Str("Error", errTxResStr).Msg("Error in VerifyPod transaction")
+			log.Debug().Str("module", "junction").Msg("Retrying VerifyPod transaction after 10 seconds..")
+			time.Sleep(10 * time.Second)
+			//return false
+		} else {
+			VerifyPodTxHash := txRes.TxHash
+			currentPodState.VerifyPodTxHash = VerifyPodTxHash
+			shared.SetPodState(currentPodState)
+			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Verify Pod")
+			return true
+		}
 	}
 
 }

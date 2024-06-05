@@ -39,6 +39,17 @@ func InitConfigs(cmd *cobra.Command) (*Configs, error) {
 		return nil, fmt.Errorf("failed to get flag 'daType': %w", err)
 	}
 
+	validTypes := map[string]bool{
+		"avail":    true,
+		"celestia": true,
+		"eigen":    true,
+		"mock":     true,
+	}
+	if _, isValid := validTypes[configs.daType]; !isValid {
+		logs.Log.Error("invalid daType. Must be one of: avail, celestia, eigen, mock")
+		return nil, fmt.Errorf("invalid daType: %s", configs.daType)
+	}
+
 	configs.daRPC, err = cmd.Flags().GetString("daRpc")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get flag 'daRpc': %w", err)
@@ -68,13 +79,13 @@ var InitCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		configs, err := InitConfigs(cmd)
 		if err != nil {
-			logs.Log.Warn(err.Error())
+			logs.Log.Error(err.Error())
 			return
 		}
 
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			logs.Log.Warn("Failed to get user home directory:" + err.Error())
+			logs.Log.Error("Failed to get user home directory:" + err.Error())
 			return
 		}
 
@@ -96,7 +107,7 @@ var InitCmd = &cobra.Command{
 
 		success := config.CreateConfigFile(conf.BaseConfig.RootDir, conf)
 		if !success {
-			logs.Log.Warn("Unable to generate a config file. Please check the error and try again.")
+			logs.Log.Error("Unable to generate a config file. Please check the error and try again.")
 			return
 		}
 

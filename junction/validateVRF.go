@@ -77,23 +77,28 @@ func ValidateVRF(addr string) bool {
 		SerializedRc: serializedRC,
 	}
 
-	txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
-	if errTxRes != nil {
-		errStr := errTxRes.Error()
-		if strings.Contains(errStr, VRFValidatedErrorContains) {
-			log.Debug().Str("module", "junction").Msg("TxError: VRF already verified for this pod number")
-			return true
+	for {
+		txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
+		if errTxRes != nil {
+			errStr := errTxRes.Error()
+			if strings.Contains(errStr, VRFValidatedErrorContains) {
+				log.Debug().Str("module", "junction").Msg("VRF already verified for this pod number")
+				return true
+			} else {
+				log.Error().Str("module", "junction").Str("Error", errStr).Msg("Error in ValidateVRF transaction")
+				// retry transaction
+				log.Debug().Str("module", "junction").Msg("Retrying ValidateVRF transaction after 10 seconds..")
+				time.Sleep(10 * time.Second)
+				//return false
+			}
 		} else {
-			log.Error().Str("module", "junction").Str("Error", errStr).Msg("TxError: Error in ValidateVRF transaction")
-			return false
-		}
-	} else {
-		// update VRN verified hash
-		currentPodState.VRFValidationTxHash = txRes.TxHash
-		shared.SetPodState(currentPodState)
+			// update VRN verified hash
+			currentPodState.VRFValidationTxHash = txRes.TxHash
+			shared.SetPodState(currentPodState)
 
-		log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("ValidateVRF")
-		return true
+			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("ValidateVRF")
+			return true
+		}
 	}
 
 }

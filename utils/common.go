@@ -17,6 +17,7 @@ import (
 	"math/big"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -120,6 +121,37 @@ func CreateAccount(accountName string, accountPath string) {
 		logs.Log.Error(fmt.Sprintf("Error getting address: %v", err))
 		return
 	}
+
+	// create "account.Name".wallet.json file
+	type AccountDetails struct {
+		Name       string `json:"name"`
+		Mnemonic   string `json:"mnemonic"`
+		NewAddress string `json:"address"`
+	}
+	acc := AccountDetails{
+		Name:       accountName,
+		Mnemonic:   mnemonic,
+		NewAddress: newCreatedAccountAddr,
+	}
+	accountBytes, err := json.Marshal(acc)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Failed to marshal account details: %s\n", err))
+		return
+	}
+	fileName := fmt.Sprintf("%s/%s.wallet.json", accountPath, accountName)
+	// Create and write the file.
+	file, err := os.Create(fileName)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Failed creating file: %s\n", err))
+		return
+	}
+	defer file.Close()
+	_, err = file.Write(accountBytes)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Failed writing to file: %s\n", err))
+		return
+	}
+	logs.Log.Info("File written successfully:" + fileName)
 
 	logs.Log.Info(fmt.Sprintf("Account created: %s", account.Name))
 	logs.Log.Info(fmt.Sprintf("Mnemonic: %s", mnemonic))

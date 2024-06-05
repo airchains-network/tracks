@@ -120,24 +120,28 @@ func InitVRF() (success bool, addr string) {
 		ExtraArg:       extraArgsByte,
 	}
 
-	txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
-	if errTxRes != nil {
-		errStr := errTxRes.Error()
-		if strings.Contains(errStr, VRFInitiatedErrorContains) {
-			log.Debug().Str("module", "junction").Msg("TxError: VRF already initiated for this pod number")
-			return true, newTempAddr
+	for {
+		txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
+		if errTxRes != nil {
+			errStr := errTxRes.Error()
+			if strings.Contains(errStr, VRFInitiatedErrorContains) {
+				log.Debug().Str("module", "junction").Msg("VRF already initiated for this pod number")
+				return true, newTempAddr
+			} else {
+				log.Error().Str("module", "junction").Str("Error", errStr).Msg("Error in InitVRF transaction")
+				// retry transaction
+				log.Debug().Str("module", "junction").Msg("Retrying InitVRF transaction after 10 seconds..")
+				time.Sleep(10 * time.Second)
+				//return false, ""
+			}
 		} else {
-			log.Error().Str("module", "junction").Str("Error", errStr).Msg("TxError: Error in InitVRF transaction")
+			// update transaction hash in current pod
+			currentPodState.VRFInitiationTxHash = txRes.TxHash
+			shared.SetPodState(currentPodState)
 
-			return false, ""
+			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("InitiateVRf")
+			return true, newTempAddr
 		}
-	} else {
-		// update transaction hash in current pod
-		currentPodState.VRFInitiationTxHash = txRes.TxHash
-		shared.SetPodState(currentPodState)
-
-		log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("InitiateVRf")
-		return true, newTempAddr
 	}
 }
 

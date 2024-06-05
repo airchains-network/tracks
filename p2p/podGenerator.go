@@ -232,13 +232,13 @@ func GenerateUnverifiedPods() {
 
 			if shared.GetPodState().LatestTxState == shared.TxStateSubmitPod {
 				// DA submit
-				mdb := connection.GetDataAvailabilityDatabaseConnection()
-				dbName, err := mock.MockDA(mdb, daDataByte, PodNumber)
-				if err != nil {
-					logs.Log.Error("Error in submitting data to DA")
-					return
-				}
-				_ = dbName
+				//mdb := connection.GetDataAvailabilityDatabaseConnection()
+				//dbName, err := mock.MockDA(mdb, daDataByte, PodNumber)
+				//if err != nil {
+				//	logs.Log.Error("Error in submitting data to DA")
+				//	return
+				//}
+				//_ = dbName
 
 				DaBatchSaver := connection.DataAvailabilityDatabaseConnection
 				baseConfig, err := shared.LoadConfig()
@@ -246,12 +246,23 @@ func GenerateUnverifiedPods() {
 					fmt.Println("Error loading configuration")
 				}
 				Datype := baseConfig.DA.DaType
+				var (
+					daCheck    string
+					daCheckErr error
+				)
+
 				if Datype == "mock" {
 					mdb := connection.MockDatabaseConnection
-					daCheck, daCheckErr := mock.MockDA(mdb, daDataByte, PodNumber)
-					if daCheckErr != nil {
-						logs.Log.Error("Error in submitting data to DA")
-						return
+
+					for {
+						daCheck, daCheckErr = mock.MockDA(mdb, daDataByte, PodNumber)
+						if daCheckErr != nil {
+							logs.Log.Error("Error in submitting data to DA")
+							logs.Log.Debug("Retrying Mock DA after 10 seconds")
+							time.Sleep(10 * time.Second)
+						} else {
+							break
+						}
 					}
 
 					da := types.DAStruct{
@@ -276,10 +287,16 @@ func GenerateUnverifiedPods() {
 					log.Info().Str("module", "p2p").Msg("Data Saved in DA")
 
 				} else if Datype == "avail" {
-					daCheck, daCheckErr := avail.Avail(daDataByte, baseConfig.DA.DaRPC)
-					if daCheckErr != nil {
-						logs.Log.Warn("Error in submitting data to DA")
-						return
+
+					for {
+						daCheck, daCheckErr = avail.Avail(daDataByte, baseConfig.DA.DaRPC)
+						if daCheckErr != nil {
+							logs.Log.Warn("Error in submitting data to DA " + daCheckErr.Error())
+							logs.Log.Debug("Retrying Avail DA after 10 seconds")
+							time.Sleep(10 * time.Second)
+						} else {
+							break
+						}
 					}
 
 					da := types.DAStruct{
@@ -294,21 +311,27 @@ func GenerateUnverifiedPods() {
 					daStoreData, daStoreDataErr := json.Marshal(da)
 					if daStoreDataErr != nil {
 						logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+						return
 					}
 
 					storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
 					if storeErr != nil {
 						logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+						return
 					}
 
 					log.Info().Str("module", "p2p").Msg("Data Saved in DA")
 
 				} else if Datype == "celestia" {
-					daCheck, daCheckErr := celestia.Celestia(daDataByte, baseConfig.DA.DaRPC, baseConfig.DA.DaRPC)
-
-					if daCheckErr != nil {
-						logs.Log.Warn("Error in submitting data to DA")
-						return
+					for {
+						daCheck, daCheckErr = celestia.Celestia(daDataByte, baseConfig.DA.DaRPC, baseConfig.DA.DaRPC)
+						if daCheckErr != nil {
+							logs.Log.Warn("Error in submitting data to DA " + daCheckErr.Error())
+							logs.Log.Debug("Retrying Celestia DA after 10 seconds")
+							time.Sleep(10 * time.Second)
+						} else {
+							break
+						}
 					}
 
 					da := types.DAStruct{
@@ -323,23 +346,28 @@ func GenerateUnverifiedPods() {
 					daStoreData, daStoreDataErr := json.Marshal(da)
 					if daStoreDataErr != nil {
 						logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+						return
 					}
 
 					storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
 					if storeErr != nil {
 						logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+						return
 					}
 
 					log.Info().Str("module", "p2p").Msg("Data Saved in DA")
 
 				} else if Datype == "eigen" {
-					daCheck, daCheckErr := eigen.Eigen(daDataByte,
-						baseConfig.DA.DaRPC, baseConfig.DA.DaRPC,
-					)
 
-					if daCheckErr != nil {
-						logs.Log.Warn("Error in submitting data to DA")
-						return
+					for {
+						daCheck, daCheckErr = eigen.Eigen(daDataByte, baseConfig.DA.DaRPC, baseConfig.DA.DaRPC)
+						if daCheckErr != nil {
+							logs.Log.Warn("Error in submitting data to DA " + daCheckErr.Error())
+							logs.Log.Debug("Retrying Eigen DA after 10 seconds")
+							time.Sleep(10 * time.Second)
+						} else {
+							break
+						}
 					}
 
 					da := types.DAStruct{
@@ -354,11 +382,13 @@ func GenerateUnverifiedPods() {
 					daStoreData, daStoreDataErr := json.Marshal(da)
 					if daStoreDataErr != nil {
 						logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+						return
 					}
 
 					storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
 					if storeErr != nil {
 						logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+						return
 					}
 
 					log.Info().Str("module", "p2p").Msg("Data Saved in DA")
