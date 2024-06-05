@@ -68,7 +68,7 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 
 	success, amount, err := CheckBalance(jsonRPC, newTempAddr)
 	if err != nil || !success {
-		logs.Log.Error("Error checking balance")
+		logs.Log.Error(err.Error())
 		return false
 	}
 	if amount < 100 {
@@ -107,7 +107,7 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 	}
 
 	ctx := context.Background()
-	gas := utilis.GenerateRandomWithFavour(611, 1200, [2]int{612, 1000}, 0.7)
+	gas := utilis.GenerateRandomWithFavour(1200, 2400, [2]int{1500, 2000}, 0.7)
 	gasFees := fmt.Sprintf("%damf", gas)
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRPC), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {

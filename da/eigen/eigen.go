@@ -42,6 +42,7 @@ import (
 	"fmt"
 	disperserGrpc "github.com/airchains-network/decentralized-sequencer/da/eigen/grpc"
 	"github.com/airchains-network/decentralized-sequencer/da/eigen/utils"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"time"
@@ -55,21 +56,21 @@ func Eigen(daData []byte, rpcUrl string, accountKey string) (string, error) {
 	dialOptions := grpc.WithTransportCredentials(credential)
 	conn, err := grpc.Dial(addr, dialOptions)
 	if err != nil {
-		fmt.Println(err)
+		log.Err(err).Msg("failed to dial")
 		return "nil", err
 	}
 	defer func() { _ = conn.Close() }()
 
 	d, de := DisperserBlob(ctx, conn, daData, accountKey)
 	if de != nil {
-		fmt.Printf("failed to disperse blob: %v", de)
+		log.Error().Err(de).Msg("failed to disperse blob")
 		return "nil", err
 	}
 
 	blobKey := string(d[:])
 
 	//TODO Add DA check Status
-	fmt.Println("Eigen DA Blob KEY", blobKey)
+	log.Info().Msg("Eigen DA Blob KEY: " + blobKey)
 	return blobKey, nil
 
 }

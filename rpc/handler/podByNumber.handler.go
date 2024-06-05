@@ -19,6 +19,7 @@ func HandleGetPodByNumber(c *gin.Context, Params []interface{}) {
 	daDB := shared.Node.NodeConnections.GetDataAvailabilityDatabaseConnection()
 	podKey := fmt.Sprintf("pod-%.0f", Params[0])
 	daKey := fmt.Sprintf("da-%.0f", Params[0])
+
 	fmt.Println(daKey)
 	podDataByte, err := batchDB.Get([]byte(podKey), nil)
 	if err != nil {
