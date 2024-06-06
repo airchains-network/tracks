@@ -48,7 +48,9 @@ func VerifyCurrentPod() (success bool) {
 
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
-		logs.Log.Error("Error creating account client")
+		logs.Log.Error("Switchyard client connection error")
+		logs.Log.Error(err.Error())
+
 		return false
 	}
 
@@ -104,7 +106,7 @@ func VerifyCurrentPod() (success bool) {
 			VerifyPodTxHash := txRes.TxHash
 			currentPodState.VerifyPodTxHash = VerifyPodTxHash
 			shared.SetPodState(currentPodState)
-			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Verify Pod")
+			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Pod Verification Tx Success")
 			return true
 		}
 	}

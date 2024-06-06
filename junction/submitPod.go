@@ -64,17 +64,20 @@ func SubmitCurrentPod() (success bool) {
 	}
 
 	ctx := context.Background()
-	gas := utilis.GenerateRandomWithFavour(510, 1000, [2]int{520, 700}, 0.7)
+	gas := utilis.GenerateRandomWithFavour(100, 300, [2]int{120, 250}, 0.7)
 	gasFees := fmt.Sprintf("%damf", gas)
 	log.Info().Str("module", "junction").Str("Gas Fees Used to Validate VRF", gasFees)
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
-		logs.Log.Error("Error creating account client")
+		logs.Log.Error("Switchyard client connection error")
+		logs.Log.Error(err.Error())
+
 		return false
 	}
 
 	unixTime := time.Now().Unix()
 	currentTime := fmt.Sprintf("%d", unixTime)
+
 	msg := types.MsgSubmitPod{
 		Creator:                newTempAddr,
 		StationId:              stationId,
@@ -91,8 +94,6 @@ func SubmitCurrentPod() (success bool) {
 		// pod already submitted
 		log.Debug().Str("module", "junction").Msg("Pod already submitted")
 		return true
-	} else {
-		log.Info().Str("module", "junction").Msg("Pod not submitted, Submitting pod")
 	}
 
 	for {
@@ -108,7 +109,7 @@ func SubmitCurrentPod() (success bool) {
 			// update txHash of submit pod in pod state
 			currentPodState.InitPodTxHash = txRes.TxHash
 			shared.SetPodState(currentPodState)
-			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Pod Submitted")
+			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Pod submitted successfully")
 			return true
 		}
 	}

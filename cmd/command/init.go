@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/config"
 	logs "github.com/airchains-network/decentralized-sequencer/log"
+
+	//logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/p2p"
 	"github.com/spf13/cobra"
 	"os"

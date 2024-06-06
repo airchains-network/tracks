@@ -260,6 +260,7 @@ func TXHashCheck(value string) string {
 	decodedBigInt := new(big.Int).SetBytes(byteSlice)
 	return decodedBigInt.String()
 }
+
 func AccountBalanceCheck(walletAddress string, blockHeight string, JsonAPI string) string {
 
 	height, err := strconv.Atoi(blockHeight)

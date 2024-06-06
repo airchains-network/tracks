@@ -28,7 +28,6 @@ func initSequencer() error {
 	if success := blocksync.InitDb(); !success {
 		return errors.New("failed to initialize database")
 	}
-
 	logger.Log.Info("Database Initialized")
 
 	if config.Junction.StationId == "" {
@@ -40,7 +39,6 @@ func initSequencer() error {
 	}
 
 	shared.NewNode(config)
-
 	return nil
 }
 

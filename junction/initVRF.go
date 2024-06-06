@@ -53,7 +53,8 @@ func InitVRF() (success bool, addr string) {
 	log.Info().Str("module", "junction").Str("Gas Fees Used for Vrf Initialization", gasFees)
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
-		logs.Log.Error("Error creating account client")
+		logs.Log.Error("Switchyard client connection error")
+		logs.Log.Error(err.Error())
 		return false, ""
 	}
 
@@ -120,6 +121,19 @@ func InitVRF() (success bool, addr string) {
 		ExtraArg:       extraArgsByte,
 	}
 
+	// check if this pod is behind the current pod at switchyard or not
+	latestVerifiedBatch := QueryLatestVerifiedBatch()
+	if latestVerifiedBatch+1 != podNumber {
+		log.Debug().Str("module", "junction").Msg("Incorrect pod number")
+		if latestVerifiedBatch+1 < podNumber {
+			log.Debug().Str("module", "junction").Msg("Rollback required")
+			return false, ""
+		} else if latestVerifiedBatch+1 > podNumber {
+			log.Debug().Str("module", "junction").Msg("Pod number at Switchyard is ahead of the current pod number")
+			return true, newTempAddr
+		}
+	}
+
 	for {
 		txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
 		if errTxRes != nil {
@@ -138,8 +152,7 @@ func InitVRF() (success bool, addr string) {
 			// update transaction hash in current pod
 			currentPodState.VRFInitiationTxHash = txRes.TxHash
 			shared.SetPodState(currentPodState)
-
-			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("InitiateVRf")
+			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("VRF Initiated Successfully")
 			return true, newTempAddr
 		}
 	}

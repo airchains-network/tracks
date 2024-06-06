@@ -107,7 +107,7 @@ func InitStateDb() bool {
 
 		emptyPodState := types.PodState{
 			LatestPodHeight:     1,
-			LatestTxState:       "InitVRF",
+			LatestTxState:       "PreInit",
 			LatestPodHash:       nil,
 			PreviousPodHash:     nil,
 			LatestPodProof:      nil,
@@ -248,7 +248,6 @@ func InitDb() bool {
 		return false
 	}
 	return true
-
 }
 
 // GetTxDbInstance This function returns the instance of the air-leveldb database.

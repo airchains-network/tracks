@@ -64,7 +64,9 @@ func ValidateVRF(addr string) bool {
 	log.Info().Str("module", "junction").Str("Gas Fees Used to Validate VRF", gasFees)
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
-		logs.Log.Error("Error creating account client")
+		logs.Log.Error("Switchyard client connection error")
+		logs.Log.Error(err.Error())
+
 		return false
 	}
 
@@ -75,6 +77,18 @@ func ValidateVRF(addr string) bool {
 		StationId:    stationId,
 		PodNumber:    podNumber,
 		SerializedRc: serializedRC,
+	}
+
+	latestVerifiedBatch := QueryLatestVerifiedBatch()
+	if latestVerifiedBatch+1 != podNumber {
+		log.Debug().Str("module", "junction").Msg("Incorrect pod number")
+		if latestVerifiedBatch+1 < podNumber {
+			log.Debug().Str("module", "junction").Msg("Rollback required")
+			return false
+		} else if latestVerifiedBatch+1 > podNumber {
+			log.Debug().Str("module", "junction").Msg("Pod number at Switchyard is ahead of the current pod number")
+			return true
+		}
 	}
 
 	for {
@@ -95,8 +109,7 @@ func ValidateVRF(addr string) bool {
 			// update VRN verified hash
 			currentPodState.VRFValidationTxHash = txRes.TxHash
 			shared.SetPodState(currentPodState)
-
-			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("ValidateVRF")
+			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("VRF Validated Tx Success")
 			return true
 		}
 	}
