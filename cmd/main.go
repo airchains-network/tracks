@@ -20,6 +20,7 @@ func main() {
 	rootCmd.AddCommand(command.KeyGenCmd)
 	rootCmd.AddCommand(command.ProverGenCMD)
 	rootCmd.AddCommand(command.CreateStation)
+	rootCmd.AddCommand(command.Rollback)
 
 	command.KeyGenCmd.AddCommand(keys.JunctionKeyGenCmd)
 	command.KeyGenCmd.AddCommand(keys.JunctionKeyImportCmd)

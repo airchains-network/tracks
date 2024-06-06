@@ -95,9 +95,6 @@ func SubmitCurrentPod() (success bool) {
 		log.Debug().Str("module", "junction").Msg("Pod already submitted")
 		return true
 	}
-	//else {
-	//	log.Info().Str("module", "junction").Msg("Pod not submitted, Submitting pod")
-	//}
 
 	for {
 		txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
@@ -112,7 +109,7 @@ func SubmitCurrentPod() (success bool) {
 			// update txHash of submit pod in pod state
 			currentPodState.InitPodTxHash = txRes.TxHash
 			shared.SetPodState(currentPodState)
-			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Pod Submitted")
+			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Pod submitted successfully")
 			return true
 		}
 	}

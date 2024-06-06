@@ -79,6 +79,18 @@ func ValidateVRF(addr string) bool {
 		SerializedRc: serializedRC,
 	}
 
+	latestVerifiedBatch := QueryLatestVerifiedBatch()
+	if latestVerifiedBatch+1 != podNumber {
+		log.Debug().Str("module", "junction").Msg("Incorrect pod number")
+		if latestVerifiedBatch+1 < podNumber {
+			log.Debug().Str("module", "junction").Msg("Rollback required")
+			return false
+		} else if latestVerifiedBatch+1 > podNumber {
+			log.Debug().Str("module", "junction").Msg("Pod number at Switchyard is ahead of the current pod number")
+			return true
+		}
+	}
+
 	for {
 		txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
 		if errTxRes != nil {
@@ -97,8 +109,7 @@ func ValidateVRF(addr string) bool {
 			// update VRN verified hash
 			currentPodState.VRFValidationTxHash = txRes.TxHash
 			shared.SetPodState(currentPodState)
-
-			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("ValidateVRF")
+			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("VRF Validated Tx Success")
 			return true
 		}
 	}

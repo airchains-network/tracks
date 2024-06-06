@@ -62,3 +62,26 @@ func QueryPod(podNumber uint64) (pod *types.Pods) {
 
 	return queryResp.Pod
 }
+
+func QueryLatestVerifiedBatch() uint64 {
+	jsonRpc, stationId, _, _, _, _, err := GetJunctionDetails()
+	if err != nil {
+		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
+		return 0
+	}
+
+	ctx := context.Background()
+	client, err := cosmosclient.New(ctx, cosmosclient.WithNodeAddress(jsonRpc))
+	if err != nil {
+		logs.Log.Error("Client connection error: " + err.Error())
+		return 0
+	}
+
+	queryClient := types.NewQueryClient(client.Context())
+	queryResp, err := queryClient.GetLatestVerifiedPodNumber(ctx, &types.QueryGetLatestVerifiedPodNumberRequest{StationId: stationId})
+	if err != nil {
+		return 0
+	}
+
+	return queryResp.PodNumber
+}
