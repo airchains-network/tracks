@@ -12,7 +12,7 @@ func CheckBalance(jsonRPC string, accountAddress string) (bool, int64, error) {
 	ctx := context.Background()
 	client, err := cosmosclient.New(ctx, cosmosclient.WithNodeAddress(jsonRPC))
 	if err != nil {
-		errorMsg := fmt.Errorf("Junction client connection failed, make sure jsonRPC is correct and active. JsonRPC: " + jsonRPC)
+		errorMsg := fmt.Errorf("Switchyard client connection failed, make sure jsonRPC is correct and active. JsonRPC: " + jsonRPC)
 		return false, 0, errorMsg
 	}
 	pageRequest := &query.PageRequest{} // Add this line to create a new PageRequest

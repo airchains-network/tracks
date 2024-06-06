@@ -53,7 +53,8 @@ func InitVRF() (success bool, addr string) {
 	log.Info().Str("module", "junction").Str("Gas Fees Used for Vrf Initialization", gasFees)
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
-		logs.Log.Error("Error creating account client")
+		logs.Log.Error("Switchyard client connection error")
+		logs.Log.Error(err.Error())
 		return false, ""
 	}
 

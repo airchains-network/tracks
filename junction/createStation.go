@@ -111,7 +111,9 @@ func CreateStation(extraArg junctionTypes.StationArg, stationId string, stationI
 	gasFees := fmt.Sprintf("%damf", gas)
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRPC), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
-		logs.Log.Error("Error creating account client")
+		logs.Log.Error("Switchyard client connection error")
+		logs.Log.Error(err.Error())
+
 		return false
 	}
 
