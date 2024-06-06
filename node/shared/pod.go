@@ -23,6 +23,7 @@ var (
 	mu   sync.Mutex
 
 	// txStates
+	TxStatePreInit   = "PreInit"
 	TxStateInitVRF   = "InitVRF"
 	TxStateVerifyVRF = "VerifyVRF"
 	TxStateSubmitPod = "InitPod"

@@ -88,17 +88,29 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 		logs.Log.Info("Retrying in 2s...")
 		StoreEVMTransactions(client, ctx, ldt, transactionHash, blockNumber, blockHash)
 	}
+	var (
+		tx        *types.Transaction
+		isPending bool
+	)
 
 	txHash := common.HexToHash(transactionHash)
-	tx, isPending, err := client.TransactionByHash(ctx, txHash)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Failed to get transaction by hash: %s", err))
-		os.Exit(0)
-	}
-
-	if isPending {
-		logs.Log.Warn("Transaction is pending")
-		logs.Log.Info(fmt.Sprintf("Transaction type: %d\n", tx.Type()))
+	for {
+		tx, isPending, err = client.TransactionByHash(ctx, txHash)
+		if err != nil {
+			logs.Log.Debug(fmt.Sprintf("Failed to get transaction by hash: %s", err))
+			// Retry transaction
+			log.Println("Retrying the transaction after 10 seconds...")
+			time.Sleep(time.Second * 10) // Wait for 10 seconds before retrying
+			continue
+		}
+		if isPending {
+			logs.Log.Debug("Transaction is pending, waiting for 5 seconds for tx Approval in blockchain")
+			logs.Log.Info(fmt.Sprintf("Transaction type: %d\n", tx.Type()))
+			// Retry after 5 seconds if transaction is pending
+			time.Sleep(time.Second * 5)
+			continue
+		}
+		break
 	}
 
 	chainID, err := client.NetworkID(context.Background())

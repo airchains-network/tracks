@@ -7,14 +7,15 @@ import (
 	"fmt"
 	"github.com/airchains-network/decentralized-sequencer/blocksync"
 	"github.com/airchains-network/decentralized-sequencer/config"
-	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/types"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/constraint"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/rs/zerolog/log"
 	"os"
+	"strconv"
 )
 
 type MyCircuit struct {
@@ -110,7 +111,7 @@ func GenerateVerificationKey() (groth16.ProvingKey, groth16.VerifyingKey, error)
 
 func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []byte, error) {
 	ccs := ComputeCCS()
-	logs.Log.Info("Generating proof for batch number:" + fmt.Sprintf("%d", batchNum))
+	log.Info().Str("batchNum", strconv.Itoa(batchNum)).Msg("Generating proof")
 	var transactions []TransactionSecond
 
 	for i := 0; i < config.PODSize; i++ {

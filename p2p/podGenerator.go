@@ -98,7 +98,7 @@ func GenerateUnverifiedPods() {
 	currentPodNumber, _ := strconv.Atoi(strings.TrimSpace(string(rawCurrentPodNumber)))
 	txState = podStateData.LatestTxState
 	if txState == "" {
-		txState = shared.TxStateInitVRF
+		txState = shared.TxStatePreInit
 	}
 
 	if currentPodNumber == 0 {
@@ -113,9 +113,9 @@ func GenerateUnverifiedPods() {
 	}
 
 	batchNumber = currentPodNumber
-
-	if podStateData.LatestTxState == shared.TxStateInitVRF {
-
+	log.Info().Str("module", "p2p").Msg(fmt.Sprintf("Processing Pod Number: %d", batchNumber))
+	if podStateData.LatestTxState == shared.TxStatePreInit {
+		txState = shared.TxStateInitVRF
 		previousTrackAppHash = podStateData.TracksAppHash
 		if previousTrackAppHash == nil {
 			previousTrackAppHash = []byte("nil")
@@ -199,7 +199,7 @@ func GenerateUnverifiedPods() {
 				updateTxState(shared.TxStateVerifyVRF)
 				log.Info().Str("module", "p2p").Msg("VRF Initiated Successfully")
 			} else {
-				log.Warn().Str("module", "p2p").Msg("VRF is already initiated, moving to next step")
+				log.Debug().Str("module", "p2p").Msg("VRF is already initiated, moving to next step")
 			}
 
 			//os.Exit(0)
@@ -226,19 +226,11 @@ func GenerateUnverifiedPods() {
 
 				log.Info().Str("module", "p2p").Msg("VRF Validated Successfully")
 			} else {
-				log.Warn().Str("module", "p2p").Msg("VRF is already validated, moving to next step")
+				log.Debug().Str("module", "p2p").Msg("VRF is already validated, moving to next step")
 			}
 			//os.Exit(0)
 
 			if shared.GetPodState().LatestTxState == shared.TxStateSubmitPod {
-				// DA submit
-				//mdb := connection.GetDataAvailabilityDatabaseConnection()
-				//dbName, err := mock.MockDA(mdb, daDataByte, PodNumber)
-				//if err != nil {
-				//	logs.Log.Error("Error in submitting data to DA")
-				//	return
-				//}
-				//_ = dbName
 
 				DaBatchSaver := connection.DataAvailabilityDatabaseConnection
 				baseConfig, err := shared.LoadConfig()
@@ -276,12 +268,12 @@ func GenerateUnverifiedPods() {
 					daStoreKey := fmt.Sprintf("da-%d", PodNumber)
 					daStoreData, daStoreDataErr := json.Marshal(da)
 					if daStoreDataErr != nil {
-						logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+						logs.Log.Debug(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
 					}
 
 					storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
 					if storeErr != nil {
-						logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+						logs.Log.Debug(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
 					}
 
 					log.Info().Str("module", "p2p").Msg("Data Saved in DA")
@@ -291,7 +283,7 @@ func GenerateUnverifiedPods() {
 					for {
 						daCheck, daCheckErr = avail.Avail(daDataByte, baseConfig.DA.DaRPC)
 						if daCheckErr != nil {
-							logs.Log.Warn("Error in submitting data to DA " + daCheckErr.Error())
+							logs.Log.Debug("Error in submitting data to DA " + daCheckErr.Error())
 							logs.Log.Debug("Retrying Avail DA after 10 seconds")
 							time.Sleep(10 * time.Second)
 						} else {
@@ -310,13 +302,13 @@ func GenerateUnverifiedPods() {
 					daStoreKey := fmt.Sprintf("da-%d", PodNumber)
 					daStoreData, daStoreDataErr := json.Marshal(da)
 					if daStoreDataErr != nil {
-						logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+						logs.Log.Debug(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
 						return
 					}
 
 					storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
 					if storeErr != nil {
-						logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+						logs.Log.Debug(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
 						return
 					}
 
@@ -326,7 +318,7 @@ func GenerateUnverifiedPods() {
 					for {
 						daCheck, daCheckErr = celestia.Celestia(daDataByte, baseConfig.DA.DaRPC, baseConfig.DA.DaRPC)
 						if daCheckErr != nil {
-							logs.Log.Warn("Error in submitting data to DA " + daCheckErr.Error())
+							logs.Log.Debug("Error in submitting data to DA " + daCheckErr.Error())
 							logs.Log.Debug("Retrying Celestia DA after 10 seconds")
 							time.Sleep(10 * time.Second)
 						} else {
@@ -345,13 +337,13 @@ func GenerateUnverifiedPods() {
 					daStoreKey := fmt.Sprintf("da-%d", PodNumber)
 					daStoreData, daStoreDataErr := json.Marshal(da)
 					if daStoreDataErr != nil {
-						logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+						logs.Log.Debug(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
 						return
 					}
 
 					storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
 					if storeErr != nil {
-						logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+						logs.Log.Debug(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
 						return
 					}
 
@@ -362,7 +354,7 @@ func GenerateUnverifiedPods() {
 					for {
 						daCheck, daCheckErr = eigen.Eigen(daDataByte, baseConfig.DA.DaRPC, baseConfig.DA.DaRPC)
 						if daCheckErr != nil {
-							logs.Log.Warn("Error in submitting data to DA " + daCheckErr.Error())
+							logs.Log.Debug("Error in submitting data to DA " + daCheckErr.Error())
 							logs.Log.Debug("Retrying Eigen DA after 10 seconds")
 							time.Sleep(10 * time.Second)
 						} else {
@@ -381,13 +373,13 @@ func GenerateUnverifiedPods() {
 					daStoreKey := fmt.Sprintf("da-%d", PodNumber)
 					daStoreData, daStoreDataErr := json.Marshal(da)
 					if daStoreDataErr != nil {
-						logs.Log.Warn(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
+						logs.Log.Debug(fmt.Sprintf("Error in marshaling DA pointer : %s", daStoreDataErr.Error()))
 						return
 					}
 
 					storeErr := DaBatchSaver.Put([]byte(daStoreKey), daStoreData, nil)
 					if storeErr != nil {
-						logs.Log.Warn(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
+						logs.Log.Debug(fmt.Sprintf("Error in saving DA pointer in pod database : %s", storeErr.Error()))
 						return
 					}
 
@@ -419,9 +411,9 @@ func GenerateUnverifiedPods() {
 					return
 				}
 				log.Info().Str("module", "p2p").Msg("pod verification transaction done")
-				updateTxState(shared.TxStateInitVRF)
+				updateTxState(shared.TxStatePreInit)
 			} else {
-				log.Error().Str("module", "p2p").Msg("Database Error. LatestTxState should equal to TxStateVerifyPod at this point")
+				log.Error().Str("module", "p2p").Msg("Database Error. LatestTxState should equal to TxStatePreInit at this point")
 				log.Error().Str("module", "p2p").Msg("LatestTxState: " + shared.GetPodState().LatestTxState)
 				return // stop sequencer, there is some error
 			}
@@ -575,7 +567,7 @@ func createEVMPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witnes
 		logs.Log.Error(fmt.Sprintf("Error in generating proof : %s", pkErr.Error()))
 		return nil, nil, nil, nil, pkErr
 	}
-	log.Info().Str("module", "p2p").Msg(fmt.Sprintf("Successfully generated  Unverified proof for Batch %s in the latest phase", strconv.Itoa(limitInt+1)))
+	log.Info().Str("module", "p2p").Str("Pod Number", strconv.Itoa(limitInt+1)).Msg("Successfully generated  Unverified proof")
 
 	// marshal witnessVector
 	witnessVectorByte, err := json.Marshal(witnessVector)
@@ -760,7 +752,6 @@ func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uin
 		Batch:               batchInput,
 	}
 	shared.SetPodState(podState)
-
 	updatePodStateInDatabase(podState)
 }
 

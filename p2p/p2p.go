@@ -176,6 +176,8 @@ func registerConnectionHandlers(node host.Host) {
 }
 
 func printNodeInfo(node host.Host) {
+	//log.Info().Msgf("Node ID: %s", node.ID())
+	//log.Info().Msgf("Node Addrs: %v", node.Addrs())
 	fmt.Println("Listen addresses:", node.Addrs())
 	fmt.Println("Node ID:", node.ID())
 }
@@ -196,9 +198,9 @@ func connectToPeer(ctx context.Context, node host.Host, addrStr string) error {
 		return err
 	}
 	fmt.Printf("Connecting to %s\n", addrStr)
-	fmt.Println(node)
-	fmt.Println(CTX)
-	fmt.Println(peerInfo)
+	fmt.Println("node: ", node)
+	fmt.Println("CTX: ", CTX)
+	fmt.Println("peerInfo: ", peerInfo)
 	err = node.Connect(CTX, peerInfo)
 	if err != nil {
 		fmt.Printf("Unable to connect to peer. Error: %s", err.Error())
