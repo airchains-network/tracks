@@ -64,7 +64,7 @@ func SubmitCurrentPod() (success bool) {
 	}
 
 	ctx := context.Background()
-	gas := utilis.GenerateRandomWithFavour(100, 300, [2]int{120, 250}, 0.7)
+	gas := utilis.GenerateRandomWithFavour(510, 1000, [2]int{520, 700}, 0.7)
 	gasFees := fmt.Sprintf("%damf", gas)
 	log.Info().Str("module", "junction").Str("Gas Fees Used to Validate VRF", gasFees)
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
