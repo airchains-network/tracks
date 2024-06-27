@@ -25,7 +25,7 @@ daKey="mockKey"
 daType="mock"
 moniker="monkey"
 stationRpc="http://127.0.0.1:8545"
-stationAPI="http://127.0.0.1:8545"
+stationAPI="http://127.0.0.1:26657"
 stationType="evm" 
 
 ./build/tracks init --daRpc "$daRpc" --daKey "$daKey" --daType "$daType" --moniker "$moniker" --stationRpc "$stationRpc" --stationAPI "$stationAPI" --stationType "$stationType"

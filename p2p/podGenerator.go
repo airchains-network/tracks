@@ -78,7 +78,9 @@ func GenerateUnverifiedPods() {
 	}
 
 	batchNumber = currentPodNumber
-	log.Info().Str("module", "p2p").Msg(fmt.Sprintf("Processing Pod Number: %d", batchNumber))
+
+	log.Info().Str("module", "p2p").Msg(fmt.Sprintf("Processing New Pod   PodNumber=%d", batchNumber))
+
 	if podStateData.LatestTxState == shared.TxStatePreInit {
 		txState = shared.TxStateInitVRF
 		previousTrackAppHash = podStateData.TracksAppHash
@@ -94,7 +96,9 @@ func GenerateUnverifiedPods() {
 		stationVariantLowerCase := strings.ToLower(stationVariant)
 
 		if stationVariantLowerCase == "evm" {
-			witness, uZKP, MRH, batchInput, err = createEVMPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+			//witness, uZKP, MRH, batchInput, err = createEVMPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+			evmTendermintRPC := shared.Node.Config.Station.StationAPI
+			witness, uZKP, MRH, batchInput, err = createEVMPODTest(currentPodNumber, evmTendermintRPC)
 			CheckErrorAndExit(err, "Error in creating POD", 0)
 		} else if stationVariantLowerCase == "wasm" {
 			witness, uZKP, MRH, batchInput, err = createWasmPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
@@ -380,6 +384,7 @@ func GenerateUnverifiedPods() {
 
 			saveVerifiedPOD()        // save data to database
 			GenerateUnverifiedPods() // generate next pod
+
 		} else {
 			PodNumber := int(shared.GetPodState().LatestPodHeight)
 			success, addr := junction.InitVRF()

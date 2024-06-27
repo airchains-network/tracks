@@ -204,20 +204,7 @@ func LoadConfig() (cnf *config.Config, err error) {
 	if os.IsNotExist(err) {
 		return nil, fmt.Errorf("config directory not found: %s", configDir)
 	}
-	//
-	//viper.AddConfigPath(configDir)
-	//viper.SetConfigName("sequencer")
-	//viper.SetConfigType("toml")
-	//
-	//if err = viper.ReadInConfig(); err != nil {
-	//	return nil, err
-	//}
-	//
-	//if err = viper.Unmarshal(&config); err != nil {
-	//	return nil, err
-	//}
-	//
-	//fmt.Println(config)
+
 	ConfigFilePath := filepath.Join(configDir, config.DefaultConfigFileName)
 	bytes, err := os.ReadFile(ConfigFilePath)
 	if err != nil {

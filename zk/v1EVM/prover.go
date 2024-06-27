@@ -99,14 +99,13 @@ func (circuit *MyCircuit) Define(api frontend.API) error {
 func ComputeCCS() constraint.ConstraintSystem {
 	var circuit MyCircuit
 	ccs, _ := frontend.Compile(ecc.BLS12_381.ScalarField(), r1cs.NewBuilder, &circuit)
-
 	return ccs
 }
 
 func GenerateVerificationKey() (groth16.ProvingKey, groth16.VerifyingKey, error) {
 	ccs := ComputeCCS()
-	pk, vk, error := groth16.Setup(ccs)
-	return pk, vk, error
+	pk, vk, err := groth16.Setup(ccs)
+	return pk, vk, err
 }
 
 func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []byte, error) {

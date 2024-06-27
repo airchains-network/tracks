@@ -20,14 +20,20 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
+func StoreEVMBlockMock(client *ethclient.Client, ctx context.Context, blockIndex int, ldb *leveldb.DB, ldt *leveldb.DB) {
+	// mock function: previously used to store EVM blocks
+	_ = client
+	_ = ctx
+	_ = blockIndex
+	_ = ldb
+	_ = ldt
+}
+
 func StoreEVMBlock(client *ethclient.Client, ctx context.Context, blockIndex int, ldb *leveldb.DB, ldt *leveldb.DB) {
 	zerolog.TimeFieldFormat = time.RFC3339
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	blockData, err := client.BlockByNumber(ctx, big.NewInt(int64(blockIndex)))
 	if err != nil {
-
-		// errMessage := fmt.Sprintf("Failed to get block data for block number %d: %s", blockIndex, err)
-		// log.Warn().Str("module", "blocksync").Err(err).Msg(errMessage)
 		time.Sleep(3 * time.Second)
 		StoreEVMBlock(client, ctx, blockIndex, ldb, ldt)
 	}
@@ -55,12 +61,13 @@ func StoreEVMBlock(client *ethclient.Client, ctx context.Context, blockIndex int
 		TransactionsRoot: utils.ToString(blockData.TxHash().String()),
 		Uncles:           utils.ToString(blockData.Uncles()),
 	}
+
 	data, err := json.Marshal(block)
 	if err != nil {
 		errMessage := fmt.Sprintf("Error marshalling block data: %s", err)
 		log.Error().Str("module", "blocksync").Err(err).Msg(errMessage)
-
 	}
+
 	key := fmt.Sprintf("block_%s", block.Number)
 	err = ldb.Put([]byte(key), data, nil)
 	if err != nil {

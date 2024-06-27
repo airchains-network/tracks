@@ -9,6 +9,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var StationCmd = &cobra.Command{
+	Use:   "start",
+	Short: "start the sequencer nodes",
+	Run:   runSequencerCommand,
+}
+
 func runSequencerCommand(_ *cobra.Command, _ []string) {
 	if err := initSequencer(); err != nil {
 		logger.Log.Error(err.Error())
@@ -40,10 +46,4 @@ func initSequencer() error {
 
 	shared.NewNode(config)
 	return nil
-}
-
-var StationCmd = &cobra.Command{
-	Use:   "start",
-	Short: "start the sequencer nodes",
-	Run:   runSequencerCommand,
 }

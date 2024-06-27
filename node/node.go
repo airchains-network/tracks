@@ -63,13 +63,13 @@ func beginDBIndexingOperations(wg *sync.WaitGroup) {
 	ctx = context.Background()
 	var wgnm *sync.WaitGroup
 	wgnm = &sync.WaitGroup{}
-	//wgnm.Add(1)
 	wgnm.Add(3)
 
 	go blocksync.StartIndexer(wgnm, client, ctx, blockDB, txnDB, latestBlock)
 	go p2p.BatchGeneration(wgnm)
 	go rpc.StartRPC(wgnm)
 	wgnm.Wait()
+
 }
 
 func initializeCounter(staticDB *leveldb.DB, counterName string) {

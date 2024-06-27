@@ -384,9 +384,11 @@ func PeerConnectionStatus(host host.Host) bool {
 	if len(persistentPeers) == numPeers {
 		return true
 	} else {
+
 		logs.Log.Warn("All Node Not Connected to Persistent Peers")
 		logs.Log.Warn("Number of Persistent Peers: " + string(rune(len(persistentPeers))))
 		logs.Log.Warn("Number of Connected Peers: " + string(rune(numPeers)))
+
 		return false
 	}
 
