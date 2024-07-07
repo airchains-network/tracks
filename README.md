@@ -82,13 +82,43 @@ info="EVM Track"
 ./build/tracks create-station --tracks "$accountAddressArray" --accountName "$accountName" --accountPath "$accountPath" --jsonRPC "$jsonRPC" --info "$info" --bootstrapNode "$bootstrapNode"
 ```
 
-## Step 8: Start the Tracks
-
-Finally, start the node to begin interacting with the Tracks blockchain.
+## Step 8: Service Settings
 
 ```shell
-./build/tracks start
+tee /etc/systemd/system/tracksd.service > /dev/null <<EOF
+[Unit]
+Description=tracksd node
+After=network-online.target
+StartLimitIntervalSec=0
+StartLimitBurst=0
+
+[Service]
+User=root
+WorkingDirectory=/root/.tracks
+ExecStart=/root/tracks/build/tracks start
+
+Restart=always
+RestartSec=10
+LimitNOFILE=65535
+SuccessExitStatus=0 1 2 3
+
+[Install]
+WantedBy=multi-user.target
+EOF
 ```
+
+```shell
+systemctl daemon-reload && \
+systemctl enable tracksd && \
+systemctl restart tracksd
+```
+
+```shell
+journalctl -fu tracksd -o cat
+```
+
+You can stop it with CTRL-C
+
 
 ## Troubleshooting
 
