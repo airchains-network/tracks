@@ -46,7 +46,7 @@ func VerifyCurrentPod() (success bool) {
 	gasFees := fmt.Sprintf("%damf", gas)
 	log.Info().Str("module", "junction").Str("Gas Fees Used to Validate VRF", gasFees)
 
-	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
+	_, err = cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
 		logs.Log.Error("Switchyard client connection error")
 		logs.Log.Error(err.Error())
@@ -95,19 +95,37 @@ func VerifyCurrentPod() (success bool) {
 	}
 
 	for {
-		txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &verifyPodStruct)
-		if errTxRes != nil {
-			errTxResStr := errTxRes.Error()
-			log.Error().Str("module", "junction").Str("Error", errTxResStr).Msg("Error in VerifyPod transaction")
-			log.Debug().Str("module", "junction").Msg("Retrying VerifyPod transaction after 10 seconds..")
-			time.Sleep(10 * time.Second)
-			//return false
-		} else {
-			VerifyPodTxHash := txRes.TxHash
-			currentPodState.VerifyPodTxHash = VerifyPodTxHash
-			shared.SetPodState(currentPodState)
-			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Pod Verification Tx Success")
-			return true
+		ctx := context.Background()
+		gas := utilis.GenerateRandomWithFavour(510, 1000, [2]int{620, 900}, 0.7)
+
+		for {
+			gasFees := fmt.Sprintf("%damf", gas)
+			log.Info().Str("module", "junction").Str("Gas Fees Used to Verify Pod", gasFees)
+
+			accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
+			if err != nil {
+				logs.Log.Error("Switchyard client connection error")
+				logs.Log.Error(err.Error())
+				return false
+			}
+
+			txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &verifyPodStruct)
+			if errTxRes != nil {
+				errTxResStr := errTxRes.Error()
+				log.Error().Str("module", "junction").Str("Error", errTxResStr).Msg("Error in VerifyPod transaction")
+				log.Debug().Str("module", "junction").Msg("Retrying VerifyPod transaction after 10 seconds..")
+				time.Sleep(10 * time.Second)
+
+				// Increase gas and update gasFees
+				gas += 200
+				log.Info().Str("module", "junction").Str("Updated Gas Fees for Retry", fmt.Sprintf("%damf", gas))
+			} else {
+				VerifyPodTxHash := txRes.TxHash
+				currentPodState.VerifyPodTxHash = VerifyPodTxHash
+				shared.SetPodState(currentPodState)
+				log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Pod Verification Tx Success")
+				return true
+			}
 		}
 	}
 

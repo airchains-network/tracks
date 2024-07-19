@@ -97,9 +97,10 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 	for {
 		tx, isPending, err = client.TransactionByHash(ctx, txHash)
 		if err != nil {
+			fmt.Println(txHash)
 			logs.Log.Debug(fmt.Sprintf("Failed to get transaction by hash: %s", err))
 			// Retry transaction
-			log.Println("Retrying the transaction after 10 seconds...")
+			fmt.Println("Retrying the transaction after 10 seconds...")
 			time.Sleep(time.Second * 10) // Wait for 10 seconds before retrying
 			continue
 		}
