@@ -46,6 +46,26 @@ func GetValueOrDefault(db *leveldb.DB, key []byte, defaultValue []byte) ([]byte,
 	return val, nil
 }
 
+func retryGetBalance(address string, blockNumber int, rpcURL string) (string, error) {
+	var balance string
+	err := utilis.Retry(func() error {
+		var err error
+		balance, err = utilis.GetBalance(address, uint64(blockNumber), rpcURL)
+		return err
+	})
+	return balance, err
+}
+
+func retryGetAccountNonce(ctx context.Context, txHash string, blockNumber int, rpcURL string) (string, error) {
+	var nonce string
+	err := utilis.Retry(func() error {
+		var err error
+		nonce, err = utilis.GetAccountNonce(ctx, txHash, uint64(blockNumber), rpcURL)
+		return err
+	})
+	return nonce, err
+}
+
 func createEVMPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
 	baseConfig, err := shared.LoadConfig()
 	if err != nil {
@@ -83,22 +103,19 @@ func createEVMPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witnes
 			os.Exit(0)
 		}
 
-		senderBalancesCheck, err := utilis.GetBalance(tx.From, tx.BlockNumber-1, baseConfig.Station.StationRPC)
+		senderBalancesCheck, err := retryGetBalance(tx.From, int(tx.BlockNumber-1), baseConfig.Station.StationRPC)
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in getting sender balance : %s", err.Error()))
-			os.Exit(0)
 		}
 
-		receiverBalancesCheck, err := utilis.GetBalance(tx.To, tx.BlockNumber-1, baseConfig.Station.StationRPC)
+		receiverBalancesCheck, err := retryGetBalance(tx.To, int(tx.BlockNumber-1), baseConfig.Station.StationRPC)
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in getting reciver balance : %s", err.Error()))
-			os.Exit(0)
 		}
 
-		accountNonceCheck, err := utilis.GetAccountNonce(context.Background(), tx.Hash, tx.BlockNumber, baseConfig.Station.StationRPC)
+		accountNonceCheck, err := retryGetAccountNonce(context.Background(), tx.Hash, int(tx.BlockNumber), baseConfig.Station.StationRPC)
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error in getting account nonce : %s", err.Error()))
-			os.Exit(0)
 		}
 
 		From = append(From, tx.From)

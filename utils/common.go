@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
+	"github.com/rs/zerolog/log"
 	"io"
 	"math/big"
 	"math/rand"
@@ -20,6 +21,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func GetBalance(address string, blockNumber uint64, stationRPC string) (string, error) {
@@ -53,7 +55,7 @@ func GetBalance(address string, blockNumber uint64, stationRPC string) (string, 
 	}
 
 	if errMsg, ok := jsonResponse["error"]; ok {
-		return "", fmt.Errorf("error from Ethereum node: %v", errMsg)
+		return "", fmt.Errorf("error from EVM STATION node: %v", errMsg)
 	}
 
 	if result, ok := jsonResponse["result"].(string); ok {
@@ -327,4 +329,21 @@ func AccountNounceCheck(walletAddress string, JsonAPI string) string {
 	}
 
 	return accountNounce.Account.Sequence
+}
+
+const retryDelay = 2 * time.Second
+
+// Retry function to retry any function that returns an error indefinitely until it succeeds
+func Retry(operation func() error) error {
+	var err error
+	attempt := 0
+	for {
+		err = operation()
+		if err == nil {
+			return nil
+		}
+		attempt++
+		log.Error().Msgf("Error occurred (attempt %d): %s", attempt, err.Error())
+		time.Sleep(retryDelay)
+	}
 }

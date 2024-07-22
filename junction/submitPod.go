@@ -86,7 +86,7 @@ func SubmitCurrentPod() (success bool) {
 
 	for {
 		ctx := context.Background()
-		gas := utilis.GenerateRandomWithFavour(300, 600, [2]int{120, 250}, 0.7)
+		gas := utilis.GenerateRandomWithFavour(300, 600, [2]int{320, 550}, 0.7)
 
 		for {
 			gasFees := fmt.Sprintf("%damf", gas)
@@ -118,5 +118,4 @@ func SubmitCurrentPod() (success bool) {
 			}
 		}
 	}
-
 }
