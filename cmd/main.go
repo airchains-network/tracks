@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/airchains-network/decentralized-sequencer/cmd/command"
-	"github.com/airchains-network/decentralized-sequencer/cmd/command/keys"
-	"github.com/airchains-network/decentralized-sequencer/cmd/command/zkpCmd"
+	"github.com/airchains-network/tracks/cmd/command"
+	"github.com/airchains-network/tracks/cmd/command/keys"
+	"github.com/airchains-network/tracks/cmd/command/zkpCmd"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/spf13/cobra"
 )

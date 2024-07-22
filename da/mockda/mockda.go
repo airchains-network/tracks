@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/types"
+	"github.com/airchains-network/tracks/types"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 

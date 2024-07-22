@@ -3,7 +3,7 @@ package blocksync
 import (
 	"context"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/config"
+	"github.com/airchains-network/tracks/config"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/viper"
 	"github.com/syndtr/goleveldb/leveldb"

@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	logs "github.com/airchains-network/decentralized-sequencer/log"
+	logs "github.com/airchains-network/tracks/log"
 	"github.com/btcsuite/btcd/btcutil/bech32"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"

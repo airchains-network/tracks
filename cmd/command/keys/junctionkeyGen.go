@@ -2,7 +2,7 @@ package keys
 
 import (
 	"errors"
-	"github.com/airchains-network/decentralized-sequencer/utils"
+	"github.com/airchains-network/tracks/utils"
 	"github.com/spf13/cobra"
 )
 

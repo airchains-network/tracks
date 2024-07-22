@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/airchains-network/decentralized-sequencer/junction/types"
+	"github.com/airchains-network/tracks/junction/types"
 )
 
 type StationInfo struct {

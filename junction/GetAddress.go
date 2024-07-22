@@ -2,7 +2,7 @@ package junction
 
 import (
 	"fmt"
-	logs "github.com/airchains-network/decentralized-sequencer/log"
+	logs "github.com/airchains-network/tracks/log"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 )
 

@@ -2,11 +2,11 @@ package command
 
 import (
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/config"
-	logs "github.com/airchains-network/decentralized-sequencer/log"
+	"github.com/airchains-network/tracks/config"
+	logs "github.com/airchains-network/tracks/log"
 
-	//logs "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/p2p"
+	//logs "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/p2p"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"

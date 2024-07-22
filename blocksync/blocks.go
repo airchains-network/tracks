@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"time"
 
-	logs "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/types"
-	"github.com/airchains-network/decentralized-sequencer/utils"
+	logs "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/types"
+	"github.com/airchains-network/tracks/utils"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

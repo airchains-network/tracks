@@ -2,9 +2,9 @@ package junction
 
 import (
 	"context"
-	"github.com/airchains-network/decentralized-sequencer/junction/types"
-	logs "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/node/shared"
+	"github.com/airchains-network/tracks/junction/types"
+	logs "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/node/shared"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 )
 

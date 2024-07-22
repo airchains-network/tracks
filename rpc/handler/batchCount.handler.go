@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github.com/airchains-network/decentralized-sequencer/node/shared"
+	"github.com/airchains-network/tracks/node/shared"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"net/http"

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/types/svmTypes"
+	"github.com/airchains-network/tracks/types/svmTypes"
 	"github.com/deadlium/deadlogs"
 	"io"
 	"net/http"

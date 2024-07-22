@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/types"
+	"github.com/airchains-network/tracks/types"
 	"io"
 	"net/http"
 	"strconv"
