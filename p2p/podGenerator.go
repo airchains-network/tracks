@@ -37,10 +37,10 @@ func GenerateUnverifiedPods() {
 
 	connection := shared.Node.NodeConnections
 	staticDBConnection := connection.GetStaticDatabaseConnection()
-	txnDBConnection := connection.GetTxnDatabaseConnection()
 
-	rawConfirmedTransactionIndex, err := GetValueOrDefault(staticDBConnection, []byte(BatchStartIndexKey), []byte("0"))
-	CheckErrorAndExit(err, "Error in getting confirmedTransactionIndex from static db", 0)
+	//txnDBConnection := connection.GetTxnDatabaseConnection()
+	//rawConfirmedTransactionIndex, err := GetValueOrDefault(staticDBConnection, []byte(BatchStartIndexKey), []byte("0"))
+	//CheckErrorAndExit(err, "Error in getting confirmedTransactionIndex from static db", 0)
 
 	rawCurrentPodNumber, err := GetValueOrDefault(staticDBConnection, []byte(BatchCountKey), []byte("0"))
 	CheckErrorAndExit(err, "Error in getting currentPodNumber from static db", 0)
@@ -98,10 +98,12 @@ func GenerateUnverifiedPods() {
 		if stationVariantLowerCase == "evm" {
 			//witness, uZKP, MRH, batchInput, err = createEVMPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
 			evmTendermintRPC := shared.Node.Config.Station.StationAPI
-			witness, uZKP, MRH, batchInput, err = createEVMPODTest(currentPodNumber, evmTendermintRPC)
+			witness, uZKP, MRH, batchInput, err = CreateNewEVMPod(currentPodNumber, evmTendermintRPC)
 			CheckErrorAndExit(err, "Error in creating POD", 0)
 		} else if stationVariantLowerCase == "wasm" {
-			witness, uZKP, MRH, batchInput, err = createWasmPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+			//witness, uZKP, MRH, batchInput, err = createWasmPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+			wasmTendermintRPC := shared.Node.Config.Station.StationRPC
+			witness, uZKP, MRH, batchInput, err = CreateNewWasmPod(currentPodNumber, wasmTendermintRPC)
 			CheckErrorAndExit(err, "Error in creating POD", 0)
 		}
 

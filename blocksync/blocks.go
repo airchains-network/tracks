@@ -20,7 +20,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func StoreEVMBlockMock(client *ethclient.Client, ctx context.Context, blockIndex int, ldb *leveldb.DB, ldt *leveldb.DB) {
+func MockStoreEVMBlock(client *ethclient.Client, ctx context.Context, blockIndex int, ldb *leveldb.DB, ldt *leveldb.DB) {
 	// mock function: previously used to store EVM blocks
 	_ = client
 	_ = ctx
@@ -107,6 +107,14 @@ func getLastProcessedBlock(db *leveldb.DB) int {
 	return lastBlockNum
 }
 
+func MockStoreWasmBlock(JsonRPC string, JsonAPI string, startBlock int, numLatestBlock int, ldb *leveldb.DB, ldt *leveldb.DB) {
+	_ = JsonRPC
+	_ = JsonAPI
+	_ = startBlock
+	_ = numLatestBlock
+	_ = ldb
+	_ = ldt
+}
 func StoreWasmBlock(ldb *leveldb.DB, ldt *leveldb.DB, JsonRPC string, JsonAPI string) {
 	rpcUrl := fmt.Sprintf("%s/cosmos/base/tendermint/v1beta1/blocks/latest", JsonAPI)
 	res, resErr := http.Get(rpcUrl)

@@ -21,11 +21,11 @@ func StartIndexer(wg *sync.WaitGroup, client *ethclient.Client, ctx context.Cont
 
 	if bsgConfig.Station.StationType == "EVM" || bsgConfig.Station.StationType == "evm" {
 		// StoreEVMBlockMock does nothing, previously StoreEVMBlock was used to store evm blocks and transactions
-		StoreEVMBlockMock(client, ctx, latestBlock, blockDatabaseConnection, txnDatabaseConnection)
+		MockStoreEVMBlock(client, ctx, latestBlock, blockDatabaseConnection, txnDatabaseConnection)
 	} else if bsgConfig.Station.StationType == "WASM" || bsgConfig.Station.StationType == "wasm" {
-		JsonRPC := bsgConfig.Station.StationRPC
-		JsonAPI := bsgConfig.Station.StationAPI
-		StoreWasmBlock(blockDatabaseConnection, txnDatabaseConnection, JsonRPC, JsonAPI)
+		//JsonRPC := bsgConfig.Station.StationRPC
+		//JsonAPI := bsgConfig.Station.StationAPI
+		//StoreWasmBlock(blockDatabaseConnection, txnDatabaseConnection, JsonRPC, JsonAPI)
 	} else if bsgConfig.Station.StationType == "SVM" || bsgConfig.Station.StationType == "svm" {
 		JsonRPC := bsgConfig.Station.StationRPC
 		JsonAPI := bsgConfig.Station.StationAPI

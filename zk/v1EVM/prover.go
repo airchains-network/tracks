@@ -150,6 +150,19 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 	txNoncesLength := len(inputData.TransactionNonces)
 	accountNoncesLength := len(inputData.AccountNonces)
 
+	fmt.Printf("Value of from is %v\n", inputData.From)
+	fmt.Printf("\n  ****************************************************************  \n")
+	fmt.Printf("Value of to is %v\n", inputData.To)
+	fmt.Printf("\n  ****************************************************************  \n")
+	fmt.Printf("Value of amounts is %v\n", inputData.Amounts)
+	fmt.Printf("\n  ****************************************************************  \n")
+	fmt.Printf("Value of txHash is %v\n", inputData.TransactionHash)
+	fmt.Printf("\n  ****************************************************************  \n")
+	fmt.Printf("Value of senderBalances is %v\n", inputData.SenderBalances)
+	fmt.Printf("\n  ****************************************************************  \n")
+	fmt.Printf("Value of receiverBalances is %v\n", inputData.ReceiverBalances)
+	fmt.Printf("\n  ****************************************************************  \n")
+
 	if fromLength == toLength &&
 		fromLength == amountsLength &&
 		fromLength == txHashLength &&
@@ -196,7 +209,7 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		inputs.FromBalances[i] = frontend.Variable(inputData.SenderBalances[i])
 		inputs.ToBalances[i] = frontend.Variable(inputData.ReceiverBalances[i])
 	}
-
+	fmt.Println("hi")
 	witness, err := frontend.NewWitness(&inputs, ecc.BLS12_381.ScalarField())
 	if err != nil {
 		fmt.Printf("Error creating a witness: %v\n", err)
@@ -205,6 +218,7 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 
 	witnessVector := witness.Vector()
 
+	fmt.Printf("Witness vector: %v\n", witnessVector)
 	publicWitness, _ := witness.Public()
 
 	publicWitnessDb := blocksync.GetPublicWitnessDbInstance()
@@ -219,11 +233,14 @@ func GenerateProof(inputData types.BatchStruct, batchNum int) (any, string, []by
 		fmt.Println("Error saving public witness:", err)
 		return nil, "", nil, err
 	}
+	fmt.Println("Land")
+
 	proof, err := groth16.Prove(ccs, pk, witness)
 	if err != nil {
 		fmt.Printf("Error generating proof: %v\n", err)
 		return nil, "", nil, err
 	}
+	fmt.Println("BBBBBBBBBBBBBBBBBBBB")
 
 	proofDb := blocksync.GetProofDbInstance()
 	proofDbKey := fmt.Sprintf("proof_%d", batchNum)

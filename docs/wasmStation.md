@@ -11,17 +11,17 @@ go run cmd/main.go init --daRpc "mock-rpc" --daKey "mockKey" --daType "mock"  --
 
 ### Create Keys for Junction
 ```shell
-go run cmd/main.go keys junction --accountName dummy --accountPath ./accounts/keys
+go run cmd/main.go keys junction --accountName dummy --accountPath ./.tracks/junction-accounts/keys
 ```
 
-### Init Prover`
+### Init Prover
 ```shell
 go run cmd/main.go prover v1WASM
 ```
 
 ### Create station on junction
 ```sh
-go run cmd/main.go create-station --accountName dummy --accountPath ./accounts/keys --jsonRPC "http://localhost:26667" --info "EVM Track" --tracks air1gzyukqnjzs4j07vmwf9fvfageeer62t0zqvx0x  --bootstrapNode "/ip4/192.168.1.24/tcp/2300/p2p/12D3KooWFoN66sCWotff1biUcnBE2vRTmYJRHJqZy27x1EpBB6AM"
+go run cmd/main.go create-station --accountName dummy --accountPath ./.tracks/junction-accounts/keys --jsonRPC "https://junction-testnet-rpc.synergynodes.com/" --info "Wasm Track" --tracks air1pkd0pg82d545xpnfyryfdya9xvhulenzwzvlsn  --bootstrapNode "/ip4/192.168.1.24/tcp/2300/p2p/12D3KooWFoN66sCWotff1biUcnBE2vRTmYJRHJqZy27x1EpBB6AM"
 ```
 
 ### start  node

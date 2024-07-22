@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const (
@@ -66,8 +67,23 @@ type EVMPodResponse struct {
 	} `json:"result"`
 }
 
-// createEVMPOD creates witness and proof by taking transactions data directly from tendermint jsonRPC 26657.eg. http://localhost:26657/tracks_get_pod?podNumber=9
-func createEVMPODTest(podNumber int, evmTendermintRPC string) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
+type WasmPodResponse struct {
+	Jsonrpc string `json:"jsonrpc"`
+	ID      int    `json:"id"`
+	Result  []struct {
+		From        string `json:"From"`
+		To          string `json:"To"`
+		Amount      string `json:"Amount"`
+		Gas         string `json:"Gas"`
+		TxHash      string `json:"TxHash"`
+		ToBalance   string `json:"ToBalance"`
+		FromBalance string `json:"FromBalance"`
+		Nonce       string `json:"Nonce"`
+	} `json:"result"`
+}
+
+// CreateNewEVMPod creates witness and proof by taking transactions data directly from tendermint jsonRPC 26657.eg. http://localhost:26657/tracks_get_pod?podNumber=9
+func CreateNewEVMPod(podNumber int, evmTendermintRPC string) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
 
 	podUrl := fmt.Sprintf("%s/tracks_get_pod?podNumber=%d", evmTendermintRPC, podNumber)
 	resp, err := http.Get(podUrl)
@@ -75,7 +91,7 @@ func createEVMPODTest(podNumber int, evmTendermintRPC string) (witness []byte, u
 		log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in making GET request: %s", err.Error()))
 		// wait 5 seconds and retry
 		time.Sleep(5 * time.Second)
-		return createEVMPODTest(podNumber, evmTendermintRPC)
+		return CreateNewEVMPod(podNumber, evmTendermintRPC)
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
@@ -90,7 +106,7 @@ func createEVMPODTest(podNumber int, evmTendermintRPC string) (witness []byte, u
 		log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in reading response body: %s", err.Error()))
 		// wait 5 seconds and retry
 		time.Sleep(5 * time.Second)
-		return createEVMPODTest(podNumber, evmTendermintRPC)
+		return CreateNewEVMPod(podNumber, evmTendermintRPC)
 	}
 
 	var response EVMPodResponse
@@ -99,7 +115,7 @@ func createEVMPODTest(podNumber int, evmTendermintRPC string) (witness []byte, u
 		log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in unmarshalling response body: %s", err.Error()))
 		// wait 5 seconds and retry
 		time.Sleep(5 * time.Second)
-		return createEVMPODTest(podNumber, evmTendermintRPC)
+		return CreateNewEVMPod(podNumber, evmTendermintRPC)
 	}
 
 	txCount := len(response.Result)
@@ -108,7 +124,7 @@ func createEVMPODTest(podNumber int, evmTendermintRPC string) (witness []byte, u
 		log.Debug().Str("module", "p2p").Str("pod_number", strconv.Itoa(podNumber)).Str("currentTxCount", txCountStr).Msg("Insufficient transactions, awaiting additional transactions")
 		// wait 5 seconds and retry
 		time.Sleep(5 * time.Second)
-		return createEVMPODTest(podNumber, evmTendermintRPC)
+		return CreateNewEVMPod(podNumber, evmTendermintRPC)
 	}
 
 	// make batch if have enough transactions
@@ -130,7 +146,7 @@ func createEVMPODTest(podNumber int, evmTendermintRPC string) (witness []byte, u
 		log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in generating proof : %s", pkErr.Error()))
 		// wait 5 seconds and retry
 		time.Sleep(5 * time.Second)
-		return createEVMPODTest(podNumber, evmTendermintRPC)
+		return CreateNewEVMPod(podNumber, evmTendermintRPC)
 	}
 	log.Info().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg("Successfully generated  Unverified proof")
 
@@ -140,7 +156,7 @@ func createEVMPODTest(podNumber int, evmTendermintRPC string) (witness []byte, u
 		log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in marshalling witness vector : %s", err.Error()))
 		// wait 5 seconds and retry
 		time.Sleep(5 * time.Second)
-		return createEVMPODTest(podNumber, evmTendermintRPC)
+		return CreateNewEVMPod(podNumber, evmTendermintRPC)
 	}
 
 	// string to []byte currentStatusHash
@@ -149,14 +165,156 @@ func createEVMPODTest(podNumber int, evmTendermintRPC string) (witness []byte, u
 		log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in marshalling current status hash : %s", err.Error()))
 		// wait 5 seconds and retry
 		time.Sleep(5 * time.Second)
-		return createEVMPODTest(podNumber, evmTendermintRPC)
+		return CreateNewEVMPod(podNumber, evmTendermintRPC)
 	}
 
 	return witnessVectorByte, proofByte, currentStatusHashByte, &batch, nil
 
 }
 
-// createEVMPOD -> createEVMPODOld : previously used to create proof and witness for EVM transactions by taking transactions from the database
+// CreateNewWasmPod creates witness and proof by taking transactions data directly from tendermint jsonRPC 26657.eg. http://localhost:26657/tracks_get_pod?podNumber=9
+func CreateNewWasmPod(podNumber int, wasmTendermintRPC string) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
+
+	podUrl := fmt.Sprintf("%s/tracks_get_pod?podNumber=%d", wasmTendermintRPC, podNumber)
+	resp, err := http.Get(podUrl)
+	if err != nil {
+		log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in making GET request: %s", err.Error()))
+		// wait 5 seconds and retry
+		time.Sleep(5 * time.Second)
+		return CreateNewWasmPod(podNumber, wasmTendermintRPC)
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in closing response body: %s", err.Error()))
+			// it's safe to ignore this error, so do not return or handle it
+		}
+	}(resp.Body)
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in reading response body: %s", err.Error()))
+		// wait 5 seconds and retry
+		time.Sleep(5 * time.Second)
+		return CreateNewWasmPod(podNumber, wasmTendermintRPC)
+	}
+
+	var response WasmPodResponse
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in unmarshalling response body: %s", err.Error()))
+		// wait 5 seconds and retry
+		time.Sleep(5 * time.Second)
+		return CreateNewWasmPod(podNumber, wasmTendermintRPC)
+	}
+
+	txCount := len(response.Result)
+	if txCount < 25 {
+		txCountStr := strconv.Itoa(txCount)
+		log.Debug().Str("module", "p2p").Str("pod_number", strconv.Itoa(podNumber)).Str("currentTxCount", txCountStr).Msg("Insufficient transactions, awaiting additional transactions")
+		// wait 5 seconds and retry
+		time.Sleep(5 * time.Second)
+		return CreateNewWasmPod(podNumber, wasmTendermintRPC)
+	}
+
+	// make batch if have enough transactions
+	var batch types.BatchStruct
+	var From []string
+	var To []string
+	var Amounts []string
+	var TransactionHash []string
+	var SenderBalances []string
+	var ReceiverBalances []string
+	var Messages []string
+	var TransactionNonces []string
+	var AccountNonces []string
+
+	for _, result := range response.Result {
+
+		fromCheck := strings.TrimSpace(utilis.Bech32Decoder(result.From))
+		toCheck := strings.TrimSpace(utilis.Bech32Decoder(result.To))
+		transactionHashCheck := strings.TrimSpace(utilis.TXHashCheck(result.TxHash))
+		amount := strings.TrimSpace(extractNumber(result.Amount))
+		fromBalance := strings.TrimSpace(extractNumber(result.FromBalance))
+		toBalance := strings.TrimSpace(extractNumber(result.ToBalance))
+
+		//fmt.Println(fromCheck, toCheck, transactionHashCheck, amount, fromBalance, toBalance)
+
+		From = append(From, fromCheck)
+		To = append(To, toCheck)
+		Amounts = append(Amounts, amount)
+		SenderBalances = append(SenderBalances, fromBalance)
+		ReceiverBalances = append(ReceiverBalances, toBalance)
+		TransactionHash = append(TransactionHash, transactionHashCheck)
+		Messages = append(Messages, "0")
+		TransactionNonces = append(TransactionNonces, result.Nonce)
+		AccountNonces = append(AccountNonces, result.Nonce)
+
+		//batch.From = append(batch.From, fromCheck)
+		//batch.To = append(batch.To, toCheck)
+		//batch.Amounts = append(batch.Amounts, amount)
+		//batch.TransactionHash = append(batch.TransactionHash, transactionHashCheck)
+		//batch.SenderBalances = append(batch.SenderBalances, fromBalance)
+		//batch.ReceiverBalances = append(batch.ReceiverBalances, toBalance)
+		//batch.Messages = append(batch.Messages, "")
+		//batch.TransactionNonces = append(batch.TransactionNonces, result.Nonce)
+		//batch.AccountNonces = append(batch.AccountNonces, result.Nonce)
+
+	}
+	batch.From = From
+	batch.To = To
+	batch.Amounts = Amounts
+	batch.TransactionHash = TransactionHash
+	batch.SenderBalances = SenderBalances
+	batch.ReceiverBalances = ReceiverBalances
+	batch.Messages = Messages
+	batch.TransactionNonces = TransactionNonces
+	batch.AccountNonces = AccountNonces
+
+	witnessVector, currentStatusHash, proofByte, pkErr := v1Wasm.GenerateProof(batch, podNumber)
+	if pkErr != nil {
+		log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in generating proof : %s", pkErr.Error()))
+		// wait 5 seconds and retry
+		time.Sleep(5 * time.Second)
+		return CreateNewWasmPod(podNumber, wasmTendermintRPC)
+	}
+	log.Info().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg("Successfully generated  Unverified proof")
+
+	// marshal witnessVector
+	witnessVectorByte, err := json.Marshal(witnessVector)
+	if err != nil {
+		log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in marshalling witness vector : %s", err.Error()))
+		// wait 5 seconds and retry
+		time.Sleep(5 * time.Second)
+		return CreateNewWasmPod(podNumber, wasmTendermintRPC)
+	}
+
+	// string to []byte currentStatusHash
+	currentStatusHashByte, err := json.Marshal(currentStatusHash)
+	if err != nil {
+		log.Error().Str("module", "p2p").Str("Pod Number", strconv.Itoa(podNumber)).Msg(fmt.Sprintf("Error in marshalling current status hash : %s", err.Error()))
+		// wait 5 seconds and retry
+		time.Sleep(5 * time.Second)
+		return CreateNewWasmPod(podNumber, wasmTendermintRPC)
+	}
+
+	return witnessVectorByte, proofByte, currentStatusHashByte, &batch, nil
+
+}
+
+func extractNumber(s string) string {
+	var numberStr string
+	for _, v := range s {
+		if unicode.IsDigit(v) {
+			numberStr += string(v)
+		} else {
+			break
+		}
+	}
+	return numberStr
+}
+
+// createEVMPOD: previously used to create proof and witness for EVM transactions by taking transactions from the database
 func createEVMPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
 	baseConfig, err := shared.LoadConfig()
 	if err != nil {
@@ -262,6 +420,7 @@ func createEVMPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witnes
 }
 
 func createWasmPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witness []byte, unverifiedProof []byte, MRH []byte, podData *types.BatchStruct, err error) {
+
 	baseConfig, err := shared.LoadConfig()
 	if err != nil {
 		return
@@ -303,6 +462,8 @@ func createWasmPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witne
 		senderBalancesCheck := utilis.AccountBalanceCheck(txn.Tx.Body.Messages[0].FromAddress, txn.TxResponse.Height, baseConfig.Station.StationAPI)
 		receiverBalancesCheck := utilis.AccountBalanceCheck(txn.Tx.Body.Messages[0].ToAddress, txn.TxResponse.Height, baseConfig.Station.StationAPI)
 		accountNoncesCheck := utilis.AccountNounceCheck(txn.Tx.Body.Messages[0].FromAddress, baseConfig.Station.StationAPI)
+
+		//fmt.Println(fromCheck, toCheck, transactionHashCheck, txn.Tx.Body.Messages[0].Amount[0].Amount, senderBalancesCheck, receiverBalancesCheck)
 
 		From = append(From, fromCheck)
 		To = append(To, toCheck)
@@ -347,6 +508,7 @@ func createWasmPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witne
 	return witnessVectorByte, proofByte, currentStatusHashByte, &batch, nil
 
 }
+
 func saveVerifiedPOD() {
 
 	podState := shared.GetPodState()
