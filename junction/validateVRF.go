@@ -59,7 +59,7 @@ func ValidateVRF(addr string) bool {
 	}
 
 	ctx := context.Background()
-	gas := utilis.GenerateRandomWithFavour(510, 1000, [2]int{520, 700}, 0.7)
+	gas := utilis.GenerateRandomWithFavour(800, 1500, [2]int{800, 1000}, 0.7)
 	gasFees := fmt.Sprintf("%damf", gas)
 	log.Info().Str("module", "junction").Str("Gas Fees Used to Validate VRF", gasFees)
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))

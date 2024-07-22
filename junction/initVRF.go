@@ -9,6 +9,7 @@ import (
 	logs "github.com/airchains-network/decentralized-sequencer/log"
 	"github.com/airchains-network/decentralized-sequencer/node/shared"
 	mainTypes "github.com/airchains-network/decentralized-sequencer/types"
+	utilis "github.com/airchains-network/decentralized-sequencer/utils"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 	"github.com/rs/zerolog"
@@ -49,7 +50,9 @@ func InitVRF() (success bool, addr string) {
 	}
 
 	ctx := context.Background()
-	gasFees := fmt.Sprintf("%damf", 213)
+	gas := utilis.GenerateRandomWithFavour(800, 1500, [2]int{800, 1000}, 0.7)
+	gasFees := fmt.Sprintf("%damf", gas)
+	//gasFees := fmt.Sprintf("%damf", 500)
 	log.Info().Str("module", "junction").Str("Gas Fees Used for Vrf Initialization", gasFees)
 	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
 	if err != nil {
