@@ -2,7 +2,7 @@ package rpc
 
 import (
 	"context"
-	"github.com/airchains-network/decentralized-sequencer/rpc/handler"
+	"github.com/airchains-network/tracks/rpc/handler"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"github.com/sirupsen/logrus"

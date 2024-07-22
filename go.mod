@@ -1,4 +1,4 @@
-module github.com/airchains-network/decentralized-sequencer
+module github.com/airchains-network/tracks
 
 go 1.21.1
 

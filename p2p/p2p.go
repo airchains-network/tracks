@@ -4,8 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	logs "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/node/shared"
+	logs "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/node/shared"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -17,6 +17,7 @@ import (
 	"math/big"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sort"
 	"sync"
 	"syscall"
@@ -140,16 +141,15 @@ func getAllPeers(node host.Host) []peer.AddrInfo {
 }
 
 func startNode(ctx context.Context) (host.Host, error) {
-	//homeDir, _ := os.UserHomeDir()
-	//filePath := filepath.Join(homeDir, ".tracks/config/sequencer.toml")
-	//privateKey, err := loadPrivateKey(filePath)
-	//if err != nil {
-	//	return nil, fmt.Errorf("failed to load private key: %w", err)
-	//}
-	//fmt.Println(privateKey)
-
+	homeDir, _ := os.UserHomeDir()
+	filePath := filepath.Join(homeDir, ".tracks/config/identity.info")
+	privateKey, err := loadPrivateKey(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load private key: %w", err)
+	}
 	node, err := libp2p.New(
 		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/2300"),
+		libp2p.Identity(privateKey),
 		libp2p.Ping(false),
 	)
 	if err != nil {

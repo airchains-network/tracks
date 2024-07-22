@@ -2,10 +2,10 @@ package command
 
 import (
 	"errors"
-	"github.com/airchains-network/decentralized-sequencer/blocksync"
-	logger "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/node"
-	"github.com/airchains-network/decentralized-sequencer/node/shared"
+	"github.com/airchains-network/tracks/blocksync"
+	logger "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/node"
+	"github.com/airchains-network/tracks/node/shared"
 	"github.com/spf13/cobra"
 )
 

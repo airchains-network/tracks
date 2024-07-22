@@ -1,8 +1,8 @@
 package zkpCmd
 
 import (
-	v1 "github.com/airchains-network/decentralized-sequencer/zk/v1EVM"
-	v1Wasm "github.com/airchains-network/decentralized-sequencer/zk/v1WASM"
+	v1 "github.com/airchains-network/tracks/zk/v1EVM"
+	v1Wasm "github.com/airchains-network/tracks/zk/v1WASM"
 	"github.com/spf13/cobra"
 )
 

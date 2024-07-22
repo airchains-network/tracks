@@ -71,11 +71,11 @@ Create a station on the junction with the necessary parameters.
 > NOTE: don't forget to replace `accountAddressArray` with the addresses you want to make track member. Replace it with  your new address 
 
 ```shell
-accountAddressArray="air1knf2an5efl8d9t5w75uds4ty8uj0scxx9yg783" #! replace it with your address
+accountAddressArray="air16hrzql0js3awfl2cfqhf3kmachxueevw4a6f4d" #! replace it with your address
 accountName="dummy"
 accountPath=".tracks/junction-accounts/keys"
 #jsonRPC="http://0.0.0.0:26657" # localhost testing
-jsonRPC="https://junction-testnet-rpc.synergynodes.com/" # junction testnet 
+jsonRPC="https://airchains-testnet-rpc.itrocket.net/" # junction testnet 
 bootstrapNode="/ip4/192.168.1.24/tcp/2300/p2p/12D3KooWFoN66sCWotff1biUcnBE2vRTmYJRHJqZy27x1EpBB6AM"
 info="EVM Track"
 

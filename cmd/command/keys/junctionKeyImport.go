@@ -1,8 +1,8 @@
 package keys
 
 import (
-	logs "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/utils"
+	logs "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/utils"
 	"github.com/spf13/cobra"
 )
 

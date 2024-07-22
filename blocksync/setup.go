@@ -3,8 +3,8 @@ package blocksync
 import (
 	"encoding/json"
 	"fmt"
-	logs "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/types"
+	logs "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"log"
 	"os"

@@ -2,7 +2,7 @@ package v1EVM
 
 import (
 	"encoding/json"
-	logs "github.com/airchains-network/decentralized-sequencer/log"
+	logs "github.com/airchains-network/tracks/log"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
 	"os"

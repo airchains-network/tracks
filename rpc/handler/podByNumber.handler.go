@@ -3,8 +3,8 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/node/shared"
-	"github.com/airchains-network/decentralized-sequencer/types"
+	"github.com/airchains-network/tracks/node/shared"
+	"github.com/airchains-network/tracks/types"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"time"

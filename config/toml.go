@@ -2,8 +2,8 @@ package config
 
 import (
 	"bytes"
-	logs "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/utils"
+	logs "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/utils"
 	"path/filepath"
 	"strings"
 	"text/template"

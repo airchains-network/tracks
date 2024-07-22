@@ -2,7 +2,7 @@ package p2p
 
 import (
 	"encoding/json"
-	"github.com/airchains-network/decentralized-sequencer/types"
+	"github.com/airchains-network/tracks/types"
 )
 
 func DecodeGossipData(data []byte) (string, []byte, error) {

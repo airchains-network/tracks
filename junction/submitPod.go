@@ -3,10 +3,10 @@ package junction
 import (
 	"context"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/junction/types"
-	logs "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/node/shared"
-	utilis "github.com/airchains-network/decentralized-sequencer/utils"
+	"github.com/airchains-network/tracks/junction/types"
+	logs "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/node/shared"
+	utilis "github.com/airchains-network/tracks/utils"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 	"github.com/rs/zerolog"
@@ -63,18 +63,6 @@ func SubmitCurrentPod() (success bool) {
 		return false
 	}
 
-	ctx := context.Background()
-	gas := utilis.GenerateRandomWithFavour(100, 300, [2]int{120, 250}, 0.7)
-	gasFees := fmt.Sprintf("%damf", gas)
-	log.Info().Str("module", "junction").Str("Gas Fees Used to Validate VRF", gasFees)
-	accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
-	if err != nil {
-		logs.Log.Error("Switchyard client connection error")
-		logs.Log.Error(err.Error())
-
-		return false
-	}
-
 	unixTime := time.Now().Unix()
 	currentTime := fmt.Sprintf("%d", unixTime)
 
@@ -97,20 +85,37 @@ func SubmitCurrentPod() (success bool) {
 	}
 
 	for {
-		txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
-		if errTxRes != nil {
-			errStr := errTxRes.Error()
-			log.Error().Str("module", "junction").Str("Error", errStr).Msg("Error in SubmitPod Transaction")
+		ctx := context.Background()
+		gas := utilis.GenerateRandomWithFavour(300, 600, [2]int{320, 550}, 0.7)
 
-			log.Debug().Str("module", "junction").Msg("Retrying SubmitPod transaction after 10 seconds..")
-			time.Sleep(10 * time.Second)
-			//return false
-		} else {
-			// update txHash of submit pod in pod state
-			currentPodState.InitPodTxHash = txRes.TxHash
-			shared.SetPodState(currentPodState)
-			log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Pod submitted successfully")
-			return true
+		for {
+			gasFees := fmt.Sprintf("%damf", gas)
+			log.Info().Str("module", "junction").Str("Gas Fees Used to Submit Pod", gasFees)
+
+			accountClient, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRpc), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees(gasFees))
+			if err != nil {
+				logs.Log.Error("Switchyard client connection error")
+				logs.Log.Error(err.Error())
+				return false
+			}
+
+			txRes, errTxRes := accountClient.BroadcastTx(ctx, newTempAccount, &msg)
+			if errTxRes != nil {
+				errStr := errTxRes.Error()
+				log.Error().Str("module", "junction").Str("Error", errStr).Msg("Error in SubmitPod Transaction")
+				log.Debug().Str("module", "junction").Msg("Retrying SubmitPod transaction after 10 seconds..")
+				time.Sleep(10 * time.Second)
+
+				// Increase gas and update gasFees
+				gas += 200
+				log.Info().Str("module", "junction").Str("Updated Gas Fees for Retry", gasFees)
+			} else {
+				// update txHash of submit pod in pod state
+				currentPodState.InitPodTxHash = txRes.TxHash
+				shared.SetPodState(currentPodState)
+				log.Info().Str("module", "junction").Str("txHash", txRes.TxHash).Msg("Pod submitted successfully")
+				return true
+			}
 		}
 	}
 }

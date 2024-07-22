@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	logs "github.com/airchains-network/decentralized-sequencer/log"
-	stationTypes "github.com/airchains-network/decentralized-sequencer/types"
-	"github.com/airchains-network/decentralized-sequencer/types/svmTypes"
-	utilis "github.com/airchains-network/decentralized-sequencer/utils"
+	logs "github.com/airchains-network/tracks/log"
+	stationTypes "github.com/airchains-network/tracks/types"
+	"github.com/airchains-network/tracks/types/svmTypes"
+	utilis "github.com/airchains-network/tracks/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -97,9 +97,10 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 	for {
 		tx, isPending, err = client.TransactionByHash(ctx, txHash)
 		if err != nil {
-			logs.Log.Debug(fmt.Sprintf("Failed to get transaction by hash: %s", err))
-			// Retry transaction
-			log.Println("Retrying the transaction after 10 seconds...")
+			logs.Log.Debug(fmt.Sprintf("Failed to get transaction hash: %s", txHash))
+			logs.Log.Debug(fmt.Sprintf("Error %s", err))
+
+			fmt.Println("Retrying the transaction after 10 seconds...")
 			time.Sleep(time.Second * 10) // Wait for 10 seconds before retrying
 			continue
 		}

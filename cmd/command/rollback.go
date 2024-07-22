@@ -3,11 +3,11 @@ package command
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/airchains-network/decentralized-sequencer/config"
-	logger "github.com/airchains-network/decentralized-sequencer/log"
-	"github.com/airchains-network/decentralized-sequencer/node/shared"
-	"github.com/airchains-network/decentralized-sequencer/p2p"
-	"github.com/airchains-network/decentralized-sequencer/types"
+	"github.com/airchains-network/tracks/config"
+	logger "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/node/shared"
+	"github.com/airchains-network/tracks/p2p"
+	"github.com/airchains-network/tracks/types"
 	"github.com/spf13/cobra"
 	"strconv"
 )
