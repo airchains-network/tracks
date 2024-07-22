@@ -2,28 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
+## [0.0.5]
 
 ### Added
-- Initial version of the project.
+- Added version command.
+- Ensure backward compatibility with version 0.0.4
 - Added CONTRIBUTING.md, AUTHORS.md, and CHANGELOG.md.
-- Implemented basic functionality for XYZ feature.
 
 ### Changed
 - Improved documentation in README.md.
-- Refactored ABC module for better performance.
+- Refactored Junction module for better performance.
 
-### Fixed
-- Fixed a bug in DEF module.
 
-## [0.1.0] - YYYY-MM-DD
+## [0.0.4] - 2024-06-06
 
 ### Added
-- Initial release.
+- Rollback feature added.
+- Ensure backward compatibility with version 0.0.3 when restarting.
+- Keys and mnemonic are saved locally.
 
-## [0.0.1] - YYYY-MM-DD
+## [0.0.3] - 2024-06-05
+
+### Added
+- Can recover the key via mnemonic.
+- Updated transaction failure errors in DA and Junction codes.
+- Ensure compatibility with version 0.0.2 when restarting.
+
+## [0.0.2] - 2024-06-04
+
+### Added
+- Handled error in pod related operations.
+
+## [0.0.1] - 2024-05-31
 
 ### Added
 - Initial setup of the project.
+- Basic project structure and initial configurations.
+****
