@@ -218,7 +218,7 @@ func StoreWasmTransaction(txn []interface{}, db *leveldb.DB, JsonAPI string) {
 			}
 
 			if len(txns.TxResponse.Tx.Body.Messages) == 0 {
-				logs.Log.Warn(fmt.Sprintf("Failed to unmarshal transaction: %s", err))
+				logs.Log.Warn("Transaction contains no messages")
 				time.Sleep(2 * time.Second)
 				continue
 			}
