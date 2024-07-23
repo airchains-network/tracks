@@ -94,16 +94,26 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 	)
 
 	txHash := common.HexToHash(transactionHash)
+	retryCount := 0
+	maxRetries := 7
+
 	for {
 		tx, isPending, err = client.TransactionByHash(ctx, txHash)
 		if err != nil {
 			logs.Log.Debug(fmt.Sprintf("Failed to get transaction hash: %s", txHash))
 			logs.Log.Debug(fmt.Sprintf("Error %s", err))
 
+			retryCount++
+			if retryCount > maxRetries {
+				logs.Log.Warn(fmt.Sprintf(" transaction hash not exist: %s after %d failed attempts", txHash, retryCount))
+				break
+			}
+
 			fmt.Println("Retrying the transaction after 10 seconds...")
-			time.Sleep(time.Second * 10) // Wait for 10 seconds before retrying
+			time.Sleep(time.Second * 5) // Wait for 5 seconds before retrying
 			continue
 		}
+
 		if isPending {
 			logs.Log.Debug("Transaction is pending, waiting for 5 seconds for tx Approval in blockchain")
 			logs.Log.Info(fmt.Sprintf("Transaction type: %d\n", tx.Type()))
@@ -111,6 +121,7 @@ func StoreEVMTransactions(client *ethclient.Client, ctx context.Context, ldt *le
 			time.Sleep(time.Second * 5)
 			continue
 		}
+
 		break
 	}
 
