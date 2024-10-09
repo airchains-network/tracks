@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/airchains-network/tracks/config"
-	junctionTypes "github.com/airchains-network/tracks/junction/types"
+	junctionTypes "github.com/airchains-network/tracks/junction/junction/types"
 	logs "github.com/airchains-network/tracks/log"
 	"github.com/airchains-network/tracks/node/shared"
 	"github.com/airchains-network/tracks/types"
@@ -32,6 +32,43 @@ func CreateGenesisJson(stationInfo types.StationInfo, verificationKey groth16.Ve
 		VerificationKey:    verificationKey,
 		ExtraArg:           extraArg,
 		StationInfo:        stationInfo,
+	}
+
+	// Marshal the data into JSON
+	jsonBytes, err := json.MarshalIndent(genesisData, "", "    ")
+	if err != nil {
+		logs.Log.Error("Error marshaling to JSON:" + err.Error())
+		return false
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		logs.Log.Error("Error in getting home dir path: " + err.Error())
+		return false
+	}
+
+	GenesisFilePath := filepath.Join(homeDir, config.DefaultGenesisFilePath)
+
+	// Write the JSON data to a file
+	err = os.WriteFile(GenesisFilePath, jsonBytes, 0644)
+	if err != nil {
+		logs.Log.Error("Error writing JSON to file:" + err.Error())
+		return false
+	} else {
+		logs.Log.Info(GenesisFilePath + " created")
+	}
+
+	return true
+}
+func CreateGenesisTrackGateJson(stationInfo types.StationInfoDetails, stationId string, tracks []string, txHash string, transactionTime string, creator string) (success bool) {
+
+	genesisData := types.GenesisTrackGateDataType{
+		StationId:    stationId,
+		Submitter:    creator,
+		CreationTime: transactionTime,
+		TxHash:       txHash,
+		Operators:    tracks,
+		StationInfo:  stationInfo,
 	}
 
 	// Marshal the data into JSON

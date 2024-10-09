@@ -2,13 +2,13 @@ package junction
 
 import (
 	"context"
-	"github.com/airchains-network/tracks/junction/types"
+	types2 "github.com/airchains-network/tracks/junction/junction/types"
 	logs "github.com/airchains-network/tracks/log"
 	"github.com/airchains-network/tracks/node/shared"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 )
 
-func QueryVRF() (vrfRecord *types.VrfRecord) {
+func QueryVRF() (vrfRecord *types2.VrfRecord) {
 
 	jsonRpc, stationId, _, _, _, _, err := GetJunctionDetails()
 	if err != nil {
@@ -25,8 +25,8 @@ func QueryVRF() (vrfRecord *types.VrfRecord) {
 		return nil
 	}
 
-	queryClient := types.NewQueryClient(client.Context())
-	queryResp, err := queryClient.FetchVrn(ctx, &types.QueryFetchVrnRequest{
+	queryClient := types2.NewQueryClient(client.Context())
+	queryResp, err := queryClient.FetchVrn(ctx, &types2.QueryFetchVrnRequest{
 		PodNumber: podNumber,
 		StationId: stationId,
 	})
@@ -38,7 +38,7 @@ func QueryVRF() (vrfRecord *types.VrfRecord) {
 	return queryResp.Details
 }
 
-func QueryPod(podNumber uint64) (pod *types.Pods) {
+func QueryPod(podNumber uint64) (pod *types2.Pods) {
 
 	jsonRpc, stationId, _, _, _, _, err := GetJunctionDetails()
 	if err != nil {
@@ -53,8 +53,8 @@ func QueryPod(podNumber uint64) (pod *types.Pods) {
 		return nil
 	}
 
-	queryClient := types.NewQueryClient(client.Context())
-	queryResp, err := queryClient.GetPod(ctx, &types.QueryGetPodRequest{StationId: stationId, PodNumber: podNumber})
+	queryClient := types2.NewQueryClient(client.Context())
+	queryResp, err := queryClient.GetPod(ctx, &types2.QueryGetPodRequest{StationId: stationId, PodNumber: podNumber})
 	if err != nil {
 		//logs.Log.Error("Error fetching VRF: " + err.Error())
 		return nil
@@ -77,8 +77,8 @@ func QueryLatestVerifiedBatch() uint64 {
 		return 0
 	}
 
-	queryClient := types.NewQueryClient(client.Context())
-	queryResp, err := queryClient.GetLatestVerifiedPodNumber(ctx, &types.QueryGetLatestVerifiedPodNumberRequest{StationId: stationId})
+	queryClient := types2.NewQueryClient(client.Context())
+	queryResp, err := queryClient.GetLatestVerifiedPodNumber(ctx, &types2.QueryGetLatestVerifiedPodNumberRequest{StationId: stationId})
 	if err != nil {
 		return 0
 	}

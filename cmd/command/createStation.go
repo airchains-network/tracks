@@ -2,8 +2,9 @@ package command
 
 import (
 	"fmt"
-	"github.com/airchains-network/tracks/junction"
-	junctionTypes "github.com/airchains-network/tracks/junction/types"
+	"github.com/airchains-network/tracks/junction/junction"
+	junctionTypes "github.com/airchains-network/tracks/junction/junction/types"
+	"github.com/airchains-network/tracks/junction/trackgate"
 	logs "github.com/airchains-network/tracks/log"
 	"github.com/airchains-network/tracks/node/shared"
 	"github.com/airchains-network/tracks/types"
@@ -67,16 +68,25 @@ var CreateStation = &cobra.Command{
 		}
 
 		extraArg := junctionTypes.StationArg{
-			TrackType: "Airchains Sequencer",
+			TrackType: conf.Sequencer.SequencerType,
 			DaType:    conf.DA.DaType,
 			Prover:    "Airchains",
 		}
 
 		addressPrefix := "air"
-		success := junction.CreateStation(extraArg, uuid.New().String(), stationInfo, stationArgs.accountName, stationArgs.accountPath, stationArgs.jsonRPC, verificationKey, addressPrefix, stationArgs.tracks, stationArgs.bootstrapNode)
-		if !success {
-			logs.Log.Error("Failed to create new station due to above error")
-			return
+
+		if extraArg.TrackType == "espresso" {
+			success := trackgate.InitStation(stationArgs.accountName, stationArgs.accountPath, stationArgs.jsonRPC, verificationKey, stationArgs.bootstrapNode, conf, addressPrefix)
+			if !success {
+				logs.Log.Error("Failed to create new station due to above error")
+				return
+			}
+		} else {
+			success := junction.CreateStation(extraArg, uuid.New().String(), stationInfo, stationArgs.accountName, stationArgs.accountPath, stationArgs.jsonRPC, verificationKey, addressPrefix, stationArgs.tracks, stationArgs.bootstrapNode)
+			if !success {
+				logs.Log.Error("Failed to create new station due to above error")
+				return
+			}
 		}
 
 		logs.Log.Info("Successfully created station")

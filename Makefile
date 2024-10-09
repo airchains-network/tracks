@@ -29,7 +29,7 @@ build: check-clean
 # Check if the working directory is clean
 .PHONY: check-clean
 check-clean:
-	@git diff-index --quiet HEAD -- || (echo "Working directory is not clean. Commit or stash your changes before building." && exit 1)
+	@#git diff-index --quiet HEAD -- || (echo "Working directory is not clean. Commit or stash your changes before building." && exit 1)
 
 # Install dependencies
 .PHONY: deps

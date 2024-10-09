@@ -27,8 +27,25 @@ moniker="monkey"
 stationRpc="http://127.0.0.1:8545"
 stationAPI="http://127.0.0.1:8545"
 stationType="evm" 
+sequencerType="mock"
+daName="mock"
+./build/tracks init --daRpc "$daRpc" --daKey "$daKey" --daType "$daType" --moniker "$moniker" --stationRpc "$stationRpc" --stationAPI "$stationAPI" --stationType "$stationType"  --sequencerType "$sequencerType" --daName "$daName"
+```
 
-./build/tracks init --daRpc "$daRpc" --daKey "$daKey" --daType "$daType" --moniker "$moniker" --stationRpc "$stationRpc" --stationAPI "$stationAPI" --stationType "$stationType"
+Initialise the sequencer for Espresso 
+```sh
+sequencerType="espresso"
+daRpc="mock-rpc"
+daKey="mockKey"
+daType="mock"
+moniker="monkey"
+stationRpc="http://127.0.0.1:8545"
+stationAPI="http://127.0.0.1:8545"
+stationType="evm" 
+sequencerRPC="http://espresso.com/"
+daName="mock"
+
+./build/tracks init --daRpc "$daRpc" --daKey "$daKey" --daName "$daName" --daType "$daType" --moniker "$moniker" --stationRpc "$stationRpc" --stationAPI "$stationAPI" --stationType "$stationType" --sequencerType "$sequencerType" --sequencerRpc "$sequencerRPC"
 ```
 
 ## Step 4: Initialize the Prover
@@ -71,11 +88,11 @@ Create a station on the junction with the necessary parameters.
 > NOTE: don't forget to replace `accountAddressArray` with the addresses you want to make track member. Replace it with  your new address 
 
 ```shell
-accountAddressArray="air16hrzql0js3awfl2cfqhf3kmachxueevw4a6f4d" #! replace it with your address
+    accountAddressArray="air16yhjt95p7eqyxm6wl3fmv2pdfv7qfx7m8mdyhv" #! replace it with your address
 accountName="dummy"
 accountPath=".tracks/junction-accounts/keys"
-#jsonRPC="http://0.0.0.0:26657" # localhost testing
-jsonRPC="https://airchains-testnet-rpc.itrocket.net/" # junction testnet 
+jsonRPC="http://0.0.0.0:26657" # localhost testing
+#jsonRPC="https://airchains-testnet-rpc.itrocket.net/" # junction testnet 
 bootstrapNode="/ip4/192.168.1.24/tcp/2300/p2p/12D3KooWFoN66sCWotff1biUcnBE2vRTmYJRHJqZy27x1EpBB6AM"
 info="EVM Track"
 

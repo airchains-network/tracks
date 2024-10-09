@@ -8,7 +8,8 @@ import (
 	"github.com/airchains-network/tracks/da/eigen"
 	mock "github.com/airchains-network/tracks/da/mockda"
 	"github.com/airchains-network/tracks/junction"
-	junctionTypes "github.com/airchains-network/tracks/junction/types"
+	junction2 "github.com/airchains-network/tracks/junction/junction"
+	junctionTypes "github.com/airchains-network/tracks/junction/junction/types"
 	logs "github.com/airchains-network/tracks/log"
 	"github.com/airchains-network/tracks/node/shared"
 	"github.com/airchains-network/tracks/types"
@@ -156,7 +157,7 @@ func GenerateUnverifiedPods() {
 			}
 
 			if shared.GetPodState().LatestTxState == shared.TxStateInitVRF {
-				success, _ := junction.InitVRF()
+				success, _ := junction2.InitVRF()
 				if !success {
 					logs.Log.Error("Failed to Init VRF")
 					return
@@ -169,7 +170,7 @@ func GenerateUnverifiedPods() {
 			//os.Exit(0)
 
 			if shared.GetPodState().LatestTxState == shared.TxStateVerifyVRF {
-				success := junction.ValidateVRF(addr)
+				success := junction2.ValidateVRF(addr)
 				if !success {
 					logs.Log.Error("Failed to Validate VRF")
 					return
@@ -353,7 +354,7 @@ func GenerateUnverifiedPods() {
 				}
 
 				// submit pod
-				success := junction.SubmitCurrentPod()
+				success := junction2.SubmitCurrentPod()
 				if !success {
 					logs.Log.Error("Failed to submit pod")
 					return
@@ -366,7 +367,7 @@ func GenerateUnverifiedPods() {
 
 			// verify pod
 			if shared.GetPodState().LatestTxState == shared.TxStateVerifyPod {
-				success := junction.VerifyCurrentPod()
+				success := junction2.VerifyCurrentPod()
 				if !success {
 					logs.Log.Error("Failed to Transact Verify pod")
 					return
@@ -382,7 +383,7 @@ func GenerateUnverifiedPods() {
 			GenerateUnverifiedPods() // generate next pod
 		} else {
 			PodNumber := int(shared.GetPodState().LatestPodHeight)
-			success, addr := junction.InitVRF()
+			success, addr := junction2.InitVRF()
 			if !success {
 				logs.Log.Error("Failed to Init VRF")
 				return

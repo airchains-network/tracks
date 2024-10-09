@@ -99,6 +99,19 @@ validatePods = {{ .Consensus.ValidatePods }}
 daKey = "{{ .DA.DaKey }}"
 daRPC = "{{ .DA.DaRPC }}"
 daType = "{{ .DA.DaType }}"
+daVersion = "{{ .DA.DaVersion }}"
+
+[sequencer]
+sequencerType = "{{ .Sequencer.SequencerType }}"
+sequencerKey = "{{ .Sequencer.SequencerKey }}"
+sequencerRpc = "{{ .Sequencer.SequencerRPC }}"
+sequencerVersion = "{{ .Sequencer.SequencerVersion }}"
+
+[prover]
+proverType = "{{ .Prover.ProverType }}"
+proverRpc = "{{ .Prover.ProverRPC }}"
+proverKey = "{{ .Prover.ProverKey }}"
+proverVersion = "{{ .Prover.ProverVersion }}"
 
 [junction]
 accountName = "{{ .Junction.AccountName }}"

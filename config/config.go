@@ -31,6 +31,8 @@ type Config struct {
 	StateSync  *StateSyncConfig `toml:"state_sync"`
 	Consensus  *ConsensusConfig `toml:"consensus"`
 	DA         *DAConfig        `toml:"da"`
+	Sequencer  *SequencerConfig `toml:"sequencer"`
+	Prover     *ProverConfig    `toml:"prover"`
 	Station    *StationConfig   `toml:"station"`
 	Junction   *JunctionConfig  `toml:"junction"`
 }
@@ -45,6 +47,8 @@ func DefaultConfig() *Config {
 		DA:         DefaultDAConfig(),
 		Station:    DefaultStationConfig(),
 		Junction:   DefaultJunctionConfig(),
+		Sequencer:  DefaultSequencerConfig(),
+		Prover:     DefaultProverConfig(),
 	}
 }
 
@@ -214,16 +218,52 @@ func DefaultConsensusConfig() *ConsensusConfig {
 }
 
 type DAConfig struct {
-	DaType string
-	DaRPC  string
-	DaKey  string
+	DaName    string
+	DaType    string
+	DaRPC     string
+	DaKey     string
+	DaVersion string
 }
 
 func DefaultDAConfig() *DAConfig {
 	return &DAConfig{
-		DaType: "",
-		DaRPC:  "",
-		DaKey:  "",
+		DaName:    "",
+		DaType:    "",
+		DaRPC:     "",
+		DaKey:     "",
+		DaVersion: "",
+	}
+}
+
+type SequencerConfig struct {
+	SequencerType    string
+	SequencerRPC     string
+	SequencerKey     string
+	SequencerVersion string
+}
+
+func DefaultSequencerConfig() *SequencerConfig {
+	return &SequencerConfig{
+		SequencerType:    "",
+		SequencerRPC:     "",
+		SequencerKey:     "",
+		SequencerVersion: "",
+	}
+}
+
+type ProverConfig struct {
+	ProverType    string
+	ProverRPC     string
+	ProverVersion string
+	ProverKey     string
+}
+
+func DefaultProverConfig() *ProverConfig {
+	return &ProverConfig{
+		ProverType:    "",
+		ProverRPC:     "",
+		ProverVersion: "",
+		ProverKey:     "",
 	}
 }
 

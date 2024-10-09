@@ -40,6 +40,8 @@ func main() {
 	rootCmd.AddCommand(command.KeyGenCmd)
 	rootCmd.AddCommand(command.ProverGenCMD)
 	rootCmd.AddCommand(command.CreateStation)
+	rootCmd.AddCommand(command.CreateSchema)
+	rootCmd.AddCommand(command.SchemaEngage)
 	rootCmd.AddCommand(command.Rollback)
 	rootCmd.AddCommand(versionCmd) // Add version command
 
@@ -65,14 +67,31 @@ func main() {
 
 	// Define flags for InitCmd
 	command.InitCmd.Flags().String("moniker", "", "Moniker for the Tracks")
+
 	command.InitCmd.Flags().String("stationType", "", "Station Type for the Tracks (evm | cosmwasm | svm)")
-	command.InitCmd.Flags().String("daType", "mock", "DA Type for the Tracks (avail | celestia | eigen | mock)")
-	command.InitCmd.Flags().String("daRpc", "", "DA RPC for the Tracks")
-	command.InitCmd.Flags().String("daKey", "", "DA Key for the Tracks")
 	command.InitCmd.Flags().String("stationRpc", "", "Station RPC for the Tracks")
 	command.InitCmd.Flags().String("stationAPI", "", "Station API for the Tracks")
+
+	command.InitCmd.Flags().String("daType", "mock", "DA Type for the Tracks (avail | celestia | eigen | mock)")
+	command.InitCmd.Flags().String("daVersion", "mock", "DA Version")
+	command.InitCmd.Flags().String("daName", "mock", "DA Name")
+	command.InitCmd.Flags().String("daRpc", "", "DA RPC for the Tracks")
+	command.InitCmd.Flags().String("daKey", "", "DA Key for the Tracks")
+
+	command.InitCmd.Flags().String("sequencerType", "mock", "sequencer Type for the Tracks")
+	command.InitCmd.Flags().String("sequencerVersion", "mock", "sequencer Version")
+	command.InitCmd.Flags().String("sequencerRpc", "", "sequencer RPC for the Tracks")
+	command.InitCmd.Flags().String("sequencerKey", "", "sequencer Key for the Tracks")
+
+	command.InitCmd.Flags().String("proverType", "mock", "prover Type for the Tracks")
+	command.InitCmd.Flags().String("proverVersion", "mock", "prover Version")
+	command.InitCmd.Flags().String("proverRpc", "", "prover RPC for the Tracks")
+	command.InitCmd.Flags().String("proverKey", "", "prover Key for the Tracks")
+
 	command.InitCmd.MarkFlagRequired("moniker")
+	command.InitCmd.MarkFlagRequired("sequencerType")
 	command.InitCmd.MarkFlagRequired("daRpc")
+	command.InitCmd.MarkFlagRequired("daName")
 	command.InitCmd.MarkFlagRequired("daKey")
 	command.InitCmd.MarkFlagRequired("stationType")
 	command.InitCmd.MarkFlagRequired("stationRpc")

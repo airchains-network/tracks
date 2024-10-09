@@ -8,7 +8,8 @@ import (
 	"github.com/airchains-network/tracks/da/eigen"
 	mock "github.com/airchains-network/tracks/da/mockda"
 	"github.com/airchains-network/tracks/junction"
-	junctionTypes "github.com/airchains-network/tracks/junction/types"
+	junction2 "github.com/airchains-network/tracks/junction/junction"
+	junctionTypes "github.com/airchains-network/tracks/junction/junction/types"
 	logs "github.com/airchains-network/tracks/log"
 	"github.com/airchains-network/tracks/node/shared"
 	"github.com/airchains-network/tracks/types"
@@ -187,7 +188,7 @@ func processVerifiedVRF(VRFInitiatedMsg *VRFInitiatedMsgData, ad *AccountDetails
 
 	// verify
 	VrfInitiatorAddress := VRFInitiatedMsg.VrfInitiatorAddress
-	success := junction.ValidateVRF(VrfInitiatorAddress)
+	success := junction2.ValidateVRF(VrfInitiatorAddress)
 	if !success {
 		logs.Log.Error("Failed to Validate VRF")
 		return
@@ -413,7 +414,7 @@ func VRNValidatedMsgHandler(dataByte []byte) {
 		}
 
 		// submit pod to junction
-		success := junction.SubmitCurrentPod()
+		success := junction2.SubmitCurrentPod()
 		if !success {
 			logs.Log.Error("Failed to submit pod")
 			return
@@ -508,7 +509,7 @@ func (h *PodSubmittedMessageHandler) processPodSubmission() {
 }
 
 func (h *PodSubmittedMessageHandler) verifyAndBroadcastPod() {
-	success := junction.VerifyCurrentPod()
+	success := junction2.VerifyCurrentPod()
 	if !success {
 		logs.Log.Error(LogPodVerifyTransact)
 		return
