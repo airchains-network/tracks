@@ -3,37 +3,25 @@ package p2p
 import (
 	"encoding/json"
 	"fmt"
+	//"github.com/airchains-network/tracks/config"
 	"github.com/airchains-network/tracks/da/avail"
 	"github.com/airchains-network/tracks/da/celestia"
 	"github.com/airchains-network/tracks/da/eigen"
 	mock "github.com/airchains-network/tracks/da/mockda"
-	"github.com/airchains-network/tracks/junction"
-	junction2 "github.com/airchains-network/tracks/junction/junction"
-	junctionTypes "github.com/airchains-network/tracks/junction/junction/types"
+	"github.com/airchains-network/tracks/junction/trackgate"
 	logs "github.com/airchains-network/tracks/log"
 	"github.com/airchains-network/tracks/node/shared"
 	"github.com/airchains-network/tracks/types"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"math/rand"
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
-func BatchGeneration(wg *sync.WaitGroup, sequencerType string) {
-	defer wg.Done()
-	if sequencerType == "espresso" {
-		TrackgatePodGenerator()
-	} else {
-		GenerateUnverifiedPods()
-	}
-}
-
-func GenerateUnverifiedPods() {
+func TrackgatePodGenerator() {
 	zerolog.TimeFieldFormat = time.RFC3339
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	log.Info().
@@ -41,6 +29,7 @@ func GenerateUnverifiedPods() {
 		Msg("Generating New unverified pods")
 
 	connection := shared.Node.NodeConnections
+
 	staticDBConnection := connection.GetStaticDatabaseConnection()
 	txnDBConnection := connection.GetTxnDatabaseConnection()
 
@@ -56,12 +45,9 @@ func GenerateUnverifiedPods() {
 
 	var (
 		previousTrackAppHash []byte
-		trackAppHash         []byte
-		witness              []byte
-		uZKP                 []byte
-		MRH                  []byte
 		batchInput           *types.BatchStruct
 		txState              string
+		trackAppHash         []byte
 		batchNumber          int
 	)
 
@@ -75,23 +61,23 @@ func GenerateUnverifiedPods() {
 		currentPodNumber = 1
 	}
 
-	podData := junction.QueryPod(uint64(currentPodNumber))
-	if podData != nil {
-		if podData.IsVerified == true {
-			currentPodNumber++
-		}
-	}
+	//podData := junction.QueryPod(uint64(currentPodNumber))
+	//if podData != nil {
+	//	if podData.IsVerified == true {
+	//		currentPodNumber++
+	//	}
+	//}
 
 	batchNumber = currentPodNumber
 	log.Info().Str("module", "p2p").Msg(fmt.Sprintf("Processing Pod Number: %d", batchNumber))
 
+	// create batch
 	if podStateData.LatestTxState == shared.TxStatePreInit {
 		txState = shared.TxStateInitVRF
 		previousTrackAppHash = podStateData.TracksAppHash
 		if previousTrackAppHash == nil {
 			previousTrackAppHash = []byte("nil")
 		}
-
 		baseCfg, err := shared.LoadConfig()
 		if err != nil {
 			log.Error().Str("module", "p2p").Msg("Error in loading config")
@@ -100,26 +86,23 @@ func GenerateUnverifiedPods() {
 		stationVariantLowerCase := strings.ToLower(stationVariant)
 
 		if stationVariantLowerCase == "evm" {
-			witness, uZKP, MRH, batchInput, err = createEVMPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+			batchInput, err = createEVMBatch(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
 			CheckErrorAndExit(err, "Error in creating POD", 0)
 		} else if stationVariantLowerCase == "wasm" {
-			witness, uZKP, MRH, batchInput, err = createWasmPOD(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+			batchInput, err = createWasmBatch(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
 			CheckErrorAndExit(err, "Error in creating POD", 0)
 		}
 
-		trackAppHash = generatePodHash(witness, uZKP, MRH, rawCurrentPodNumber)
-		updateNewPodState(trackAppHash, witness, uZKP, MRH, uint64(batchNumber), batchInput, txState)
+		trackAppHash = generateBatchHash(rawCurrentPodNumber)
+		updateNewBatchState(trackAppHash, uint64(batchNumber), batchInput, txState)
 	} else {
 		trackAppHash = podStateData.TracksAppHash
-		witness = podStateData.LatestPublicWitness
-		uZKP = podStateData.LatestPodProof
-		MRH = podStateData.LatestPodHash
-		pMRH := podStateData.PreviousPodHash
 		batchInput = podStateData.Batch
 
-		storeNewPodState(trackAppHash, witness, uZKP, pMRH, MRH, uint64(batchNumber), batchInput, txState)
+		storeNewBatchState(trackAppHash, uint64(batchNumber), batchInput, txState)
 	}
 
+	//	multi node
 	selectedMaster := MasterTracksSelection(Node, string(previousTrackAppHash))
 	decodedMaster, err := peer.Decode(selectedMaster)
 	CheckErrorAndExit(err, "Error in decoding master", 0)
@@ -155,56 +138,15 @@ func GenerateUnverifiedPods() {
 				return
 			}
 
-			addr, err := junction.GetAddress()
+			baseConfig, err := shared.LoadConfig()
 			if err != nil {
-				logs.Log.Error("Error in getting address")
-				return
+				fmt.Println("Error loading configuration")
 			}
-
-			if shared.GetPodState().LatestTxState == shared.TxStateInitVRF {
-				success, _ := junction2.InitVRF()
-				if !success {
-					logs.Log.Error("Failed to Init VRF")
-					return
-				}
-				updateTxState(shared.TxStateVerifyVRF)
-			} else {
-				log.Debug().Str("module", "p2p").Msg("VRF is already initiated, moving to next step")
-			}
-
-			//os.Exit(0)
-
-			if shared.GetPodState().LatestTxState == shared.TxStateVerifyVRF {
-				success := junction2.ValidateVRF(addr)
-				if !success {
-					logs.Log.Error("Failed to Validate VRF")
-					return
-				}
-				updateTxState(shared.TxStateSubmitPod)
-
-				// check if VRF is successfully validated
-				var vrfRecord *junctionTypes.VrfRecord
-				vrfRecord = junction.QueryVRF()
-				if vrfRecord == nil {
-					logs.Log.Error("VRF record is nil")
-					return
-				}
-				if !vrfRecord.IsVerified {
-					logs.Log.Error("Verification of VRF is failed, need Voting for correct VRN")
-					return
-				}
-			} else {
-				log.Debug().Str("module", "p2p").Msg("VRF is already validated, moving to next step")
-			}
-			//os.Exit(0)
 
 			if shared.GetPodState().LatestTxState == shared.TxStateSubmitPod {
 
 				DaBatchSaver := connection.DataAvailabilityDatabaseConnection
-				baseConfig, err := shared.LoadConfig()
-				if err != nil {
-					fmt.Println("Error loading configuration")
-				}
+
 				Datype := baseConfig.DA.DaType
 				var (
 					daCheck    string
@@ -358,93 +300,29 @@ func GenerateUnverifiedPods() {
 					return
 				}
 
-				// submit pod
-				success := junction2.SubmitCurrentPod()
-				if !success {
-					logs.Log.Error("Failed to submit pod")
-					return
-				}
-				updateTxState(shared.TxStateVerifyPod)
-			} else {
-				log.Warn().Str("module", "p2p").Msg("Pod already submitted, moving to next step")
-			}
-			//os.Exit(0)
-
-			// verify pod
-			if shared.GetPodState().LatestTxState == shared.TxStateVerifyPod {
-				success := junction2.VerifyCurrentPod()
-				if !success {
-					logs.Log.Error("Failed to Transact Verify pod")
-					return
-				}
-				updateTxState(shared.TxStatePreInit)
-			} else {
-				log.Error().Str("module", "p2p").Msg("Database Error. LatestTxState should equal to TxStatePreInit at this point")
-				log.Error().Str("module", "p2p").Msg("LatestTxState: " + shared.GetPodState().LatestTxState)
-				return // stop sequencer, there is some error
 			}
 
-			saveVerifiedPOD()        // save data to database
-			GenerateUnverifiedPods() // generate next pod
-		} else {
-			PodNumber := int(shared.GetPodState().LatestPodHeight)
-			success, addr := junction2.InitVRF()
+			// espresso data submit
+			EspressoTxResponse, err := EspressoBatchSubmit(batchInput, baseConfig)
+			if err != nil {
+				logs.Log.Error("Error in submitting data to Espresso")
+				return
+			}
+
+			// schema engage
+			success := trackgate.SchemaEngage(baseConfig, PodNumber, EspressoTxResponse)
 			if !success {
-				logs.Log.Error("Failed to Init VRF")
+				logs.Log.Error("Failed to submit pod")
 				return
-			}
-			logs.Log.Info("VRF initiated")
-
-			// get own address
-			_, _, accountPath, accountName, addressPrefix, tracks, err := junction.GetJunctionDetails()
-			if err != nil {
-				logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
-				return
-			}
-			myAddress, err := junction.CheckIfAccountExists(accountName, accountPath, addressPrefix)
-			if err != nil {
-				logs.Log.Error("Can not get junction wallet address")
-				return
+			} else {
+				logs.Log.Info("Successfully submitted pod")
 			}
 
-			// choose one verifiable random node to verify the VRF
-			// Filter out the peer with own Id
-			var filteredTracks []string
-			for _, track := range tracks {
-				if track != myAddress {
-					filteredTracks = append(filteredTracks, track)
-				}
-			}
-			// Select a random peer from the filtered list
-			selectedTrackAddress := filteredTracks[rand.Intn(len(filteredTracks))]
-			fmt.Println("Selected random address:", selectedTrackAddress)
-
-			// get txHash of vrfInit
-			VrfInitTxHash := shared.GetPodState().VRFInitiationTxHash
-			// send verify VRF message to selected node
-			VRFInitiatedMsg := VRFInitiatedMsgData{
-				PodNumber:            uint64(PodNumber),
-				SelectedTrackAddress: selectedTrackAddress,
-				VrfInitTxHash:        VrfInitTxHash,
-				VrfInitiatorAddress:  addr,
-			}
-
-			VRFInitiatedMsgByte, err := json.Marshal(VRFInitiatedMsg)
-			if err != nil {
-				logs.Log.Error("Error in Marshaling ProofVote Result")
-				return
-			}
-			gossipMsg := types.GossipData{
-				Type: "vrfInitiated",
-				Data: VRFInitiatedMsgByte,
-			}
-			gossipMsgByte, err := json.Marshal(gossipMsg)
-			if err != nil {
-				logs.Log.Error("Error marshaling gossip message")
-				return
-			}
-			BroadcastMessage(CTX, Node, gossipMsgByte)
+			os.Exit(0)
+		} else {
+			log.Warn().Str("module", "p2p").Msg("Pod already submitted, moving to next step")
 		}
+
 	}
 
 }

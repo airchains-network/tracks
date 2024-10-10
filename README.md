@@ -42,13 +42,14 @@ moniker="monkey"
 stationRpc="http://127.0.0.1:8545"
 stationAPI="http://127.0.0.1:8545"
 stationType="evm" 
-sequencerRPC="http://espresso.com/"
+sequencerRPC="https://query.decaf.testnet.espresso.network"
 daName="mock"
+sequencerNamespace="2345678"
 
-./build/tracks init --daRpc "$daRpc" --daKey "$daKey" --daName "$daName" --daType "$daType" --moniker "$moniker" --stationRpc "$stationRpc" --stationAPI "$stationAPI" --stationType "$stationType" --sequencerType "$sequencerType" --sequencerRpc "$sequencerRPC"
+./build/tracks init --daRpc "$daRpc" --daKey "$daKey" --daName "$daName" --daType "$daType" --moniker "$moniker" --stationRpc "$stationRpc" --stationAPI "$stationAPI" --stationType "$stationType" --sequencerType "$sequencerType" --sequencerRpc "$sequencerRPC" --sequencerNamespace "$sequencerNamespace"
 ```
 
-## Step 4: Initialize the Prover
+## Step 4: Initialize the Prover (not required if using external sequencer)
 
 Initialize the prover. Ensure you specify the correct version.
 
@@ -88,7 +89,7 @@ Create a station on the junction with the necessary parameters.
 > NOTE: don't forget to replace `accountAddressArray` with the addresses you want to make track member. Replace it with  your new address 
 
 ```shell
-    accountAddressArray="air16yhjt95p7eqyxm6wl3fmv2pdfv7qfx7m8mdyhv" #! replace it with your address
+accountAddressArray="air16yhjt95p7eqyxm6wl3fmv2pdfv7qfx7m8mdyhv" #! replace it with your address
 accountName="dummy"
 accountPath=".tracks/junction-accounts/keys"
 jsonRPC="http://0.0.0.0:26657" # localhost testing
@@ -98,6 +99,12 @@ info="EVM Track"
 
 ./build/tracks create-station --tracks "$accountAddressArray" --accountName "$accountName" --accountPath "$accountPath" --jsonRPC "$jsonRPC" --info "$info" --bootstrapNode "$bootstrapNode"
 ```
+
+### Create Schema ( In case of Espresso )
+```sh 
+./build/tracks create-schema
+```
+
 
 ## Step 8: Start the Tracks
 

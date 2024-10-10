@@ -106,6 +106,7 @@ sequencerType = "{{ .Sequencer.SequencerType }}"
 sequencerKey = "{{ .Sequencer.SequencerKey }}"
 sequencerRpc = "{{ .Sequencer.SequencerRPC }}"
 sequencerVersion = "{{ .Sequencer.SequencerVersion }}"
+sequencerNamespace = "{{ .Sequencer.SequencerNamespace }}"
 
 [prover]
 proverType = "{{ .Prover.ProverType }}"
@@ -170,5 +171,6 @@ temp_dir = "{{ .StateSync.TempDir }}"
 stationAPI = "{{ .Station.StationAPI }}"
 stationRPC = "{{ .Station.StationRPC }}"
 stationType = "{{ .Station.StationType }}"
+stationSchemaKey = "{{ .Station.StationSchemaKey }}"
 
 `

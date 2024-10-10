@@ -246,6 +246,152 @@ func createWasmPOD(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (witne
 	return witnessVectorByte, proofByte, currentStatusHashByte, &batch, nil
 
 }
+
+func createWasmBatch(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (podData *types.BatchStruct, err error) {
+	baseConfig, err := shared.LoadConfig()
+	if err != nil {
+		return
+	}
+	limitInt, _ := strconv.Atoi(strings.TrimSpace(string(limit)))
+	batchStartIndexInt, _ := strconv.Atoi(strings.TrimSpace(string(batchStartIndex)))
+
+	var batch types.BatchStruct
+
+	var From []string
+	var To []string
+	var Amounts []string
+	var TransactionHash []string
+	var SenderBalances []string
+	var ReceiverBalances []string
+	var Messages []string
+	var TransactionNonces []string
+	var AccountNonces []string
+
+	for i := batchStartIndexInt; i < (config.PODSize * (limitInt + 1)); i++ {
+		findKey := fmt.Sprintf("txns-%d", i+1)
+		txData, err := ldt.Get([]byte(findKey), nil)
+
+		if err != nil {
+			i--
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		var txn types.BatchTransaction
+		err = json.Unmarshal(txData, &txn)
+		if err != nil {
+			logs.Log.Info(fmt.Sprintf("Error in unmarshalling tx data : %s", err.Error()))
+		}
+		fromCheck := utilis.Bech32Decoder(txn.Tx.Body.Messages[0].FromAddress)
+		toCheck := utilis.Bech32Decoder(txn.Tx.Body.Messages[0].ToAddress)
+		transactionHashCheck := utilis.TXHashCheck(txn.TxResponse.TxHash)
+
+		senderBalancesCheck := utilis.AccountBalanceCheck(txn.Tx.Body.Messages[0].FromAddress, txn.TxResponse.Height, baseConfig.Station.StationAPI)
+		receiverBalancesCheck := utilis.AccountBalanceCheck(txn.Tx.Body.Messages[0].ToAddress, txn.TxResponse.Height, baseConfig.Station.StationAPI)
+		accountNoncesCheck := utilis.AccountNounceCheck(txn.Tx.Body.Messages[0].FromAddress, baseConfig.Station.StationAPI)
+
+		From = append(From, fromCheck)
+		To = append(To, toCheck)
+		Amounts = append(Amounts, txn.Tx.Body.Messages[0].Amount[0].Amount)
+		SenderBalances = append(SenderBalances, senderBalancesCheck)
+		ReceiverBalances = append(ReceiverBalances, receiverBalancesCheck)
+		TransactionHash = append(TransactionHash, transactionHashCheck)
+		Messages = append(Messages, fmt.Sprint(txn.Tx.Body.Messages[0]))
+		TransactionNonces = append(TransactionNonces, "0")
+		AccountNonces = append(AccountNonces, accountNoncesCheck)
+	}
+
+	batch.From = From
+	batch.To = To
+	batch.Amounts = Amounts
+	batch.TransactionHash = TransactionHash
+	batch.SenderBalances = SenderBalances
+	batch.ReceiverBalances = ReceiverBalances
+	batch.Messages = Messages
+	batch.TransactionNonces = TransactionNonces
+	batch.AccountNonces = AccountNonces
+
+	return &batch, nil
+
+}
+
+func createEVMBatch(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (podData *types.BatchStruct, err error) {
+	baseConfig, err := shared.LoadConfig()
+	if err != nil {
+		return
+	}
+	limitInt, _ := strconv.Atoi(strings.TrimSpace(string(limit)))
+
+	batchStartIndexInt, _ := strconv.Atoi(strings.TrimSpace(string(batchStartIndex)))
+
+	var batch types.BatchStruct
+
+	var From []string
+	var To []string
+	var Amounts []string
+	var TransactionHash []string
+	var SenderBalances []string
+	var ReceiverBalances []string
+	var Messages []string
+	var TransactionNonces []string
+	var AccountNonces []string
+
+	for i := batchStartIndexInt; i < (config.PODSize * (limitInt + 1)); i++ {
+
+		findKey := fmt.Sprintf("txns-%d", i+1)
+		txData, err := ldt.Get([]byte(findKey), nil)
+		if err != nil {
+			i--
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		var tx types.TransactionStruct
+		err = json.Unmarshal(txData, &tx)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in unmarshalling tx data : %s", err.Error()))
+			os.Exit(0)
+		}
+
+		senderBalancesCheck, err := retryGetBalance(tx.From, int(tx.BlockNumber-1), baseConfig.Station.StationRPC)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in getting sender balance : %s", err.Error()))
+		}
+
+		receiverBalancesCheck, err := retryGetBalance(tx.To, int(tx.BlockNumber-1), baseConfig.Station.StationRPC)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in getting reciver balance : %s", err.Error()))
+		}
+
+		accountNonceCheck, err := retryGetAccountNonce(context.Background(), tx.Hash, int(tx.BlockNumber), baseConfig.Station.StationRPC)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in getting account nonce : %s", err.Error()))
+		}
+
+		From = append(From, tx.From)
+		To = append(To, tx.To)
+		Amounts = append(Amounts, tx.Value)
+		TransactionHash = append(TransactionHash, tx.Hash)
+		SenderBalances = append(SenderBalances, senderBalancesCheck)
+		ReceiverBalances = append(ReceiverBalances, receiverBalancesCheck)
+		Messages = append(Messages, tx.Input)
+		TransactionNonces = append(TransactionNonces, tx.Nonce)
+		AccountNonces = append(AccountNonces, accountNonceCheck)
+	}
+
+	batch.From = From
+	batch.To = To
+	batch.Amounts = Amounts
+	batch.TransactionHash = TransactionHash
+	batch.SenderBalances = SenderBalances
+	batch.ReceiverBalances = ReceiverBalances
+	batch.Messages = Messages
+	batch.TransactionNonces = TransactionNonces
+	batch.AccountNonces = AccountNonces
+
+	return &batch, nil
+
+}
+
 func saveVerifiedPOD() {
 
 	podState := shared.GetPodState()
@@ -293,6 +439,13 @@ func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
 	hash.Write(podNumber)
 	return hash.Sum(nil)
 }
+
+func generateBatchHash(podNumber []byte) []byte {
+	hash := sha256.New()
+	hash.Write(podNumber)
+	return hash.Sum(nil)
+}
+
 func storeNewPodState(CombinedPodHash, Witness, uZKP, previousMRH, MRH []byte, podNumber uint64, batchInput *types.BatchStruct, txState string) {
 	var podState *shared.PodState
 	votes := make(map[string]shared.Votes)
@@ -306,6 +459,19 @@ func storeNewPodState(CombinedPodHash, Witness, uZKP, previousMRH, MRH []byte, p
 		Votes:               votes,
 		TracksAppHash:       CombinedPodHash,
 		Batch:               batchInput,
+	}
+	shared.SetPodState(podState)
+	updatePodStateInDatabase(podState)
+}
+func storeNewBatchState(CombinedPodHash []byte, podNumber uint64, batchInput *types.BatchStruct, txState string) {
+	var podState *shared.PodState
+	votes := make(map[string]shared.Votes)
+	podState = &shared.PodState{
+		LatestPodHeight: podNumber,
+		LatestTxState:   txState,
+		Votes:           votes,
+		TracksAppHash:   CombinedPodHash,
+		Batch:           batchInput,
 	}
 	shared.SetPodState(podState)
 	updatePodStateInDatabase(podState)
@@ -327,12 +493,35 @@ func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uin
 	shared.SetPodState(podState)
 	updatePodStateInDatabase(podState)
 }
+
+func updateNewBatchState(CombinedPodHash []byte, podNumber uint64, batchInput *types.BatchStruct, txState string) {
+	var podState *shared.PodState
+	votes := make(map[string]shared.Votes)
+	podState = &shared.PodState{
+		LatestPodHeight: podNumber,
+		LatestTxState:   txState,
+		PreviousPodHash: shared.GetPodState().LatestPodHash,
+		Votes:           votes,
+		TracksAppHash:   CombinedPodHash,
+		Batch:           batchInput,
+	}
+	shared.SetPodState(podState)
+	updatePodStateInDatabase(podState)
+}
 func updateTxState(txState string) {
 	podState := shared.GetPodState()
 	podState.LatestTxState = txState
 	shared.SetPodState(podState)
 	updatePodStateInDatabase(podState)
 }
+
+func SetPodNumber(currentPodNumber uint64) {
+	podState := shared.GetPodState()
+	podState.LatestPodHeight = currentPodNumber
+	shared.SetPodState(podState)
+	updatePodStateInDatabase(podState)
+}
+
 func updatePodStateInDatabase(podState *shared.PodState) {
 	stateConnection := shared.Node.NodeConnections.GetStateDatabaseConnection()
 

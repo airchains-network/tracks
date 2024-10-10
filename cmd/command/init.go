@@ -25,10 +25,11 @@ type Configs struct {
 	daKey     string
 	daVersion string
 
-	sequencerType    string
-	sequencerRPC     string
-	sequencerKey     string
-	sequencerVersion string
+	sequencerType      string
+	sequencerRPC       string
+	sequencerKey       string
+	sequencerVersion   string
+	sequencerNamespace string
 
 	proverType    string
 	proverRPC     string
@@ -102,6 +103,11 @@ func InitConfigs(cmd *cobra.Command) (*Configs, error) {
 		configs.sequencerRPC, err = cmd.Flags().GetString("sequencerRpc")
 		if err != nil {
 			return nil, fmt.Errorf("failed to get flag 'sequencerRPC': %w", err)
+		}
+
+		configs.sequencerNamespace, err = cmd.Flags().GetString("sequencerNamespace")
+		if err != nil {
+			return nil, fmt.Errorf("failed to get flag 'sequencerNamespace': %w", err)
 		}
 
 		//configs.sequencerKey, err = cmd.Flags().GetString("sequencerKey")
@@ -185,6 +191,7 @@ var InitCmd = &cobra.Command{
 			conf.Sequencer.SequencerKey = "mock"
 			conf.Sequencer.SequencerVersion = "v0.0.1"
 			conf.Sequencer.SequencerRPC = configs.sequencerRPC
+			conf.Sequencer.SequencerNamespace = configs.sequencerNamespace
 			conf.Prover.ProverType = "mock"
 			conf.Prover.ProverRPC = "mock"
 			conf.Prover.ProverVersion = "mock"

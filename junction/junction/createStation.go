@@ -24,15 +24,16 @@ import (
 	"time"
 )
 
-type JunctionConfig struct {
-	JunctionRPC   string
-	JunctionAPI   string
-	StationID     string
-	VRFPrivateKey string
-	VRFPublicKey  string
-	AddressPrefix string
-	Tracks        []string
-}
+//
+//type JunctionConfig struct {
+//	JunctionRPC   string
+//	JunctionAPI   string
+//	StationID     string
+//	VRFPrivateKey string
+//	VRFPublicKey  string
+//	AddressPrefix string
+//	Tracks        []string
+//}
 
 func CreateStation(extraArg types2.StationArg, stationId string, stationInfo types.StationInfo, accountName, accountPath, jsonRPC string, verificationKey groth16.VerifyingKey, addressPrefix string, tracks []string, bootstrapNode []string) bool {
 

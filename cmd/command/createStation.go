@@ -56,32 +56,30 @@ var CreateStation = &cobra.Command{
 			return
 		}
 
-		_, verificationKey, err := v1.GetVkPk()
-		//The Unused variable is the proving key
-		if err != nil {
-			logs.Log.Error("Failed to read Proving Key & Verification key: " + err.Error())
-			return
-		}
-
-		stationInfo := types.StationInfo{
-			StationType: conf.Station.StationType,
-		}
-
-		extraArg := junctionTypes.StationArg{
-			TrackType: conf.Sequencer.SequencerType,
-			DaType:    conf.DA.DaType,
-			Prover:    "Airchains",
-		}
-
 		addressPrefix := "air"
 
-		if extraArg.TrackType == "espresso" {
-			success := trackgate.InitStation(stationArgs.accountName, stationArgs.accountPath, stationArgs.jsonRPC, verificationKey, stationArgs.bootstrapNode, conf, addressPrefix)
+		if conf.Sequencer.SequencerType == "espresso" {
+			success := trackgate.InitStation(stationArgs.accountName, stationArgs.accountPath, stationArgs.jsonRPC, stationArgs.bootstrapNode, addressPrefix)
 			if !success {
 				logs.Log.Error("Failed to create new station due to above error")
 				return
 			}
 		} else {
+			_, verificationKey, err := v1.GetVkPk()
+			if err != nil {
+				logs.Log.Error("Failed to read Proving Key & Verification key: " + err.Error())
+				return
+			}
+
+			stationInfo := types.StationInfo{
+				StationType: conf.Station.StationType,
+			}
+
+			extraArg := junctionTypes.StationArg{
+				TrackType: conf.Sequencer.SequencerType,
+				DaType:    conf.DA.DaType,
+				Prover:    conf.Prover.ProverType,
+			}
 			success := junction.CreateStation(extraArg, uuid.New().String(), stationInfo, stationArgs.accountName, stationArgs.accountPath, stationArgs.jsonRPC, verificationKey, addressPrefix, stationArgs.tracks, stationArgs.bootstrapNode)
 			if !success {
 				logs.Log.Error("Failed to create new station due to above error")

@@ -60,14 +60,14 @@ func CreateGenesisJson(stationInfo types.StationInfo, verificationKey groth16.Ve
 
 	return true
 }
-func CreateGenesisTrackGateJson(stationInfo types.StationInfoDetails, stationId string, tracks []string, txHash string, transactionTime string, creator string) (success bool) {
+func CreateGenesisTrackGateJson(creator string, stationId string, stationInfo types.StationInfoDetails, operators []string, txHash string, transactionTime string) (success bool) {
 
 	genesisData := types.GenesisTrackGateDataType{
 		StationId:    stationId,
 		Submitter:    creator,
 		CreationTime: transactionTime,
 		TxHash:       txHash,
-		Operators:    tracks,
+		Operators:    operators,
 		StationInfo:  stationInfo,
 	}
 

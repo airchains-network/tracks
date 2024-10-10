@@ -34,8 +34,10 @@ func initSequencer() error {
 		return errors.New("create station before stating sequencer")
 	}
 
-	if config.Junction.VRFPublicKey == "" || config.Junction.VRFPrivateKey == "" {
-		return errors.New("VRF keys not setup properly")
+	if config.Sequencer.SequencerType != "espresso" {
+		if config.Junction.VRFPublicKey == "" || config.Junction.VRFPrivateKey == "" {
+			return errors.New("VRF keys not setup properly")
+		}
 	}
 
 	shared.NewNode(config)

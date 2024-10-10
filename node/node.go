@@ -67,7 +67,9 @@ func beginDBIndexingOperations(wg *sync.WaitGroup) {
 	wgnm.Add(3)
 
 	go blocksync.StartIndexer(wgnm, client, ctx, blockDB, txnDB, latestBlock)
-	go p2p.BatchGeneration(wgnm)
+
+	go p2p.BatchGeneration(wgnm, baseConfig.Sequencer.SequencerType)
+
 	go rpc.StartRPC(wgnm)
 	wgnm.Wait()
 }

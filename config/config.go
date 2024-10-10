@@ -236,18 +236,20 @@ func DefaultDAConfig() *DAConfig {
 }
 
 type SequencerConfig struct {
-	SequencerType    string
-	SequencerRPC     string
-	SequencerKey     string
-	SequencerVersion string
+	SequencerType      string
+	SequencerRPC       string
+	SequencerKey       string
+	SequencerVersion   string
+	SequencerNamespace string
 }
 
 func DefaultSequencerConfig() *SequencerConfig {
 	return &SequencerConfig{
-		SequencerType:    "",
-		SequencerRPC:     "",
-		SequencerKey:     "",
-		SequencerVersion: "",
+		SequencerType:      "",
+		SequencerRPC:       "",
+		SequencerKey:       "",
+		SequencerVersion:   "",
+		SequencerNamespace: "",
 	}
 }
 
@@ -268,17 +270,19 @@ func DefaultProverConfig() *ProverConfig {
 }
 
 type StationConfig struct {
-	StationType string
-	StationRPC  string
-	StationAPI  string
+	StationType      string
+	StationRPC       string
+	StationAPI       string
+	StationSchemaKey string
 }
 
 // DefaultStationConfig returns a default configuration for the station.
 func DefaultStationConfig() *StationConfig {
 	return &StationConfig{
-		StationType: "",
-		StationRPC:  "",
-		StationAPI:  "",
+		StationType:      "",
+		StationRPC:       "",
+		StationAPI:       "",
+		StationSchemaKey: "",
 	}
 }
 

@@ -8,12 +8,12 @@ import (
 	"github.com/airchains-network/tracks/config"
 	junction2 "github.com/airchains-network/tracks/junction"
 	logs "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/node/shared"
 	"github.com/google/uuid"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 	"log"
 	"math"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -24,8 +24,13 @@ import (
 	trackTypes "github.com/airchains-network/tracks/types"
 )
 
-func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []string, conf *config.Config, addressPrefix string) bool {
+func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []string, addressPrefix string) bool {
 
+	conf, err := shared.LoadConfig()
+	if err != nil {
+		logs.Log.Error("Failed to load conf info")
+		return false
+	}
 	ctx := context.Background()
 
 	client, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRPC), cosmosclient.WithHome(accountPath))
@@ -77,7 +82,7 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 	stationId := uuid.New().String()
 	stationName := "test"
 
-	randomStationInfoDetails := trackTypes.StationInfoDetails{
+	stationInfo := trackTypes.StationInfoDetails{
 		StationName: stationName,
 		Type:        conf.Station.StationType,
 		FheEnabled:  false,
@@ -97,7 +102,7 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 		},
 	}
 
-	randomStationInfoDetailsByte, err := json.Marshal(randomStationInfoDetails)
+	stationInfoByte, err := json.Marshal(stationInfo)
 	if err != nil {
 		log.Fatal(err)
 		return false
@@ -106,28 +111,8 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 	msg := &types.MsgInitStation{
 		Submitter:   newTempAddr,
 		StationId:   stationId,
-		StationInfo: randomStationInfoDetailsByte,
+		StationInfo: stationInfoByte,
 		Operators:   []string{newTempAddr},
-	}
-
-	var OpsVotingPower []uint64
-	totalPower := uint64(100)
-	numOps := len(msg.Operators)
-	// Calculate the equal share for each track
-	equalShare := totalPower / uint64(numOps)
-	// Calculate the remainder
-	remainder := totalPower % uint64(numOps)
-	// Distribute the equal share to each track
-	for i := 0; i < numOps; i++ {
-		if remainder > 0 {
-			// For each track, until the remainder is exhausted,
-			// add an extra unit of power to make the total sum 100.
-			OpsVotingPower = append(OpsVotingPower, equalShare+1)
-			remainder-- // Decrement the remainder until it's 0
-		} else {
-			// Once the remainder is exhausted, append the equal share.
-			OpsVotingPower = append(OpsVotingPower, equalShare)
-		}
 	}
 
 	// Broadcast a transaction from account `charlie` with the message
@@ -145,28 +130,10 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 	fmt.Print("MsgCreatePost:\n\n")
 	fmt.Println(txResp)
 	timestamp := time.Now().String()
-	successGenesis := junction2.CreateGenesisTrackGateJson(randomStationInfoDetails, stationId, msg.Operators, OpsVotingPower, txResp.TxHash, timestamp, newTempAddr)
+	successGenesis := junction2.CreateGenesisTrackGateJson(newTempAddr, stationId, stationInfo, msg.Operators, txResp.TxHash, timestamp)
 	if !successGenesis {
 		return false
 	}
-
-	// create VRF Keys
-	vrfPrivateKey, vrfPublicKey := junction2.NewKeyPair()
-	vrfPrivateKeyHex := vrfPrivateKey.String()
-	vrfPublicKeyHex := vrfPublicKey.String()
-	if vrfPrivateKeyHex != "" {
-		junction2.SetVRFPrivKey(vrfPrivateKeyHex)
-	} else {
-		logs.Log.Error("Error saving VRF private key")
-		return false
-	}
-	if vrfPublicKeyHex != "" {
-		junction2.SetVRFPubKey(vrfPublicKeyHex)
-	} else {
-		logs.Log.Error("Error saving VRF public key")
-		return false
-	}
-	logs.Log.Info("Successfully Created VRF public and private Keys")
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -187,16 +154,12 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 		return false
 	}
 
-	//fmt.Println(conf.P2P)
-
 	// Update the values
 
 	conf.P2P.PersistentPeers = bootstrapNode
 	conf.Junction.JunctionRPC = jsonRPC
 	conf.Junction.JunctionAPI = ""
 	conf.Junction.StationId = stationId
-	conf.Junction.VRFPrivateKey = vrfPrivateKeyHex
-	conf.Junction.VRFPublicKey = vrfPublicKeyHex
 	conf.Junction.AddressPrefix = "air"
 	conf.Junction.AccountPath = accountPath
 	conf.Junction.AccountName = accountName
@@ -222,98 +185,4 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 
 	return true
 
-	//// Instantiate a query client for your `blog` blockchain
-	//queryClient := types.NewQueryClient(client.Context())
-	//
-	//queryResp, err := queryClient.GetExtTrackStation(ctx, &types.QueryGetExtTrackStationRequest{Id: stationId})
-	//if err != nil {
-	//	log.Fatal(err)
-	//	return false
-	//}
-	//
-	//data := queryResp.Station
-	//fmt.Println("Operator: ", data.Operators)
-	//fmt.Println("LatestPod: ", data.LatestPod)
-	//fmt.Println("LatestMerkleRootHash: ", data.LatestMerkleRootHash)
-	//fmt.Println("Name: ", data.Name)
-	//fmt.Println("Id: ", data.Id)
-	//fmt.Println("StationType: ", data.StationType)
-	//fmt.Println("FheEnabled: ", data.FheEnabled)
-	//var seqData SequencerDetails
-	//seqDataErr := json.Unmarshal(data.SequencerDetails, &seqData)
-	//if seqDataErr != nil {
-	//	log.Fatal(seqDataErr)
-	//	return false
-	//}
-	//var daData DADetails
-	//daDataErr := json.Unmarshal(data.DaDetails, &daData)
-	//if daDataErr != nil {
-	//	log.Fatal(daDataErr)
-	//	return false
-	//}
-	//var proverData ProverDetails
-	//proverDataErr := json.Unmarshal(data.ProverDetails, &proverData)
-	//if proverDataErr != nil {
-	//	log.Fatal(proverDataErr)
-	//	return false
-	//}
-	//seqDataInd, err := json.MarshalIndent(seqData, "", "    ")
-	//if err != nil {
-	//	log.Fatalf("Failed to marshal JSON: %v", err)
-	//	return false
-	//}
-	//daDataInd, err := json.MarshalIndent(daData, "", "    ")
-	//if err != nil {
-	//	log.Fatalf("Failed to marshal JSON: %v", err)
-	//	return false
-	//}
-	//proverDataInd, err := json.MarshalIndent(proverData, "", "    ")
-	//if err != nil {
-	//	log.Fatalf("Failed to marshal JSON: %v", err)
-	//	return false
-	//}
-	//fmt.Println("SequencerDetails: ", string(seqDataInd))
-	//fmt.Println("DaDetails: ", string(daDataInd))
-	//fmt.Println("ProverDetails: ", string(proverDataInd))
-	/*
-	  Operators            []string
-	    LatestPod            uint64
-	    LatestMerkleRootHash string
-	    Name                 string
-	    Id                   string
-	    StationType          string
-	    FheEnabled           bool
-	    SequencerDetails     []byte
-	    DaDetails            []byte
-	    ProverDetails        []byte
-	*/
-
-	//queryResp2, err := queryClient.ListExtTrackStations(ctx, &types.QueryListExtTrackStationsRequest{})
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//// Use json.MarshalIndent to print with indentation
-	//jsonData, err = json.MarshalIndent(queryResp2, "", "    ")
-	//if err != nil {
-	//	log.Fatalf("Failed to marshal JSON: %v", err)
-	//}
-	//
-	//fmt.Print("\n\nAll posts:\n\n")
-	//fmt.Println(string(jsonData))
-	return true
-}
-
-// Function to generate a random string in the format "stationId-xxxx"
-func generateRandomString() (string, string) {
-	// Seed the random number generator
-	rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	// Generate a random four-digit number
-	randomNumber := rand.Intn(9000) + 1000 // Generates a number between 1000 and 9999
-
-	// Concatenate the string parts
-	randomStationId := fmt.Sprintf("stationId-%d", randomNumber)
-	randomStationInfo := fmt.Sprintf("stationInfo-%d", randomNumber)
-
-	return randomStationId, randomStationInfo
 }

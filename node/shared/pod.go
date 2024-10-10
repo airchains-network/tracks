@@ -53,6 +53,18 @@ type PodState struct {
 	InitPodTxHash       string
 	VerifyPodTxHash     string
 }
+
+type TrackgatePodState struct {
+	LatestPodHeight uint64
+	LatestTxState   string // InitVRF / VerifyVRF / InitPod / VerifyPod
+	LatestPodHash   []byte
+	PreviousPodHash []byte
+	Votes           map[string]Votes
+	TracksAppHash   []byte
+	Batch           *types.BatchStruct
+	Timestamp       *time.Time `json:"timestamp,omitempty"`
+}
+
 type Connections struct {
 	mu                                 sync.Mutex
 	BlockDatabaseConnection            *leveldb.DB

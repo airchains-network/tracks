@@ -41,7 +41,7 @@ func main() {
 	rootCmd.AddCommand(command.ProverGenCMD)
 	rootCmd.AddCommand(command.CreateStation)
 	rootCmd.AddCommand(command.CreateSchema)
-	rootCmd.AddCommand(command.SchemaEngage)
+	//rootCmd.AddCommand(command.SchemaEngage)
 	rootCmd.AddCommand(command.Rollback)
 	rootCmd.AddCommand(versionCmd) // Add version command
 
@@ -82,6 +82,7 @@ func main() {
 	command.InitCmd.Flags().String("sequencerVersion", "mock", "sequencer Version")
 	command.InitCmd.Flags().String("sequencerRpc", "", "sequencer RPC for the Tracks")
 	command.InitCmd.Flags().String("sequencerKey", "", "sequencer Key for the Tracks")
+	command.InitCmd.Flags().String("sequencerNamespace", "mock", "Sequencer Namespace for the Tracks")
 
 	command.InitCmd.Flags().String("proverType", "mock", "prover Type for the Tracks")
 	command.InitCmd.Flags().String("proverVersion", "mock", "prover Version")
