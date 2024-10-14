@@ -105,3 +105,10 @@ type EspressoSchemaV1 struct {
 type SchemaDef struct {
 	Fields map[string]interface{} // Changed to interface{} to allow nested definitions
 }
+
+type EspressoData struct {
+	Version string
+	Data    []byte
+}
+
+//

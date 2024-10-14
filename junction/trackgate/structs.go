@@ -56,26 +56,3 @@ type ProverDetails struct {
 type SchemaDef struct {
 	Fields map[string]interface{} // Changed to interface{} to allow nested definitions
 }
-
-type FigSchema struct {
-	Name   string
-	Age    int
-	Status uint
-	Origin struct {
-		Place string
-		Year  int
-	}
-}
-
-type PearSchema struct {
-	Variety string
-	Color   string
-	Origin  struct {
-		Country string
-		Region  string
-		History struct {
-			DiscoveredBy string
-			Year         int
-		}
-	}
-}

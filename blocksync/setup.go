@@ -14,6 +14,7 @@ import (
 var txDbInstance *leveldb.DB
 var blockDbInstance *leveldb.DB
 var staticDbInstance *leveldb.DB
+var espressoDbInstance *leveldb.DB
 var stateDbInstance *leveldb.DB
 var batchesDbInstance *leveldb.DB
 var proofDbInstance *leveldb.DB
@@ -88,6 +89,18 @@ func InitStaticDb() bool {
 		return false
 	}
 	staticDbInstance = staticDB
+	return true
+}
+
+func InitEspressoDb() bool {
+	homeDir, _ := os.UserHomeDir()
+	filePath := filepath.Join(homeDir, ".tracks/data/leveldb/espresso")
+	espressoDB, err := leveldb.OpenFile(filePath, nil)
+	if err != nil {
+		log.Fatal("Failed to open static LevelDB:", err)
+		return false
+	}
+	espressoDbInstance = espressoDB
 	return true
 }
 
@@ -229,6 +242,9 @@ func InitDb() bool {
 	if !InitStaticDb() {
 		return false
 	}
+	if !InitEspressoDb() {
+		return false
+	}
 	if !InitStateDb() {
 		return false
 	}
@@ -265,6 +281,10 @@ func GetBlockDbInstance() *leveldb.DB {
 // the LevelDB database instance for performing operations such as reading or writing data.
 func GetStaticDbInstance() *leveldb.DB {
 	return staticDbInstance
+}
+
+func GetEspressoDbInstance() *leveldb.DB {
+	return espressoDbInstance
 }
 
 func GetStateDbInstance() *leveldb.DB {

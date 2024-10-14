@@ -1,25 +1,22 @@
 package trackgate
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/airchains-network/tracks/config"
 	trackgateTypes "github.com/airchains-network/tracks/junction/trackgate/types"
 	logs "github.com/airchains-network/tracks/log"
-	"github.com/airchains-network/tracks/types"
+	"github.com/airchains-network/tracks/node/shared"
+	"net/http"
+
 	//"github.com/airchains-network/tracks/junction/trackgate/types"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 )
 
-func SchemaEngage(conf *config.Config, podNum int, EspressoTxResponse *types.EspressoSchemaV1) bool {
-
-	schemaObjectByte, err := json.Marshal(EspressoTxResponse)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error  marshaling JSON: %v", err))
-		return false
-	}
+func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte) bool {
 
 	ctx := context.Background()
 
@@ -55,13 +52,29 @@ func SchemaEngage(conf *config.Config, podNum int, EspressoTxResponse *types.Esp
 	logs.Log.Info("tracks address: " + newTempAddr)
 	creator := newTempAddr
 
-	msg := &trackgateTypes.MsgSchemaEngage{
-		Operator:          creator,
-		ExtTrackStationId: stationId,
-		SchemaObject:      schemaObjectByte,
-		StateRoot:         "stateroot-1",
-		PodNumber:         uint64(podNum),
+	sequencerDetails := &trackgateTypes.SequencerDetails{
+		Name:      conf.Sequencer.SequencerType,
+		Version:   VersionNameV1,
+		NameSpace: conf.Sequencer.SequencerNamespace,
+		Address:   "nil",
 	}
+
+	sequencerDetailsBytes, err := json.Marshal(sequencerDetails)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error marshalling sequencer details: %v", err))
+		return false
+	}
+
+	msg := &trackgateTypes.MsgSchemaEngage{
+		Operator:            creator,
+		ExtTrackStationId:   stationId,
+		SchemaObject:        schemaObjectByte,
+		AcknowledgementHash: "acknowledgementHash",
+		PodNumber:           uint64(podNum),
+		SequencerDetails:    sequencerDetailsBytes,
+	}
+
+	fmt.Println("podNum", podNum)
 
 	// Broadcast a transaction from account `charlie` with the message
 	// to create a post store response in txResp
@@ -71,10 +84,31 @@ func SchemaEngage(conf *config.Config, podNum int, EspressoTxResponse *types.Esp
 		logs.Log.Error(err.Error())
 		return false
 	}
+	_ = txResp
 
-	// Print response from broadcasting a transaction
-	fmt.Print("MsgCreatePost:\n\n")
-	fmt.Println(txResp)
+	// update pod number
+	podState := shared.GetPodState()
+	podState.LatestPodHeight = uint64(podNum + 1)
+	fmt.Println("podState.LatestPodHeight", podState.LatestPodHeight)
+	shared.SetPodState(podState)
 
+	//SubmitEspressoTx(schemaObjectByte) // Print response from broadcasting a transaction
+	//fmt.Print("MsgCreatePost:\n\n")
+	//fmt.Println(txResp)
+
+	return true
+}
+
+func SubmitEspressoTx(schemaObjectByte []byte) bool {
+
+	//gin server api
+	submitURL := fmt.Sprintf("")
+
+	resp, err := http.Post(submitURL, "application/json", bytes.NewBuffer(schemaObjectByte))
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error submitting espresso transaction : %v", err))
+		return false
+	}
+	defer resp.Body.Close()
 	return true
 }

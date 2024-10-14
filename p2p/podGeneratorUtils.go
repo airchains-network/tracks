@@ -324,6 +324,8 @@ func createEVMBatch(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (podD
 
 	batchStartIndexInt, _ := strconv.Atoi(strings.TrimSpace(string(batchStartIndex)))
 
+	fmt.Println("Batch Start Index : ", batchStartIndexInt)
+
 	var batch types.BatchStruct
 
 	var From []string
@@ -400,6 +402,7 @@ func saveVerifiedPOD() {
 	currentPodNumber := podState.LatestPodHeight
 	currentPodNumberInt := int(currentPodNumber)
 
+	fmt.Println("Current Pod Number : ", currentPodNumberInt)
 	lds := shared.Node.NodeConnections.GetStaticDatabaseConnection()
 
 	err := lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(config.PODSize*(currentPodNumberInt))), nil)

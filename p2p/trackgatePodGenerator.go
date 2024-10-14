@@ -31,6 +31,7 @@ func TrackgatePodGenerator() {
 	connection := shared.Node.NodeConnections
 
 	staticDBConnection := connection.GetStaticDatabaseConnection()
+	espressoDBConnection := connection.GetEspressoDatabaseConnection()
 	txnDBConnection := connection.GetTxnDatabaseConnection()
 
 	rawConfirmedTransactionIndex, err := GetValueOrDefault(staticDBConnection, []byte(BatchStartIndexKey), []byte("0"))
@@ -72,35 +73,37 @@ func TrackgatePodGenerator() {
 	log.Info().Str("module", "p2p").Msg(fmt.Sprintf("Processing Pod Number: %d", batchNumber))
 
 	// create batch
-	if podStateData.LatestTxState == shared.TxStatePreInit {
-		txState = shared.TxStateInitVRF
-		previousTrackAppHash = podStateData.TracksAppHash
-		if previousTrackAppHash == nil {
-			previousTrackAppHash = []byte("nil")
-		}
-		baseCfg, err := shared.LoadConfig()
-		if err != nil {
-			log.Error().Str("module", "p2p").Msg("Error in loading config")
-		}
-		stationVariant := baseCfg.Station.StationType
-		stationVariantLowerCase := strings.ToLower(stationVariant)
-
-		if stationVariantLowerCase == "evm" {
-			batchInput, err = createEVMBatch(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
-			CheckErrorAndExit(err, "Error in creating POD", 0)
-		} else if stationVariantLowerCase == "wasm" {
-			batchInput, err = createWasmBatch(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
-			CheckErrorAndExit(err, "Error in creating POD", 0)
-		}
-
-		trackAppHash = generateBatchHash(rawCurrentPodNumber)
-		updateNewBatchState(trackAppHash, uint64(batchNumber), batchInput, txState)
-	} else {
-		trackAppHash = podStateData.TracksAppHash
-		batchInput = podStateData.Batch
-
-		storeNewBatchState(trackAppHash, uint64(batchNumber), batchInput, txState)
+	//if podStateData.LatestTxState == shared.TxStatePreInit {
+	txState = shared.TxStateInitVRF
+	previousTrackAppHash = podStateData.TracksAppHash
+	if previousTrackAppHash == nil {
+		previousTrackAppHash = []byte("nil")
 	}
+	baseCfg, err := shared.LoadConfig()
+	if err != nil {
+		log.Error().Str("module", "p2p").Msg("Error in loading config")
+	}
+	stationVariant := baseCfg.Station.StationType
+	stationVariantLowerCase := strings.ToLower(stationVariant)
+
+	if stationVariantLowerCase == "evm" {
+		batchInput, err = createEVMBatch(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+		CheckErrorAndExit(err, "Error in creating POD", 0)
+	} else if stationVariantLowerCase == "wasm" {
+		batchInput, err = createWasmBatch(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+		CheckErrorAndExit(err, "Error in creating POD", 0)
+	}
+
+	trackAppHash = generateBatchHash(rawCurrentPodNumber)
+	updateNewBatchState(trackAppHash, uint64(batchNumber), batchInput, txState)
+	//}
+	//
+	//else {
+	//	trackAppHash = podStateData.TracksAppHash
+	//	batchInput = podStateData.Batch
+	//
+	//	storeNewBatchState(trackAppHash, uint64(batchNumber), batchInput, txState)
+	//}
 
 	//	multi node
 	selectedMaster := MasterTracksSelection(Node, string(previousTrackAppHash))
@@ -310,7 +313,7 @@ func TrackgatePodGenerator() {
 			}
 
 			// schema engage
-			success := trackgate.SchemaEngage(baseConfig, PodNumber, EspressoTxResponse)
+			success := trackgate.SchemaEngage(baseConfig, PodNumber, EspressoTxResponse.Data)
 			if !success {
 				logs.Log.Error("Failed to submit pod")
 				return
@@ -318,7 +321,11 @@ func TrackgatePodGenerator() {
 				logs.Log.Info("Successfully submitted pod")
 			}
 
-			os.Exit(0)
+			saveEspressoPod(espressoDBConnection, EspressoTxResponse, PodNumber)
+
+			saveVerifiedPOD()
+			TrackgatePodGenerator()
+			//os.Exit(0)
 		} else {
 			log.Warn().Str("module", "p2p").Msg("Pod already submitted, moving to next step")
 		}

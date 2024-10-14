@@ -72,6 +72,7 @@ type Connections struct {
 	PodsDatabaseConnection             *leveldb.DB
 	DataAvailabilityDatabaseConnection *leveldb.DB
 	StaticDatabaseConnection           *leveldb.DB
+	EspressoDatabaseConnection         *leveldb.DB
 	StateDatabaseConnection            *leveldb.DB
 	MockDatabaseConnection             *leveldb.DB
 	PublicWitnessConnection            *leveldb.DB
@@ -120,6 +121,7 @@ func InitializeDatabaseConnections() *Connections {
 		PodsDatabaseConnection:             blocksync.GetBatchesDbInstance(),
 		DataAvailabilityDatabaseConnection: blocksync.GetDaDbInstance(),
 		StaticDatabaseConnection:           blocksync.GetStaticDbInstance(),
+		EspressoDatabaseConnection:         blocksync.GetEspressoDbInstance(),
 		MockDatabaseConnection:             blocksync.GetMockDbInstance(),
 		PublicWitnessConnection:            blocksync.GetPublicWitnessDbInstance(),
 	}
@@ -153,6 +155,12 @@ func (c *Connections) GetStaticDatabaseConnection() *leveldb.DB {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.StaticDatabaseConnection
+}
+
+func (c *Connections) GetEspressoDatabaseConnection() *leveldb.DB {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.EspressoDatabaseConnection
 }
 
 func (c *Connections) GetStateDatabaseConnection() *leveldb.DB {
