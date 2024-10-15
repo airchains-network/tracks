@@ -186,10 +186,10 @@ var InitCmd = &cobra.Command{
 
 		conf.Sequencer.SequencerType = configs.sequencerType
 		if conf.Sequencer.SequencerType == "espresso" {
-			conf.DA.DaVersion = "v0.0.1"
+			conf.DA.DaVersion = "v1.0.0"
 			conf.DA.DaName = configs.daName
 			conf.Sequencer.SequencerKey = "mock"
-			conf.Sequencer.SequencerVersion = "v0.0.1"
+			conf.Sequencer.SequencerVersion = "v1.0.0"
 			conf.Sequencer.SequencerRPC = configs.sequencerRPC
 			conf.Sequencer.SequencerNamespace = configs.sequencerNamespace
 			conf.Prover.ProverType = "mock"

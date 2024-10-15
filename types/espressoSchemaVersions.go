@@ -100,6 +100,7 @@ type EspressoSchemaV1 struct {
 		BlockHeight int    `json:"block_height"`
 	} `json:"espresso_tx_response_v_1"`
 	StationId string `json:"station_id"`
+	PodNumber int    `json:"pod_number"`
 }
 
 type SchemaDef struct {

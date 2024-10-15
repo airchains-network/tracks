@@ -2,6 +2,7 @@ package trackgate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/airchains-network/tracks/config"
 	"github.com/airchains-network/tracks/junction/trackgate/types"
@@ -10,13 +11,15 @@ import (
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 )
 
-func SchemaMigration(conf *config.Config, stationId string, newSchemaKey string) bool {
+func ListEngagements(conf *config.Config, order string, offset uint64, limit uint64) bool {
 
 	ctx := context.Background()
+
 	accountName := conf.Junction.AccountName
 	accountPath := conf.Junction.AccountPath
 	addressPrefix := conf.Junction.AddressPrefix
 	junctionRPC := conf.Junction.JunctionRPC
+	stationId := conf.Junction.StationId
 
 	client, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(junctionRPC), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees("1000amf"))
 	if err != nil {
@@ -42,26 +45,30 @@ func SchemaMigration(conf *config.Config, stationId string, newSchemaKey string)
 		return false
 	}
 	logs.Log.Info("tracks address: " + newTempAddr)
-	creator := newTempAddr
 
-	msg := &types.MsgMigrateSchema{
-		Operator:          creator,
+	queryClient := types.NewQueryClient(client.Context())
+
+	params := &types.QueryListTrackEngagementsRequest{
 		ExtTrackStationId: stationId,
-		NewSchemaKey:      newSchemaKey,
+		Pagination: &types.TrackgatePaginationRequest{
+			Offset: offset,
+			Limit:  limit,
+			Order:  order,
+		},
 	}
 
-	// Broadcast a transaction from account `charlie` with the message
-	// to create a post store response in txResp
-	txResp, err := client.BroadcastTx(ctx, newTempAccount, msg)
+	schemas, err := queryClient.ListTrackEngagements(ctx, params)
 	if err != nil {
-		logs.Log.Error("Error in broadcasting transaction")
-		logs.Log.Error(err.Error())
+		logs.Log.Error(fmt.Sprintf("Error getting track engagements: %v", err))
 		return false
 	}
 
-	// Print response from broadcasting a transaction
-	fmt.Print("MsgCreatePost:\n\n")
-	fmt.Println(txResp)
+	jsonData, err := json.MarshalIndent(schemas, "", "    ")
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error marshalling track engagements: %v", err))
+		return false
+	}
+	fmt.Println(string(jsonData))
 
 	return true
 }

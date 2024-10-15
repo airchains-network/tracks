@@ -10,7 +10,6 @@ import (
 	logs "github.com/airchains-network/tracks/log"
 	"github.com/airchains-network/tracks/node/shared"
 	"net/http"
-
 	//"github.com/airchains-network/tracks/junction/trackgate/types"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
@@ -26,7 +25,7 @@ func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte) bool
 	junctionRPC := conf.Junction.JunctionRPC
 	stationId := conf.Junction.StationId
 
-	client, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(junctionRPC), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("1000000"))
+	client, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(junctionRPC), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees("1000amf"))
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in connecting client: %v", err))
 		return false
@@ -89,12 +88,18 @@ func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte) bool
 	// update pod number
 	podState := shared.GetPodState()
 	podState.LatestPodHeight = uint64(podNum + 1)
-	fmt.Println("podState.LatestPodHeight", podState.LatestPodHeight)
 	shared.SetPodState(podState)
 
-	//SubmitEspressoTx(schemaObjectByte) // Print response from broadcasting a transaction
-	//fmt.Print("MsgCreatePost:\n\n")
-	//fmt.Println(txResp)
+	//for {
+	//	espressoDataSubmitSuccess := SubmitEspressoTx(schemaObjectByte)
+	//	if !espressoDataSubmitSuccess {
+	//		logs.Log.Error("Gin server call failed, retrying in 5 seconds...")
+	//		time.Sleep(5 * time.Second)
+	//		continue
+	//	} else {
+	//		break
+	//	}
+	//}
 
 	return true
 }
@@ -102,7 +107,7 @@ func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte) bool
 func SubmitEspressoTx(schemaObjectByte []byte) bool {
 
 	//gin server api
-	submitURL := fmt.Sprintf("")
+	submitURL := fmt.Sprintf("http://192.168.1.55:8080/track/espresso")
 
 	resp, err := http.Post(submitURL, "application/json", bytes.NewBuffer(schemaObjectByte))
 	if err != nil {

@@ -3,7 +3,7 @@ package types_test
 import (
 	"testing"
 
-	"github.com/airchains-network/junction/x/trackgate/types"
+	"github.com/airchains-network/tracks/junction/trackgate/types"
 	"github.com/stretchr/testify/require"
 )
 

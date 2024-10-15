@@ -38,5 +38,6 @@ var SchemaV1 = types.SchemaDef{
 			"block_height": "int",
 		},
 		"station_id": "string",
+		"pod_number": "int",
 	},
 }

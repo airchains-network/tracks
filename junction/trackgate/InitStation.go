@@ -33,7 +33,7 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 	}
 	ctx := context.Background()
 
-	client, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRPC), cosmosclient.WithHome(accountPath))
+	client, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRPC), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees("1000amf"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -120,7 +120,8 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 	txResp, err := client.BroadcastTx(ctx, newTempAccount, msg)
 	if err != nil {
 		fmt.Println("txResp above")
-		fmt.Println(txResp)
+		fmt.Printf("Error broadcasting transaction: %v\n", err)
+		fmt.Printf("txResp: %+v\n", txResp)
 		fmt.Println("txResp below")
 		log.Fatal(err.Error())
 		return false

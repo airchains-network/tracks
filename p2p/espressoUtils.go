@@ -15,9 +15,10 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
-func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Config) (*types.EspressoData, error) {
+func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Config, podNum int) (*types.EspressoData, error) {
 
 	//hashes := batchInput.TransactionHash
 	//for i := 0; i < len(hashes); i++ {
@@ -49,16 +50,39 @@ func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Confi
 	}
 
 	// Make the POST request
+	//submitURL := fmt.Sprintf("%s/v0/submit/submit", espressoRPC)
+	//
+	//resp, err := http.Post(submitURL, "application/json", bytes.NewBuffer(jsonData))
+	//
+	//if err != nil {
+	//	log.Fatalf("Error making POST request: %v", err)
+	//}
+	//defer resp.Body.Close()
+
 	submitURL := fmt.Sprintf("%s/v0/submit/submit", espressoRPC)
+	var resp2 *http.Response
+	for {
 
-	resp, err := http.Post(submitURL, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Fatalf("Error making POST request: %v", err)
+		resp2, err = http.Post(submitURL, "application/json", bytes.NewBuffer(jsonData))
+
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error making POST request: %v", err))
+		}
+		defer resp2.Body.Close()
+
+		if resp2.StatusCode != 200 {
+			logs.Log.Error("Submit request to espresso call failed, retrying in 5 seconds...")
+			time.Sleep(5 * time.Second)
+			continue
+		} else {
+			break
+
+		}
 	}
-	defer resp.Body.Close()
 
+	//fmt.Println(resp2.Body)
 	// Read the response
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp2.Body)
 	if err != nil {
 		log.Fatalf("Error reading response body: %v", err)
 	}
@@ -67,21 +91,44 @@ func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Confi
 	txHash := string(body)
 	txHash = strings.ReplaceAll(txHash, `"`, "")
 
-	fmt.Printf("Transaction Hash: %s\n", txHash)
+	//fmt.Printf("Transaction Hash: %s\n", txHash)
 
 	// Now make the GET request to check availability using the returned transaction hash
 	availabilityURL := fmt.Sprintf("%s/v0/availability/transaction/hash/%s", espressoRPC, txHash)
 
-	// Make the GET request
-	resp, err = http.Get(availabilityURL)
-	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error making GET request: %v", err))
-		return nil, err
+	//
+	////Make the GET request
+	//resp, err := http.Get(availabilityURL)
+	//if err != nil {
+	//	logs.Log.Error(fmt.Sprintf("Error making GET request: %v", err))
+	//	return nil, err
+	//}
+	//defer resp.Body.Close()
+
+	for {
+		resp2, err = http.Get(availabilityURL)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error making GET request: %v", err))
+			return nil, err
+		}
+		defer resp2.Body.Close()
+
+		if resp2.StatusCode != 200 {
+			logs.Log.Error("Get request to espresso failed, retrying in 5 seconds...")
+			time.Sleep(5 * time.Second)
+			continue
+		} else {
+			break
+
+		}
 	}
-	defer resp.Body.Close()
 
 	// Read the response from the availability check
-	availabilityBody, err := ioutil.ReadAll(resp.Body)
+	if resp2.StatusCode != 200 {
+		logs.Log.Debug(fmt.Sprintf("Error making GET request: %v", err))
+		return nil, err
+	}
+	availabilityBody, err := ioutil.ReadAll(resp2.Body)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error reading availability response body: %v", err))
 		return nil, err
@@ -121,22 +168,25 @@ func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Confi
 	// Convert slices and assign
 	espressoTxResponse.Proof.TxIndex = convertIntSliceToString(espressoTxResponseTemp.Proof.TxIndex)
 	espressoTxResponse.Proof.PayloadNumTxs = convertIntSliceToString(espressoTxResponseTemp.Proof.PayloadNumTxs)
+	espressoTxResponse.Proof.PayloadProofNumTxs.Proofs = espressoTxResponseTemp.Proof.PayloadProofNumTxs.Proofs
 	espressoTxResponse.Proof.PayloadProofNumTxs.PrefixBytes = convertIntSliceToBase64(espressoTxResponseTemp.Proof.PayloadProofNumTxs.PrefixBytes)
 	espressoTxResponse.Proof.PayloadProofNumTxs.SuffixBytes = convertIntSliceToBase64(espressoTxResponseTemp.Proof.PayloadProofNumTxs.SuffixBytes)
 	espressoTxResponse.Proof.PayloadTxTableEntries = convertIntSliceToString(espressoTxResponseTemp.Proof.PayloadTxTableEntries)
+	espressoTxResponse.Proof.PayloadProofTxTableEntries.Proofs = espressoTxResponseTemp.Proof.PayloadProofTxTableEntries.Proofs
 	espressoTxResponse.Proof.PayloadProofTxTableEntries.PrefixBytes = convertIntSliceToBase64(espressoTxResponseTemp.Proof.PayloadProofTxTableEntries.PrefixBytes)
 	espressoTxResponse.Proof.PayloadProofTxTableEntries.SuffixBytes = convertIntSliceToBase64(espressoTxResponseTemp.Proof.PayloadProofTxTableEntries.SuffixBytes)
+	espressoTxResponse.Proof.PayloadProofTx.Proofs = espressoTxResponseTemp.Proof.PayloadProofTx.Proofs
 	espressoTxResponse.Proof.PayloadProofTx.PrefixBytes = convertIntSliceToBase64(espressoTxResponseTemp.Proof.PayloadProofTx.PrefixBytes)
 	espressoTxResponse.Proof.PayloadProofTx.SuffixBytes = convertIntSliceToBase64(espressoTxResponseTemp.Proof.PayloadProofTx.SuffixBytes)
-
-	// Handle the rest of the values
 	espressoTxResponse.BlockHash = espressoTxResponseTemp.BlockHash
 	espressoTxResponse.BlockHeight = espressoTxResponseTemp.BlockHeight
 
+	//fmt.Println("espressoTxResponse.Proof.PayloadProofTx.Proofs", espressoTxResponse.Proof.PayloadProofTx.Proofs)
+
 	// Now, espressoTxResponse contains all values as strings, and it's ready to use
 
-	var espressoSchemaV1 = types.EspressoSchemaV1{EspressoTxResponseV1: espressoTxResponse, StationId: baseConfig.Junction.StationId}
-	fmt.Println(espressoSchemaV1)
+	var espressoSchemaV1 = types.EspressoSchemaV1{EspressoTxResponseV1: espressoTxResponse, StationId: baseConfig.Junction.StationId, PodNumber: podNum}
+	//fmt.Printf("esp schema v1 %v : ", espressoSchemaV1)
 
 	schemaObjectByte, err := json.Marshal(espressoSchemaV1)
 	if err != nil {
@@ -218,7 +268,7 @@ func saveEspressoPod(ldt *leveldb.DB, EspressoTxResponse *types.EspressoData, po
 		return err
 	}
 
-	fmt.Println(string(EspressoTxResponseByte))
+	//fmt.Println(string(EspressoTxResponseByte))
 	podNumByte := []byte(strconv.Itoa(podNum))
 	fmt.Println(podNumByte)
 

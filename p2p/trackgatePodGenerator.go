@@ -306,7 +306,7 @@ func TrackgatePodGenerator() {
 			}
 
 			// espresso data submit
-			EspressoTxResponse, err := EspressoBatchSubmit(batchInput, baseConfig)
+			EspressoTxResponse, err := EspressoBatchSubmit(batchInput, baseConfig, PodNumber)
 			if err != nil {
 				logs.Log.Error("Error in submitting data to Espresso")
 				return

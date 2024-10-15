@@ -23,7 +23,7 @@ func SchemaCreation(conf *config.Config) bool {
 	addressPrefix := conf.Junction.AddressPrefix
 	junctionRPC := conf.Junction.JunctionRPC
 
-	client, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(junctionRPC), cosmosclient.WithHome(accountPath))
+	client, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(junctionRPC), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees("1000amf"))
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in connecting client: %v", err))
 		return false

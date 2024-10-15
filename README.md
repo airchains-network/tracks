@@ -92,7 +92,7 @@ Create a station on the junction with the necessary parameters.
 accountAddressArray="air16yhjt95p7eqyxm6wl3fmv2pdfv7qfx7m8mdyhv" #! replace it with your address
 accountName="dummy"
 accountPath=".tracks/junction-accounts/keys"
-jsonRPC="http://0.0.0.0:26657" # localhost testing
+jsonRPC="http://192.168.1.54:26657" # localhost testing
 #jsonRPC="https://airchains-testnet-rpc.itrocket.net/" # junction testnet 
 bootstrapNode="/ip4/192.168.1.24/tcp/2300/p2p/12D3KooWFoN66sCWotff1biUcnBE2vRTmYJRHJqZy27x1EpBB6AM"
 info="EVM Track"
@@ -103,6 +103,11 @@ info="EVM Track"
 ### Create Schema ( In case of Espresso )
 ```sh 
 ./build/tracks create-schema
+```
+
+### List Engagements (In case of Espresso)
+```shell
+clear; ./build/tracks list-station-engagements --offset 0 --limit 30 --order "desc"
 ```
 
 

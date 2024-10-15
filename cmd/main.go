@@ -40,6 +40,9 @@ func main() {
 	rootCmd.AddCommand(command.KeyGenCmd)
 	rootCmd.AddCommand(command.ProverGenCMD)
 	rootCmd.AddCommand(command.CreateStation)
+	// TODO: remove this if you want added just for check
+	rootCmd.AddCommand(command.ListStationEngagements)
+	// TODO: remove the above code if you want added just for check
 	rootCmd.AddCommand(command.CreateSchema)
 	//rootCmd.AddCommand(command.SchemaEngage)
 	rootCmd.AddCommand(command.Rollback)
@@ -111,6 +114,10 @@ func main() {
 	command.CreateStation.MarkFlagRequired("accountPath")
 	command.CreateStation.MarkFlagRequired("jsonRPC")
 	command.CreateStation.MarkFlagRequired("tracks")
+
+	command.ListStationEngagements.Flags().String("offset", "0", "offset for the list")
+	command.ListStationEngagements.Flags().String("limit", "100", "limit for the list")
+	command.ListStationEngagements.Flags().String("order", "asc", "order of the list (asc | desc)")
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Error(err.Error())
