@@ -37,13 +37,13 @@ Initialise the sequencer for Espresso
 sequencerType="espresso"
 daRpc="mock-rpc"
 daKey="mockKey"
-daType="mock"
+daName="mocha"
+daType="celestia"
 moniker="monkey"
 stationRpc="http://127.0.0.1:8545"
 stationAPI="http://127.0.0.1:8545"
 stationType="evm" 
 sequencerRPC="https://query.decaf.testnet.espresso.network"
-daName="mock"
 sequencerNamespace="2345678"
 
 ./build/tracks init --daRpc "$daRpc" --daKey "$daKey" --daName "$daName" --daType "$daType" --moniker "$moniker" --stationRpc "$stationRpc" --stationAPI "$stationAPI" --stationType "$stationType" --sequencerType "$sequencerType" --sequencerRpc "$sequencerRPC" --sequencerNamespace "$sequencerNamespace"
@@ -93,13 +93,20 @@ accountAddressArray="air16yhjt95p7eqyxm6wl3fmv2pdfv7qfx7m8mdyhv" #! replace it w
 accountName="dummy"
 accountPath=".tracks/junction-accounts/keys"
 jsonRPC="http://0.0.0.0:26657" 
-stationName="dummyStation"
+stationName="testStation"
 bootstrapNode="/ip4/192.168.1.24/tcp/2300/p2p/12D3KooWFoN66sCWotff1biUcnBE2vRTmYJRHJqZy27x1EpBB6AM"
-info="EVM Track"
+#info="EVM Track"
+operators="air1e7l4nlsj8hww60y6kjas9ccq2v9x3ep5spaqlw,air16yhjt95p7eqyxm6wl3fmv2pdfv7qfx7m8mdyhv"
 
-./build/tracks create-station --stationName "$stationName" --tracks "$accountAddressArray" --accountName "$accountName" --accountPath "$accountPath" --jsonRPC "$jsonRPC" --info "$info" --bootstrapNode "$bootstrapNode"
+./build/tracks create-station --stationName "$stationName" --tracks "$accountAddressArray" --accountName "$accountName" --accountPath "$accountPath" --jsonRPC "$jsonRPC" --bootstrapNode "$bootstrapNode" --operators "$operators"
 ```
 
+## Step 8: Start the Tracks
+
+Finally, start the node to begin interacting with the Tracks blockchain.
+```shell
+./build/tracks start
+```
 
 ### List Engagements (In case of Espresso)
 ```shell
@@ -116,14 +123,6 @@ info="EVM Track"
 ./build/tracks query list-station --offset 0 --limit 35 --reverse "true"
 ```
 
-
-## Step 8: Start the Tracks
-
-Finally, start the node to begin interacting with the Tracks blockchain.
-
-```shell
-./build/tracks start
-```
 
 ## Troubleshooting
 

@@ -96,6 +96,7 @@ timeout_propose_delta = "{{ .Consensus.TimeoutProposeDelta }}"
 validatePods = {{ .Consensus.ValidatePods }}
 
 [da]
+daName = "{{ .DA.DaName }}"
 daKey = "{{ .DA.DaKey }}"
 daRPC = "{{ .DA.DaRPC }}"
 daType = "{{ .DA.DaType }}"

@@ -10,6 +10,8 @@ import (
 	logs "github.com/airchains-network/tracks/log"
 	"github.com/airchains-network/tracks/node/shared"
 	"net/http"
+	"time"
+
 	//"github.com/airchains-network/tracks/junction/trackgate/types"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
@@ -91,16 +93,16 @@ func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte) bool
 	shared.SetPodState(podState)
 	//fmt.Println("schemaObjetByte", schemaObjectByte)
 
-	//for {
-	//	espressoDataSubmitSuccess := SubmitEspressoTx(schemaObjectByte)
-	//	if !espressoDataSubmitSuccess {
-	//		logs.Log.Error("Gin server call failed, retrying in 5 seconds...")
-	//		time.Sleep(5 * time.Second)
-	//		continue
-	//	} else {
-	//		break
-	//	}
-	//}
+	for {
+		espressoDataSubmitSuccess := SubmitEspressoTx(schemaObjectByte)
+		if !espressoDataSubmitSuccess {
+			logs.Log.Error("Gin server call failed, retrying in 5 seconds...")
+			time.Sleep(5 * time.Second)
+			continue
+		} else {
+			break
+		}
+	}
 
 	return true
 }

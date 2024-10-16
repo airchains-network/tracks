@@ -111,10 +111,11 @@ func main() {
 	command.CreateStation.Flags().String("accountPath", "", "Station Account Path")
 	command.CreateStation.Flags().String("jsonRPC", "", "Station JSON RPC")
 	command.CreateStation.Flags().StringSlice("tracks", []string{}, "tracks array for this station")
+	command.CreateStation.Flags().StringSlice("operators", []string{}, "operators array for this station")
 	command.CreateStation.Flags().StringSlice("bootstrapNode", []string{}, "Bootstrap Node for the Tracks")
 
 	command.CreateStation.MarkFlagRequired("stationName")
-	command.CreateStation.MarkFlagRequired("info")
+	//command.CreateStation.MarkFlagRequired("info")
 	command.CreateStation.MarkFlagRequired("accountName")
 	command.CreateStation.MarkFlagRequired("accountPath")
 	command.CreateStation.MarkFlagRequired("jsonRPC")

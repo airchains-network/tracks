@@ -24,7 +24,7 @@ import (
 	trackTypes "github.com/airchains-network/tracks/types"
 )
 
-func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []string, addressPrefix string, stationName string) bool {
+func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []string, addressPrefix string, stationName string, operators []string) bool {
 
 	conf, err := shared.LoadConfig()
 	if err != nil {
@@ -85,7 +85,7 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 		StationName: stationName,
 		Type:        conf.Station.StationType,
 		FheEnabled:  false,
-		Operators:   []string{newTempAddr},
+		Operators:   operators,
 		SequencerDetails: trackTypes.SequencerDetails{
 			Name:    conf.Sequencer.SequencerType,
 			Version: conf.Sequencer.SequencerVersion,
@@ -111,7 +111,7 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 		Submitter:   newTempAddr,
 		StationId:   stationId,
 		StationInfo: stationInfoByte,
-		Operators:   []string{newTempAddr},
+		Operators:   operators,
 	}
 
 	// Broadcast a transaction from account `charlie` with the message

@@ -52,14 +52,14 @@ func InitConfigs(cmd *cobra.Command) (*Configs, error) {
 		return nil, fmt.Errorf("failed to get flag 'stationType': %w", err)
 	}
 
-	configs.daType, err = cmd.Flags().GetString("daType")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get flag 'daType': %w", err)
-	}
-
 	configs.daName, err = cmd.Flags().GetString("daName")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get flag 'daName': %w", err)
+	}
+
+	configs.daType, err = cmd.Flags().GetString("daType")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get flag 'daType': %w", err)
 	}
 
 	validTypes := map[string]bool{
@@ -197,15 +197,15 @@ var InitCmd = &cobra.Command{
 		conf.Sequencer.SequencerType = configs.sequencerType
 		if conf.Sequencer.SequencerType == "espresso" {
 			conf.DA.DaVersion = "v1.0.0"
-			conf.DA.DaName = configs.daName
+			//conf.DA.DaName = configs.daName
 			conf.Sequencer.SequencerKey = "mock"
 			conf.Sequencer.SequencerVersion = "v1.0.0"
 			conf.Sequencer.SequencerRPC = configs.sequencerRPC
 			conf.Sequencer.SequencerNamespace = configs.sequencerNamespace
-			conf.Prover.ProverType = "mock"
-			conf.Prover.ProverRPC = "mock"
-			conf.Prover.ProverVersion = "mock"
-			conf.Prover.ProverKey = "mock"
+			conf.Prover.ProverType = "espresso"
+			conf.Prover.ProverRPC = "nil"
+			conf.Prover.ProverVersion = "nil"
+			conf.Prover.ProverKey = "nil"
 
 			//conf.DA.DaVersion = configs.daVersion
 			//conf.Sequencer.SequencerKey = configs.sequencerKey

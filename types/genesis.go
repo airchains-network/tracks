@@ -60,12 +60,12 @@ type GenesisDataType struct {
 }
 
 type GenesisTrackGateDataType struct {
-	StationId             string
-	Submitter             string
-	CreationTime          string
-	TxHash                string
-	Operators             []string
-	OperatorsVotingPowers []uint64
+	StationId    string
+	Submitter    string
+	CreationTime string
+	TxHash       string
+	Operators    []string
+	//OperatorsVotingPowers []uint64
 	//ExtraArg              types.StationArg
 	StationInfo StationInfoDetails
 }

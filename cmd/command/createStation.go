@@ -19,6 +19,7 @@ type StationArgs struct {
 	accountPath   string
 	jsonRPC       string
 	tracks        []string
+	operators     []string
 	bootstrapNode []string
 }
 
@@ -33,6 +34,10 @@ func parseCmdArgs(cmd *cobra.Command) (*StationArgs, error) {
 	args.tracks, err = cmd.Flags().GetStringSlice("tracks")
 	if err != nil {
 		return nil, fmt.Errorf(" Failed to get 'tracks' flag values: %w", err)
+	}
+	args.operators, err = cmd.Flags().GetStringSlice("operators")
+	if err != nil {
+		return nil, fmt.Errorf(" Failed to get 'operators' flag values: %w", err)
 	}
 	args.bootstrapNode, err = cmd.Flags().GetStringSlice("bootstrapNode")
 	if err != nil {
@@ -62,8 +67,7 @@ var CreateStation = &cobra.Command{
 
 		if conf.Sequencer.SequencerType == "espresso" {
 
-			//fmt.Println("stationName", stationArgs.stationName)
-			success := trackgate.InitStation(stationArgs.accountName, stationArgs.accountPath, stationArgs.jsonRPC, stationArgs.bootstrapNode, addressPrefix, stationArgs.stationName)
+			success := trackgate.InitStation(stationArgs.accountName, stationArgs.accountPath, stationArgs.jsonRPC, stationArgs.bootstrapNode, addressPrefix, stationArgs.stationName, stationArgs.operators)
 			if !success {
 				logs.Log.Error("Failed to create new station due to above error")
 				return

@@ -71,7 +71,8 @@ accountName="dummy"
 accountPath=".tracks/junction-accounts/keys"
 jsonRPC="http://0.0.0.0:26657" 
 bootstrapNode="/ip4/192.168.1.24/tcp/2300/p2p/12D3KooWFoN66sCWotff1biUcnBE2vRTmYJRHJqZy27x1EpBB6AM"
-info="EVM Track"
+#info="EVM Track"
+operators="air1e7l4nlsj8hww60y6kjas9ccq2v9x3ep5spaqlw,air16yhjt95p7eqyxm6wl3fmv2pdfv7qfx7m8mdyhv"
 
 ./build/tracks create-station --tracks "$accountAddressArray" --accountName "$accountName" --accountPath "$accountPath" --jsonRPC "$jsonRPC" --info "$info" --bootstrapNode "$bootstrapNode"
 ```
