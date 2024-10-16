@@ -18,7 +18,7 @@ var CreateSchema = &cobra.Command{
 			return
 		}
 		if conf.Sequencer.SequencerType == "espresso" {
-			success := trackgate.SchemaCreation(conf)
+			success := trackgate.SchemaCreation()
 			if !success {
 				logs.Log.Error("Failed to create new station due to above error")
 				return

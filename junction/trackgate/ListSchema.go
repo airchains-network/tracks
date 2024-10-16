@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/airchains-network/tracks/config"
+
 	"github.com/airchains-network/tracks/junction/trackgate/types"
 	logs "github.com/airchains-network/tracks/log"
+	//"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 )
 
-func ListEngagements(conf *config.Config, order string, offset uint64, limit uint64) bool {
+func ListSchema(conf *config.Config, reverse bool, offset uint64, limit uint64) bool {
 
 	ctx := context.Background()
 
@@ -48,24 +51,25 @@ func ListEngagements(conf *config.Config, order string, offset uint64, limit uin
 
 	queryClient := types.NewQueryClient(client.Context())
 
-	params := &types.QueryListTrackEngagementsRequest{
+	params := &types.QueryListSchemasRequest{
 		ExtTrackStationId: stationId,
-		Pagination: &types.TrackgatePaginationRequest{
-			Offset: offset,
-			Limit:  limit,
-			Order:  order,
+		Pagination: &query.PageRequest{
+			Offset:     offset,
+			Limit:      limit,
+			CountTotal: true,
+			Reverse:    reverse,
 		},
 	}
 
-	engagements, err := queryClient.ListTrackEngagements(ctx, params)
+	schemas, err := queryClient.ListSchemas(ctx, params)
 	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error getting track engagements: %v", err))
+		logs.Log.Error(fmt.Sprintf("Error getting station schemas: %v", err))
 		return false
 	}
 
-	jsonData, err := json.MarshalIndent(engagements, "", "    ")
+	jsonData, err := json.MarshalIndent(schemas, "", "    ")
 	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error marshalling track engagements: %v", err))
+		logs.Log.Error(fmt.Sprintf("Error marshalling station schemas: %v", err))
 		return false
 	}
 	fmt.Println(string(jsonData))

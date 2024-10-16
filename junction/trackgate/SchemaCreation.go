@@ -8,15 +8,21 @@ import (
 	"github.com/airchains-network/tracks/config"
 	"github.com/airchains-network/tracks/junction/trackgate/types"
 	logs "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/node/shared"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 	"os"
 	"path/filepath"
 )
 
-func SchemaCreation(conf *config.Config) bool {
+func SchemaCreation() bool {
 
 	ctx := context.Background()
+	conf, err := shared.LoadConfig()
+	if err != nil {
+		logs.Log.Error("Failed to load conf info")
+		return false
+	}
 
 	accountName := conf.Junction.AccountName
 	accountPath := conf.Junction.AccountPath
@@ -46,7 +52,7 @@ func SchemaCreation(conf *config.Config) bool {
 		logs.Log.Error(fmt.Sprintf("Error getting address: %v", err))
 		return false
 	}
-	logs.Log.Info("tracks address: " + newTempAddr)
+	//logs.Log.Info("tracks address: " + newTempAddr)
 	creator := newTempAddr
 
 	schemaByte, err := json.Marshal(SchemaV1)
@@ -71,10 +77,12 @@ func SchemaCreation(conf *config.Config) bool {
 		logs.Log.Error(err.Error())
 		return false
 	}
+	logs.Log.Info("txHash: " + txResp.TxHash)
 
-	// Print response from broadcasting a transaction
-	fmt.Print("MsgCreatePost:\n\n")
-	fmt.Println(txResp)
+	//
+	//// Print response from broadcasting a transaction
+	//fmt.Print("MsgCreatePost:\n\n")
+	//fmt.Println(txResp)
 
 	queryClient := types.NewQueryClient(client.Context())
 

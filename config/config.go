@@ -270,6 +270,7 @@ func DefaultProverConfig() *ProverConfig {
 }
 
 type StationConfig struct {
+	StationName      string
 	StationType      string
 	StationRPC       string
 	StationAPI       string
@@ -279,6 +280,7 @@ type StationConfig struct {
 // DefaultStationConfig returns a default configuration for the station.
 func DefaultStationConfig() *StationConfig {
 	return &StationConfig{
+		StationName:      "",
 		StationType:      "",
 		StationRPC:       "",
 		StationAPI:       "",

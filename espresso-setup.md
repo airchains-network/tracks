@@ -1,6 +1,6 @@
 
 # Tracks Setup Guide
-This guide will help you set up and initialize the Tracks environment.
+This guide will help you set up and initialize the Tracks environment with Espresso Setup
 
 ## Step 1: Remove Old Data
 
@@ -17,22 +17,6 @@ make build
 
 ## Step 3: Initialize the Tracks
 
-Initialize the sequencer with the necessary parameters.
-
-```shell
-daRpc="mock-rpc"
-daKey="mockKey"
-daType="mock"
-moniker="monkey"
-stationRpc="http://127.0.0.1:8545"
-stationAPI="http://127.0.0.1:8545"
-stationType="evm" 
-sequencerType="default"
-daName="mock"
-./build/tracks init --daRpc "$daRpc" --daKey "$daKey" --daType "$daType" --moniker "$moniker" --stationRpc "$stationRpc" --stationAPI "$stationAPI" --stationType "$stationType"  --sequencerType "$sequencerType" --daName "$daName"
-```
-
-Initialise the sequencer for Espresso 
 ```sh
 sequencerType="espresso"
 daRpc="mock-rpc"
@@ -49,15 +33,7 @@ sequencerNamespace="2345678"
 ./build/tracks init --daRpc "$daRpc" --daKey "$daKey" --daName "$daName" --daType "$daType" --moniker "$moniker" --stationRpc "$stationRpc" --stationAPI "$stationAPI" --stationType "$stationType" --sequencerType "$sequencerType" --sequencerRpc "$sequencerRPC" --sequencerNamespace "$sequencerNamespace"
 ```
 
-## Step 4: Initialize the Prover (not required if using external sequencer)
-
-Initialize the prover. Ensure you specify the correct version.
-
-```shell
-./build/tracks prover v1EVM
-```
-
-## Step 5: Create Keys for Junction (If not already created)
+## Step 4: Create Keys for Junction (If not already created)
 
 Create keys for the junction account. If the keys are not already created, use the following command:
 
@@ -72,52 +48,36 @@ Alternatively, you can import an account using a mnemonic:
 
 ```shell 
 accountName="dummy"
+
 accountPath=".tracks/junction-accounts/keys"
 mnemonic="huge bounce thing settle diet mobile fruit skill call roast offer soap other upset toward sand dress moral pole smile limb round vacant ecology"
 
 ./build/tracks keys import --accountName "$accountName" --accountPath "$accountPath" --mnemonic "$mnemonic"
 ```
 
-## Step 6: Fund the wallet 
-- Join [Airchains Discord ](https://discord.gg/airchains) 
+## Step 5: Fund the wallet
+- Join [Airchains Discord ](https://discord.gg/airchains)
 - Goto `switchyard-faucet-bot` channel
 - Type `$faucet <your_address>`, you will get 2AMF soon.
 
-## Step 7: Create a Station on Junction
+## Step 6: Create a Station on Junction
 
 Create a station on the junction with the necessary parameters.
-> NOTE: don't forget to replace `accountAddressArray` with the addresses you want to make track member. Replace it with  your new address 
+> NOTE: don't forget to replace `accountAddressArray` with the addresses you want to make track member. Replace it with  your new address
 
 ```shell
 accountAddressArray="air16yhjt95p7eqyxm6wl3fmv2pdfv7qfx7m8mdyhv" #! replace it with your address
 accountName="dummy"
 accountPath=".tracks/junction-accounts/keys"
 jsonRPC="http://0.0.0.0:26657" 
-stationName="dummyStation"
 bootstrapNode="/ip4/192.168.1.24/tcp/2300/p2p/12D3KooWFoN66sCWotff1biUcnBE2vRTmYJRHJqZy27x1EpBB6AM"
 info="EVM Track"
 
-./build/tracks create-station --stationName "$stationName" --tracks "$accountAddressArray" --accountName "$accountName" --accountPath "$accountPath" --jsonRPC "$jsonRPC" --info "$info" --bootstrapNode "$bootstrapNode"
+./build/tracks create-station --tracks "$accountAddressArray" --accountName "$accountName" --accountPath "$accountPath" --jsonRPC "$jsonRPC" --info "$info" --bootstrapNode "$bootstrapNode"
 ```
 
 
-### List Engagements (In case of Espresso)
-```shell
-./build/tracks query list-station-engagements --offset 0 --limit 2 --order "desc"
-```
-
-### List Schemas (In case of Espresso)
-```shell
-./build/tracks query list-station-schemas --offset 0 --limit 2 --reverse "true"
-```
-
-### List Station (In case of Espresso)
-```shell
-./build/tracks query list-station --offset 0 --limit 35 --reverse "true"
-```
-
-
-## Step 8: Start the Tracks
+## Step 7: Start the Tracks
 
 Finally, start the node to begin interacting with the Tracks blockchain.
 

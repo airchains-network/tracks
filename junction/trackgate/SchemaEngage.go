@@ -89,6 +89,7 @@ func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte) bool
 	podState := shared.GetPodState()
 	podState.LatestPodHeight = uint64(podNum + 1)
 	shared.SetPodState(podState)
+	//fmt.Println("schemaObjetByte", schemaObjectByte)
 
 	//for {
 	//	espressoDataSubmitSuccess := SubmitEspressoTx(schemaObjectByte)

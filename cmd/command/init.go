@@ -15,6 +15,7 @@ import (
 type Configs struct {
 	moniker string
 
+	//stationName string
 	stationType string
 	stationRPC  string
 	stationAPI  string
@@ -95,6 +96,15 @@ func InitConfigs(cmd *cobra.Command) (*Configs, error) {
 	configs.sequencerType, err = cmd.Flags().GetString("sequencerType")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get flag 'sequencerType': %w", err)
+	}
+
+	validSeqTypes := map[string]bool{
+		"espresso": true,
+		"default":  true,
+	}
+	if _, isValid := validSeqTypes[configs.sequencerType]; !isValid {
+		logs.Log.Error("invalid sequencerType. Must be one of: espresso or default")
+		return nil, fmt.Errorf("invalid sequencerType: %s", configs.sequencerType)
 	}
 
 	// check the other flags :

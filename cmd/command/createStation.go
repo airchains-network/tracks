@@ -14,6 +14,7 @@ import (
 )
 
 type StationArgs struct {
+	stationName   string
 	accountName   string
 	accountPath   string
 	jsonRPC       string
@@ -25,6 +26,7 @@ func parseCmdArgs(cmd *cobra.Command) (*StationArgs, error) {
 	args := &StationArgs{}
 	var err error
 
+	args.stationName = cmd.Flag("stationName").Value.String()
 	args.accountName = cmd.Flag("accountName").Value.String()
 	args.accountPath = cmd.Flag("accountPath").Value.String()
 	args.jsonRPC = cmd.Flag("jsonRPC").Value.String()
@@ -59,9 +61,16 @@ var CreateStation = &cobra.Command{
 		addressPrefix := "air"
 
 		if conf.Sequencer.SequencerType == "espresso" {
-			success := trackgate.InitStation(stationArgs.accountName, stationArgs.accountPath, stationArgs.jsonRPC, stationArgs.bootstrapNode, addressPrefix)
+
+			//fmt.Println("stationName", stationArgs.stationName)
+			success := trackgate.InitStation(stationArgs.accountName, stationArgs.accountPath, stationArgs.jsonRPC, stationArgs.bootstrapNode, addressPrefix, stationArgs.stationName)
 			if !success {
 				logs.Log.Error("Failed to create new station due to above error")
+				return
+			}
+			successSchema := trackgate.SchemaCreation()
+			if !successSchema {
+				logs.Log.Error("Failed to deploy schema  due to above error")
 				return
 			}
 		} else {

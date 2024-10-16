@@ -1,4 +1,4 @@
-package command
+package query
 
 import (
 	"github.com/airchains-network/tracks/junction/trackgate"

@@ -168,6 +168,7 @@ rpc_servers = [{{ range .StateSync.RPCServers }} "{{ . }}", {{ end }}]
 temp_dir = "{{ .StateSync.TempDir }}"
 
 [station]
+stationName = "{{ .Station.StationName }}"
 stationAPI = "{{ .Station.StationAPI }}"
 stationRPC = "{{ .Station.StationRPC }}"
 stationType = "{{ .Station.StationType }}"

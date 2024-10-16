@@ -199,13 +199,6 @@ func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Confi
 		Data:    schemaObjectByte,
 	}
 
-	//type EspressoData struct {
-	//	version string
-	//	data []byte
-	//}
-
-	//
-
 	//return &espressoSchemaV1, nil
 	return &espressoData, nil
 }
@@ -270,7 +263,7 @@ func saveEspressoPod(ldt *leveldb.DB, EspressoTxResponse *types.EspressoData, po
 
 	//fmt.Println(string(EspressoTxResponseByte))
 	podNumByte := []byte(strconv.Itoa(podNum))
-	fmt.Println(podNumByte)
+	//fmt.Println(podNumByte)
 
 	err = ldt.Put(podNumByte, EspressoTxResponseByte, nil)
 	if err != nil {

@@ -7,11 +7,12 @@ import (
 	"github.com/airchains-network/tracks/config"
 	"github.com/airchains-network/tracks/junction/trackgate/types"
 	logs "github.com/airchains-network/tracks/log"
+	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 )
 
-func ListEngagements(conf *config.Config, order string, offset uint64, limit uint64) bool {
+func ListStation(conf *config.Config, offset uint64, limit uint64, reverse bool) bool {
 
 	ctx := context.Background()
 
@@ -19,7 +20,6 @@ func ListEngagements(conf *config.Config, order string, offset uint64, limit uin
 	accountPath := conf.Junction.AccountPath
 	addressPrefix := conf.Junction.AddressPrefix
 	junctionRPC := conf.Junction.JunctionRPC
-	stationId := conf.Junction.StationId
 
 	client, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(junctionRPC), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees("1000amf"))
 	if err != nil {
@@ -48,27 +48,27 @@ func ListEngagements(conf *config.Config, order string, offset uint64, limit uin
 
 	queryClient := types.NewQueryClient(client.Context())
 
-	params := &types.QueryListTrackEngagementsRequest{
-		ExtTrackStationId: stationId,
-		Pagination: &types.TrackgatePaginationRequest{
-			Offset: offset,
-			Limit:  limit,
-			Order:  order,
+	params := &types.QueryListExtTrackStationsRequest{
+		Pagination: &query.PageRequest{
+			Limit:      limit,   // Set the limit for the number of results
+			Offset:     offset,  // Use the provided offset for pagination
+			Reverse:    reverse, // Set the reverse flag based on the function parameter
+			CountTotal: true,
 		},
 	}
 
-	engagements, err := queryClient.ListTrackEngagements(ctx, params)
+	stations, err := queryClient.ListExtTrackStations(ctx, params)
 	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error getting track engagements: %v", err))
+		logs.Log.Error(fmt.Sprintf("Error getting stations: %v", err))
 		return false
 	}
 
-	jsonData, err := json.MarshalIndent(engagements, "", "    ")
+	jsonData, err := json.MarshalIndent(stations, "", "    ")
 	if err != nil {
-		logs.Log.Error(fmt.Sprintf("Error marshalling track engagements: %v", err))
+		logs.Log.Error(fmt.Sprintf("Error marshalling station details: %v", err))
 		return false
 	}
 	fmt.Println(string(jsonData))
-
 	return true
+
 }

@@ -24,7 +24,7 @@ import (
 	trackTypes "github.com/airchains-network/tracks/types"
 )
 
-func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []string, addressPrefix string) bool {
+func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []string, addressPrefix string, stationName string) bool {
 
 	conf, err := shared.LoadConfig()
 	if err != nil {
@@ -32,10 +32,9 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 		return false
 	}
 	ctx := context.Background()
-
 	client, err := cosmosclient.New(ctx, cosmosclient.WithAddressPrefix(addressPrefix), cosmosclient.WithNodeAddress(jsonRPC), cosmosclient.WithHome(accountPath), cosmosclient.WithGas("auto"), cosmosclient.WithFees("1000amf"))
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error creating client")
 	}
 	// connect junction
 
@@ -80,7 +79,7 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 
 	// addr string, client cosmosclient.Client, ctx context.Context, account cosmosaccount.Account
 	stationId := uuid.New().String()
-	stationName := "test"
+	//stationName := "test-station"
 
 	stationInfo := trackTypes.StationInfoDetails{
 		StationName: stationName,
@@ -119,17 +118,12 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 	// to create a post store response in txResp
 	txResp, err := client.BroadcastTx(ctx, newTempAccount, msg)
 	if err != nil {
-		fmt.Println("txResp above")
-		fmt.Printf("Error broadcasting transaction: %v\n", err)
-		fmt.Printf("txResp: %+v\n", txResp)
-		fmt.Println("txResp below")
-		log.Fatal(err.Error())
+		logs.Log.Error("Error in broadcasting transaction")
+		logs.Log.Error(err.Error())
 		return false
 	}
+	logs.Log.Info("txHash: " + txResp.TxHash)
 
-	// Print response from broadcasting a transaction
-	fmt.Print("MsgCreatePost:\n\n")
-	fmt.Println(txResp)
 	timestamp := time.Now().String()
 	successGenesis := junction2.CreateGenesisTrackGateJson(newTempAddr, stationId, stationInfo, msg.Operators, txResp.TxHash, timestamp)
 	if !successGenesis {
@@ -156,7 +150,7 @@ func InitStation(accountName, accountPath, jsonRPC string, bootstrapNode []strin
 	}
 
 	// Update the values
-
+	conf.Station.StationName = stationName
 	conf.P2P.PersistentPeers = bootstrapNode
 	conf.Junction.JunctionRPC = jsonRPC
 	conf.Junction.JunctionAPI = ""

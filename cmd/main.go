@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/airchains-network/tracks/cmd/command/query"
 	"os"
 
 	"github.com/airchains-network/tracks/cmd/command"
@@ -40,14 +41,16 @@ func main() {
 	rootCmd.AddCommand(command.KeyGenCmd)
 	rootCmd.AddCommand(command.ProverGenCMD)
 	rootCmd.AddCommand(command.CreateStation)
-	// TODO: remove this if you want added just for check
-	rootCmd.AddCommand(command.ListStationEngagements)
-	// TODO: remove the above code if you want added just for check
+	rootCmd.AddCommand(command.QueryCmd)
 	rootCmd.AddCommand(command.CreateSchema)
 	//rootCmd.AddCommand(command.SchemaEngage)
 	rootCmd.AddCommand(command.Rollback)
 	rootCmd.AddCommand(versionCmd) // Add version command
 
+	//Add subcommands to query
+	command.QueryCmd.AddCommand(query.ListStationEngagements)
+	command.QueryCmd.AddCommand(query.ListStationSchemas)
+	command.QueryCmd.AddCommand(query.ListStation)
 	// Add subcommands to keygen and provergen
 	command.KeyGenCmd.AddCommand(keys.JunctionKeyGenCmd)
 	command.KeyGenCmd.AddCommand(keys.JunctionKeyImportCmd)
@@ -103,21 +106,31 @@ func main() {
 
 	// Define flags for CreateStation
 	command.CreateStation.Flags().String("info", "", "Station information")
+	command.CreateStation.Flags().String("stationName", "test", "Station Name ")
 	command.CreateStation.Flags().String("accountName", "", "Station Account Name")
 	command.CreateStation.Flags().String("accountPath", "", "Station Account Path")
 	command.CreateStation.Flags().String("jsonRPC", "", "Station JSON RPC")
 	command.CreateStation.Flags().StringSlice("tracks", []string{}, "tracks array for this station")
 	command.CreateStation.Flags().StringSlice("bootstrapNode", []string{}, "Bootstrap Node for the Tracks")
 
+	command.CreateStation.MarkFlagRequired("stationName")
 	command.CreateStation.MarkFlagRequired("info")
 	command.CreateStation.MarkFlagRequired("accountName")
 	command.CreateStation.MarkFlagRequired("accountPath")
 	command.CreateStation.MarkFlagRequired("jsonRPC")
 	command.CreateStation.MarkFlagRequired("tracks")
 
-	command.ListStationEngagements.Flags().String("offset", "0", "offset for the list")
-	command.ListStationEngagements.Flags().String("limit", "100", "limit for the list")
-	command.ListStationEngagements.Flags().String("order", "asc", "order of the list (asc | desc)")
+	query.ListStationEngagements.Flags().String("offset", "0", "offset for the list")
+	query.ListStationEngagements.Flags().String("limit", "100", "limit for the list")
+	query.ListStationEngagements.Flags().String("order", "asc", "order of the list (asc | desc)")
+
+	query.ListStationSchemas.Flags().String("offset", "0", "offset for the list")
+	query.ListStationSchemas.Flags().String("limit", "100", "limit for the list")
+	query.ListStationSchemas.Flags().Bool("reverse", false, "reverse the order of the list (true | false)")
+
+	query.ListStation.Flags().String("offset", "0", "offset for the list")
+	query.ListStation.Flags().String("limit", "100", "limit for the list")
+	query.ListStation.Flags().Bool("reverse", false, "reverse the order of the list (true | false)")
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Error(err.Error())
