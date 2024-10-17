@@ -37,8 +37,8 @@ Initialise the sequencer for Espresso
 sequencerType="espresso"
 daRpc="mock-rpc"
 daKey="mockKey"
-daName="mocha"
-daType="celestia"
+daName="mock"
+daType="mock"
 moniker="monkey"
 stationRpc="http://127.0.0.1:8545"
 stationAPI="http://127.0.0.1:8545"
@@ -62,7 +62,7 @@ Initialize the prover. Ensure you specify the correct version.
 Create keys for the junction account. If the keys are not already created, use the following command:
 
 ```shell
-accountName="dummy"
+accountName="fig"
 accountPath=".tracks/junction-accounts/keys"
 
 ./build/tracks keys junction --accountName "$accountName" --accountPath "$accountPath"
@@ -89,14 +89,14 @@ Create a station on the junction with the necessary parameters.
 > NOTE: don't forget to replace `accountAddressArray` with the addresses you want to make track member. Replace it with  your new address 
 
 ```shell
-accountAddressArray="air16yhjt95p7eqyxm6wl3fmv2pdfv7qfx7m8mdyhv" #! replace it with your address
-accountName="dummy"
+accountAddressArray="air1c3w3ypk3v4hypmqqsajugxervl4e0eadf4geex" #! replace it with your address
+accountName="fig"
 accountPath=".tracks/junction-accounts/keys"
 jsonRPC="http://0.0.0.0:26657" 
 stationName="testStation"
 bootstrapNode="/ip4/192.168.1.24/tcp/2300/p2p/12D3KooWFoN66sCWotff1biUcnBE2vRTmYJRHJqZy27x1EpBB6AM"
 #info="EVM Track"
-operators="air1e7l4nlsj8hww60y6kjas9ccq2v9x3ep5spaqlw,air16yhjt95p7eqyxm6wl3fmv2pdfv7qfx7m8mdyhv"
+operators="air1e7l4nlsj8hww60y6kjas9ccq2v9x3ep5spaqlw,air1c3w3ypk3v4hypmqqsajugxervl4e0eadf4geex"
 
 ./build/tracks create-station --stationName "$stationName" --tracks "$accountAddressArray" --accountName "$accountName" --accountPath "$accountPath" --jsonRPC "$jsonRPC" --bootstrapNode "$bootstrapNode" --operators "$operators"
 ```
@@ -105,7 +105,8 @@ operators="air1e7l4nlsj8hww60y6kjas9ccq2v9x3ep5spaqlw,air16yhjt95p7eqyxm6wl3fmv2
 
 Finally, start the node to begin interacting with the Tracks blockchain.
 ```shell
-./build/tracks start
+#./build/tracks start
+go run cmd/main.go start
 ```
 
 ### List Engagements (In case of Espresso)

@@ -3,6 +3,7 @@ package junction
 import (
 	"context"
 	types2 "github.com/airchains-network/tracks/junction/junction/types"
+	typesT "github.com/airchains-network/tracks/junction/trackgate/types"
 	logs "github.com/airchains-network/tracks/log"
 	"github.com/airchains-network/tracks/node/shared"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
@@ -61,6 +62,31 @@ func QueryPod(podNumber uint64) (pod *types2.Pods) {
 	}
 
 	return queryResp.Pod
+}
+
+func QueryTrackgatePod(podNumber uint64) (pod *typesT.ExtTrackSchemaEngagement) {
+
+	jsonRpc, stationId, _, _, _, _, err := GetJunctionDetails()
+	if err != nil {
+		logs.Log.Error("can not get junctionDetails.json data: " + err.Error())
+		return nil
+	}
+
+	ctx := context.Background()
+	client, err := cosmosclient.New(ctx, cosmosclient.WithNodeAddress(jsonRpc))
+	if err != nil {
+		logs.Log.Error("Client connection error: " + err.Error())
+		return nil
+	}
+
+	queryClient := typesT.NewQueryClient(client.Context())
+	queryResp, err := queryClient.GetTrackEngagement(ctx, &typesT.QueryGetTrackEngagementRequest{ExtTrackStationId: stationId, PodNumber: podNumber})
+	if err != nil {
+		//logs.Log.Error("Error fetching VRF: " + err.Error())
+		return nil
+	}
+
+	return queryResp.Engagement
 }
 
 func QueryLatestVerifiedBatch() uint64 {

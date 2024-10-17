@@ -19,8 +19,9 @@ import (
 )
 
 var (
-	Node *NodeS
-	mu   sync.Mutex
+	Node  *NodeS
+	TNode *TNodeS
+	mu    sync.Mutex
 
 	// txStates
 	TxStatePreInit   = "PreInit"
@@ -28,6 +29,13 @@ var (
 	TxStateVerifyVRF = "VerifyVRF"
 	TxStateSubmitPod = "InitPod"
 	TxStateVerifyPod = "VerifyPod"
+
+	//tx states for trackgate
+	TxStateInitPod   = "InitPod"        //
+	TxSubmitEspresso = "SubmitEspresso" // submit/submit
+	TxStoreEspresso  = "StoreEspresso"  //save espresso pod in leveldb
+	TxPodEngage      = "VerifyEspresso" //pod engage
+	TxEVCUpdate      = "UpdateEVC"      //update to gin server
 )
 
 type Votes struct {
@@ -56,13 +64,12 @@ type PodState struct {
 
 type TrackgatePodState struct {
 	LatestPodHeight uint64
-	LatestTxState   string // InitVRF / VerifyVRF / InitPod / VerifyPod
+	LatestTxState   string // InitPod / SubmitPod / StorePod
 	LatestPodHash   []byte
 	PreviousPodHash []byte
-	Votes           map[string]Votes
 	TracksAppHash   []byte
 	Batch           *types.BatchStruct
-	Timestamp       *time.Time `json:"timestamp,omitempty"`
+	//add timestamp in case of p2p
 }
 
 type Connections struct {
@@ -83,6 +90,11 @@ type NodeS struct {
 	podState        *PodState
 	NodeConnections *Connections
 }
+type TNodeS struct {
+	Config          *config.Config
+	podState        *TrackgatePodState
+	NodeConnections *Connections
+}
 
 func InitializePodState(stateConnection *leveldb.DB) *PodState {
 
@@ -101,16 +113,45 @@ func InitializePodState(stateConnection *leveldb.DB) *PodState {
 	}
 	return podState
 }
+func InitializeTrackgatePodState(stateConnection *leveldb.DB) *TrackgatePodState {
+	podStateByte, err := stateConnection.Get([]byte("TrackgatePodState"), nil)
+	if err != nil {
+		fmt.Println(err)
+		logs.Log.Error("Pod should be already initiated/updated by now")
+		os.Exit(0)
+	}
+	var podState *TrackgatePodState
+	err = json.Unmarshal(podStateByte, &podState)
+	if err != nil {
+		logs.Log.Error("Error in unmarshal  pod state")
+		os.Exit(0)
+	}
+	return podState
+}
+
 func GetPodState() *PodState {
 	mu.Lock()
 	defer mu.Unlock()
 	return Node.podState
 }
 
+func GetTrackgatePodState() *TrackgatePodState {
+	mu.Lock()
+	defer mu.Unlock()
+	//println("TNode.podState", TNode)
+	return TNode.podState
+}
+
 func SetPodState(podState *PodState) {
 	mu.Lock()
 	defer mu.Unlock()
 	Node.podState = podState
+}
+
+func SetTrackgatePodState(podState *TrackgatePodState) {
+	mu.Lock()
+	defer mu.Unlock()
+	TNode.podState = podState
 }
 
 func InitializeDatabaseConnections() *Connections {
@@ -204,13 +245,22 @@ func NewNode(conf *config.Config) {
 
 	NodeConnections := InitializeDatabaseConnections()
 	stateConnection := NodeConnections.GetStateDatabaseConnection()
-	podState := InitializePodState(stateConnection)
 
+	if conf.Sequencer.SequencerType == "espresso" {
+		tPodState := InitializeTrackgatePodState(stateConnection)
+		TNode = &TNodeS{
+			Config:          conf,
+			podState:        tPodState,
+			NodeConnections: NodeConnections,
+		}
+	}
+	podState := InitializePodState(stateConnection)
 	Node = &NodeS{
 		Config:          conf,
 		podState:        podState,
 		NodeConnections: NodeConnections,
 	}
+
 }
 
 func LoadConfig() (cnf *config.Config, err error) {

@@ -142,6 +142,26 @@ func InitStateDb() bool {
 			return false
 		}
 
+		emptyTPodState := types.TrackgatePodState{
+			LatestPodHeight: 1,
+			LatestTxState:   "PreInit",
+			LatestPodHash:   nil,
+			PreviousPodHash: nil,
+			TracksAppHash:   nil,
+			Batch:           nil,
+		}
+		byteEmptyTPodState, err := json.Marshal(emptyTPodState)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in marshalling emptyPodState : %s", err.Error()))
+			return false
+		}
+
+		err = stateDB.Put([]byte("TrackgatePodState"), byteEmptyTPodState, nil)
+		if err != nil {
+			logs.Log.Error(fmt.Sprintf("Error in saving TrackgatePodState in state Database : %s", err.Error()))
+			return false
+		}
+
 	}
 
 	return true

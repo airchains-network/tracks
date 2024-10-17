@@ -351,3 +351,50 @@ func GetJunctionDetails() (JsonRPC, StationId, AccountPath, AccountName, Address
 	// Return the StationId from the unmarshaled data
 	return JsonRPC, StationId, AccountPath, AccountName, AddressPrefix, Tracks, nil
 }
+
+//
+//func GetTrackgateDetails() (JsonRPC, StationId, AccountPath, AccountName, AddressPrefix string, Tracks []string, err error) {
+//	// Specify the file path and name
+//
+//	baseConfig, err := shared.LoadConfig()
+//	if err != nil {
+//		errorMsg := fmt.Errorf("error in aloading config file")
+//		return "", "", "", "", "", Tracks, errorMsg
+//	}
+//
+//	JsonRPC = baseConfig.Junction.JunctionRPC
+//	StationId = baseConfig.Junction.StationId
+//	AccountPath = baseConfig.Junction.AccountPath
+//	AccountName = baseConfig.Junction.AccountName
+//	AddressPrefix = baseConfig.Junction.AddressPrefix
+//	Tracks = baseConfig.Junction.Tracks
+//
+//	if JsonRPC == "" {
+//		errorMsg := fmt.Errorf("JsonRPC should not be empty at config file")
+//		return "", "", "", "", "", Tracks, errorMsg
+//	}
+//	if StationId == "" {
+//		errorMsg := fmt.Errorf("StationId should not be empty at config file. Create station first")
+//		return "", "", "", "", "", Tracks, errorMsg
+//	}
+//	if AccountPath == "" {
+//		errorMsg := fmt.Errorf("AccountPath should not be empty at config file")
+//		return "", "", "", "", "", Tracks, errorMsg
+//	}
+//	if AccountName == "" {
+//		errorMsg := fmt.Errorf("AccountName should not be empty at config file")
+//		return "", "", "", "", "", Tracks, errorMsg
+//	}
+//	if AddressPrefix == "" {
+//		errorMsg := fmt.Errorf("AddressPrefix should not be empty at config file")
+//		return "", "", "", "", "", Tracks, errorMsg
+//	}
+//
+//	if len(Tracks) == 0 {
+//		errorMsg := fmt.Errorf("tracks filed should not be empty in config file")
+//		return "", "", "", "", "", Tracks, errorMsg
+//	}
+//
+//	// Return the StationId from the unmarshaled data
+//	return JsonRPC, StationId, AccountPath, AccountName, AddressPrefix, Tracks, nil
+//}

@@ -321,7 +321,6 @@ func createEVMBatch(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (podD
 		return
 	}
 	limitInt, _ := strconv.Atoi(strings.TrimSpace(string(limit)))
-
 	batchStartIndexInt, _ := strconv.Atoi(strings.TrimSpace(string(batchStartIndex)))
 
 	fmt.Println("Batch Start Index : ", batchStartIndexInt)
@@ -467,17 +466,15 @@ func storeNewPodState(CombinedPodHash, Witness, uZKP, previousMRH, MRH []byte, p
 	updatePodStateInDatabase(podState)
 }
 func storeNewBatchState(CombinedPodHash []byte, podNumber uint64, batchInput *types.BatchStruct, txState string) {
-	var podState *shared.PodState
-	votes := make(map[string]shared.Votes)
-	podState = &shared.PodState{
+	var podState *shared.TrackgatePodState
+	podState = &shared.TrackgatePodState{
 		LatestPodHeight: podNumber,
 		LatestTxState:   txState,
-		Votes:           votes,
 		TracksAppHash:   CombinedPodHash,
 		Batch:           batchInput,
 	}
-	shared.SetPodState(podState)
-	updatePodStateInDatabase(podState)
+	shared.SetTrackgatePodState(podState)
+	updateTrackgatePodStateInDatabase(podState)
 }
 func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uint64, batchInput *types.BatchStruct, txState string) {
 	var podState *shared.PodState
@@ -498,24 +495,34 @@ func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uin
 }
 
 func updateNewBatchState(CombinedPodHash []byte, podNumber uint64, batchInput *types.BatchStruct, txState string) {
-	var podState *shared.PodState
-	votes := make(map[string]shared.Votes)
-	podState = &shared.PodState{
+	var podState *shared.TrackgatePodState
+
+	fmt.Printf("podNumber : %d\n", podNumber)
+	fmt.Printf("CombinedPodHash : %s\n", CombinedPodHash)
+	fmt.Printf("PreviousPodHash : %s\n", shared.GetTrackgatePodState().LatestPodHash)
+
+	podState = &shared.TrackgatePodState{
 		LatestPodHeight: podNumber,
 		LatestTxState:   txState,
-		PreviousPodHash: shared.GetPodState().LatestPodHash,
-		Votes:           votes,
+		PreviousPodHash: shared.GetTrackgatePodState().LatestPodHash,
 		TracksAppHash:   CombinedPodHash,
 		Batch:           batchInput,
 	}
-	shared.SetPodState(podState)
-	updatePodStateInDatabase(podState)
+
+	shared.SetTrackgatePodState(podState)
+	updateTrackgatePodStateInDatabase(podState)
 }
 func updateTxState(txState string) {
 	podState := shared.GetPodState()
 	podState.LatestTxState = txState
 	shared.SetPodState(podState)
 	updatePodStateInDatabase(podState)
+}
+func UpdateTrackgateTxState(txState string) {
+	podState := shared.GetTrackgatePodState()
+	podState.LatestTxState = txState
+	shared.SetTrackgatePodState(podState)
+	updateTrackgatePodStateInDatabase(podState)
 }
 
 func SetPodNumber(currentPodNumber uint64) {
@@ -539,11 +546,45 @@ func updatePodStateInDatabase(podState *shared.PodState) {
 		logs.Log.Error(err.Error())
 	}
 }
+
+func updateTrackgatePodStateInDatabase(podState *shared.TrackgatePodState) {
+	stateConnection := shared.Node.NodeConnections.GetStateDatabaseConnection()
+
+	podStateByte, err := json.Marshal(podState)
+	if err != nil {
+		logs.Log.Error(err.Error())
+		os.Exit(0)
+	}
+
+	err = stateConnection.Put([]byte("TrackgatePodState"), podStateByte, nil)
+	if err != nil {
+		logs.Log.Error(err.Error())
+	}
+}
+
 func GetPodStateFromDatabase() (*types.PodState, error) {
 	var podStateData *types.PodState
 	stateConnection := shared.Node.NodeConnections.GetStateDatabaseConnection()
 
 	podStateDataByte, err := stateConnection.Get([]byte("podState"), nil)
+	if err != nil {
+		logs.Log.Error("error in getting pod state data from database")
+		return nil, err
+	}
+	err = json.Unmarshal(podStateDataByte, &podStateData)
+	if err != nil {
+		logs.Log.Error("error in unmarshal pod state data")
+		return nil, err
+	}
+	return podStateData, nil
+}
+
+func GetTrackgatePodStateFromDatabase() (podStateData *shared.TrackgatePodState, err error) {
+	//var podStateData *types.TrackgatePodState
+	stateConnection := shared.Node.NodeConnections.GetStateDatabaseConnection()
+
+	podStateDataByte, err := stateConnection.Get([]byte("TrackgatePodState"), nil)
+	//fmt.Println("byte", podStateDataByte)
 	if err != nil {
 		logs.Log.Error("error in getting pod state data from database")
 		return nil, err

@@ -3,6 +3,8 @@ package p2p
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/airchains-network/tracks/junction"
+
 	//"github.com/airchains-network/tracks/config"
 	"github.com/airchains-network/tracks/da/avail"
 	"github.com/airchains-network/tracks/da/celestia"
@@ -41,8 +43,9 @@ func TrackgatePodGenerator() {
 	CheckErrorAndExit(err, "Error in getting currentPodNumber from static db", 0)
 
 	//previousStateData
-	podStateData, err := GetPodStateFromDatabase()
+	podStateData, err := GetTrackgatePodStateFromDatabase()
 	CheckErrorAndExit(err, "Error in getting previous station data", 0)
+	//shared.SetTrackgatePodState((*shared.TrackgatePodState)(podStateData))
 
 	var (
 		previousTrackAppHash []byte
@@ -62,48 +65,47 @@ func TrackgatePodGenerator() {
 		currentPodNumber = 1
 	}
 
-	//podData := junction.QueryPod(uint64(currentPodNumber))
-	//if podData != nil {
-	//	if podData.IsVerified == true {
-	//		currentPodNumber++
-	//	}
-	//}
+	podData := junction.QueryTrackgatePod(uint64(currentPodNumber))
+	if podData != nil {
+		//check if sequencer detail is empty
+		if podStateData.LatestTxState == shared.TxPodEngage {
+			currentPodNumber++
+		}
+	}
 
 	batchNumber = currentPodNumber
 	log.Info().Str("module", "p2p").Msg(fmt.Sprintf("Processing Pod Number: %d", batchNumber))
 
 	// create batch
-	//if podStateData.LatestTxState == shared.TxStatePreInit {
-	txState = shared.TxStateInitVRF
-	previousTrackAppHash = podStateData.TracksAppHash
-	if previousTrackAppHash == nil {
-		previousTrackAppHash = []byte("nil")
-	}
-	baseCfg, err := shared.LoadConfig()
-	if err != nil {
-		log.Error().Str("module", "p2p").Msg("Error in loading config")
-	}
-	stationVariant := baseCfg.Station.StationType
-	stationVariantLowerCase := strings.ToLower(stationVariant)
+	if podStateData.LatestTxState == shared.TxStatePreInit {
+		txState = shared.TxStateInitPod
+		previousTrackAppHash = podStateData.TracksAppHash
+		if previousTrackAppHash == nil {
+			previousTrackAppHash = []byte("nil")
+		}
+		baseCfg, err := shared.LoadConfig()
+		if err != nil {
+			log.Error().Str("module", "p2p").Msg("Error in loading config")
+		}
+		stationVariant := baseCfg.Station.StationType
+		stationVariantLowerCase := strings.ToLower(stationVariant)
 
-	if stationVariantLowerCase == "evm" {
-		batchInput, err = createEVMBatch(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
-		CheckErrorAndExit(err, "Error in creating POD", 0)
-	} else if stationVariantLowerCase == "wasm" {
-		batchInput, err = createWasmBatch(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
-		CheckErrorAndExit(err, "Error in creating POD", 0)
-	}
+		if stationVariantLowerCase == "evm" {
+			batchInput, err = createEVMBatch(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+			CheckErrorAndExit(err, "Error in creating POD", 0)
+		} else if stationVariantLowerCase == "wasm" {
+			batchInput, err = createWasmBatch(txnDBConnection, rawConfirmedTransactionIndex, rawCurrentPodNumber)
+			CheckErrorAndExit(err, "Error in creating POD", 0)
+		}
 
-	trackAppHash = generateBatchHash(rawCurrentPodNumber)
-	updateNewBatchState(trackAppHash, uint64(batchNumber), batchInput, txState)
-	//}
-	//
-	//else {
-	//	trackAppHash = podStateData.TracksAppHash
-	//	batchInput = podStateData.Batch
-	//
-	//	storeNewBatchState(trackAppHash, uint64(batchNumber), batchInput, txState)
-	//}
+		trackAppHash = generateBatchHash(rawCurrentPodNumber)
+		updateNewBatchState(trackAppHash, uint64(batchNumber), batchInput, txState)
+	} else {
+		trackAppHash = podStateData.TracksAppHash
+		batchInput = podStateData.Batch
+
+		storeNewBatchState(trackAppHash, uint64(batchNumber), batchInput, txState)
+	}
 
 	//	multi node
 	selectedMaster := MasterTracksSelection(Node, string(previousTrackAppHash))
@@ -111,29 +113,26 @@ func TrackgatePodGenerator() {
 	CheckErrorAndExit(err, "Error in decoding master", 0)
 
 	if decodedMaster == Node.ID() {
-		podState := shared.GetPodState()
-		currentVotes := podState.Votes
-		currentVotes[decodedMaster.String()] = shared.Votes{
-			PeerID: decodedMaster.String(),
-			Vote:   true,
-		}
-		podState.Votes = currentVotes
-		shared.SetPodState(podState)
+		fmt.Println("Master is same as node")
+		podState := shared.GetTrackgatePodState()
+		fmt.Println("PodState", podState)
+
+		shared.SetTrackgatePodState(podState)
 		Peers := getAllPeers(Node)
 		peerCount := len(Peers)
 		if peerCount == 1 {
-			DaData := shared.GetPodState().Batch.TransactionHash
+			DaData := shared.GetTrackgatePodState().Batch.TransactionHash
 			var daDataByte []byte
 			for _, str := range DaData {
 				daDataByte = append(daDataByte, []byte(str)...)
 			}
-			ZkProof := shared.GetPodState().LatestPodProof
-			PodNumber := int(shared.GetPodState().LatestPodHeight)
+			//ZkProof := shared.GetTrackgatePodState().LatestPodProof
+			PodNumber := int(shared.GetTrackgatePodState().LatestPodHeight)
 
 			finalizeDA := types.FinalizeDA{
 				CompressedHash: DaData,
-				Proof:          ZkProof,
-				PodNumber:      PodNumber,
+				//Proof:          ZkProof,
+				PodNumber: PodNumber,
 			}
 			_, err := json.Marshal(finalizeDA)
 			if err != nil {
@@ -146,7 +145,7 @@ func TrackgatePodGenerator() {
 				fmt.Println("Error loading configuration")
 			}
 
-			if shared.GetPodState().LatestTxState == shared.TxStateSubmitPod {
+			if shared.GetTrackgatePodState().LatestTxState == shared.TxStateSubmitPod {
 
 				DaBatchSaver := connection.DataAvailabilityDatabaseConnection
 
@@ -174,8 +173,8 @@ func TrackgatePodGenerator() {
 						DAKey:             daCheck,
 						DAClientName:      "mock-da",
 						BatchNumber:       strconv.Itoa(PodNumber),
-						PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
-						CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
+						PreviousStateHash: string(shared.GetTrackgatePodState().PreviousPodHash),
+						CurrentStateHash:  string(shared.GetTrackgatePodState().TracksAppHash),
 					}
 
 					daStoreKey := fmt.Sprintf("da-%d", PodNumber)
@@ -208,8 +207,8 @@ func TrackgatePodGenerator() {
 						DAKey:             daCheck,
 						DAClientName:      "avail-da",
 						BatchNumber:       strconv.Itoa(PodNumber),
-						PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
-						CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
+						PreviousStateHash: string(shared.GetTrackgatePodState().PreviousPodHash),
+						CurrentStateHash:  string(shared.GetTrackgatePodState().TracksAppHash),
 					}
 
 					daStoreKey := fmt.Sprintf("da-%d", PodNumber)
@@ -243,8 +242,8 @@ func TrackgatePodGenerator() {
 						DAKey:             daCheck,
 						DAClientName:      "celestia-da",
 						BatchNumber:       strconv.Itoa(PodNumber),
-						PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
-						CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
+						PreviousStateHash: string(shared.GetTrackgatePodState().PreviousPodHash),
+						CurrentStateHash:  string(shared.GetTrackgatePodState().TracksAppHash),
 					}
 
 					daStoreKey := fmt.Sprintf("da-%d", PodNumber)
@@ -279,8 +278,8 @@ func TrackgatePodGenerator() {
 						DAKey:             daCheck,
 						DAClientName:      "eigen-da",
 						BatchNumber:       strconv.Itoa(PodNumber),
-						PreviousStateHash: string(shared.GetPodState().PreviousPodHash),
-						CurrentStateHash:  string(shared.GetPodState().TracksAppHash),
+						PreviousStateHash: string(shared.GetTrackgatePodState().PreviousPodHash),
+						CurrentStateHash:  string(shared.GetTrackgatePodState().TracksAppHash),
 					}
 
 					daStoreKey := fmt.Sprintf("da-%d", PodNumber)
@@ -311,14 +310,23 @@ func TrackgatePodGenerator() {
 				logs.Log.Error("Error in submitting data to Espresso")
 				return
 			}
+			UpdateTrackgateTxState(shared.TxSubmitEspresso)
+			fmt.Println("Pod Number: ", PodNumber)
 
 			// schema engage
-			success := trackgate.SchemaEngage(baseConfig, PodNumber, EspressoTxResponse.Data)
-			if !success {
-				logs.Log.Error("Failed to submit pod")
-				return
+			if shared.GetTrackgatePodState().LatestTxState == shared.TxSubmitEspresso {
+				success := trackgate.SchemaEngage(baseConfig, PodNumber, EspressoTxResponse.Data)
+				if !success {
+					logs.Log.Error("Failed to submit pod")
+					return
+				} else {
+					logs.Log.Info("Successfully submitted pod")
+				}
+				UpdateTrackgateTxState(shared.TxPodEngage)
 			} else {
-				logs.Log.Info("Successfully submitted pod")
+				log.Error().Str("module", "p2p").Msg("Database Error. LatestTxState should equal to TxStatePreInit at this point")
+				log.Error().Str("module", "p2p").Msg("LatestTxState: " + shared.GetTrackgatePodState().LatestTxState)
+				return // stop sequencer, there is some error
 			}
 
 			saveEspressoPod(espressoDBConnection, EspressoTxResponse, PodNumber)

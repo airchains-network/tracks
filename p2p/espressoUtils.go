@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/airchains-network/tracks/config"
 	logs "github.com/airchains-network/tracks/log"
+	"github.com/airchains-network/tracks/node/shared"
 	"github.com/airchains-network/tracks/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"io/ioutil"
@@ -270,7 +271,9 @@ func saveEspressoPod(ldt *leveldb.DB, EspressoTxResponse *types.EspressoData, po
 		logs.Log.Error(fmt.Sprintf("Error in saving tx data : %s", err.Error()))
 		return err
 	}
+	UpdateTrackgateTxState(shared.TxStoreEspresso)
 	fmt.Println("saved")
+
 	return nil
 }
 

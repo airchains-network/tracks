@@ -27,6 +27,7 @@ import (
 func BatchGeneration(wg *sync.WaitGroup, sequencerType string) {
 	defer wg.Done()
 	if sequencerType == "espresso" {
+
 		//// config: sequencer version,
 		//storedVersion := config.Sequencer.Version
 		//CurrentEspressoVersion := "v4.0.0"

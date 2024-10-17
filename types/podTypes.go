@@ -28,3 +28,12 @@ type PodState struct {
 	Batch               *BatchStruct
 	MasterTrackAppHash  []byte
 }
+
+type TrackgatePodState struct {
+	LatestPodHeight uint64
+	LatestTxState   string // InitPod / SubmitPod / StorePod
+	LatestPodHash   []byte
+	PreviousPodHash []byte
+	TracksAppHash   []byte
+	Batch           *BatchStruct
+}
