@@ -104,14 +104,14 @@ operators="air1e7l4nlsj8hww60y6kjas9ccq2v9x3ep5spaqlw,air1c3w3ypk3v4hypmqqsajugx
 ## Step 8: Start the Tracks
 
 Finally, start the node to begin interacting with the Tracks blockchain.
-```shell
-#./build/tracks start
-go run cmd/main.go start
+```shellq   
+./build/tracks start
+#go run cmd/main.go start
 ```
 
 ### List Engagements (In case of Espresso)
 ```shell
-./build/tracks query list-station-engagements --offset 0 --limit 2 --order "desc"
+./build/tracks query list-station-engagements --offset 0 --limit 10 --order "asc"
 ```
 
 ### List Schemas (In case of Espresso)

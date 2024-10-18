@@ -433,6 +433,48 @@ func saveVerifiedPOD() {
 
 	log.Info().Str("module", "p2p").Msg("Present Pod has been saved Locally")
 }
+
+func saveVerifiedTrackgatePOD() {
+
+	podState := shared.GetTrackgatePodState()
+	//batchTimestamp := time.Now()
+	//podState.Timestamp = &batchTimestamp
+	currentPodNumber := podState.LatestPodHeight
+	currentPodNumberInt := int(currentPodNumber)
+
+	fmt.Println("Current Pod Number : ", currentPodNumberInt)
+	lds := shared.TNode.NodeConnections.GetStaticDatabaseConnection()
+
+	err := lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(config.PODSize*(currentPodNumberInt))), nil)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in updating batchStartIndex in static db : %s", err.Error()))
+		os.Exit(0)
+	}
+
+	err = lds.Put([]byte("batchCount"), []byte(strconv.Itoa(currentPodNumberInt)), nil)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in updating batchCount in static db : %s", err.Error()))
+		os.Exit(0)
+	}
+
+	batchDB := shared.TNode.NodeConnections.GetPodsDatabaseConnection()
+	podKey := fmt.Sprintf("pod-%d", currentPodNumberInt)
+
+	batchInputWithTimestampBytes, err := json.Marshal(podState)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in marshalling batch data : %s", err.Error()))
+		os.Exit(0)
+	}
+	err = batchDB.Put([]byte(podKey), batchInputWithTimestampBytes, nil)
+	if err != nil {
+		panic("Failed to update pod data: " + err.Error())
+	}
+	podState.MasterTrackAppHash = nil
+	shared.SetTrackgatePodState(podState)
+
+	log.Info().Str("module", "p2p").Msg("Present Pod has been saved Locally")
+}
+
 func generatePodHash(Witness, uZKP, MRH []byte, podNumber []byte) []byte {
 	hash := sha256.New()
 	hash.Write(Witness)
@@ -521,6 +563,7 @@ func updateTxState(txState string) {
 func UpdateTrackgateTxState(txState string) {
 	podState := shared.GetTrackgatePodState()
 	podState.LatestTxState = txState
+	fmt.Println("Trackgate TxState in function : ", podState.LatestTxState)
 	shared.SetTrackgatePodState(podState)
 	updateTrackgatePodStateInDatabase(podState)
 }
@@ -548,7 +591,7 @@ func updatePodStateInDatabase(podState *shared.PodState) {
 }
 
 func updateTrackgatePodStateInDatabase(podState *shared.TrackgatePodState) {
-	stateConnection := shared.Node.NodeConnections.GetStateDatabaseConnection()
+	stateConnection := shared.TNode.NodeConnections.GetStateDatabaseConnection()
 
 	podStateByte, err := json.Marshal(podState)
 	if err != nil {
@@ -579,9 +622,9 @@ func GetPodStateFromDatabase() (*types.PodState, error) {
 	return podStateData, nil
 }
 
-func GetTrackgatePodStateFromDatabase() (podStateData *shared.TrackgatePodState, err error) {
-	//var podStateData *types.TrackgatePodState
-	stateConnection := shared.Node.NodeConnections.GetStateDatabaseConnection()
+func GetTrackgatePodStateFromDatabase() (*types.TrackgatePodState, error) {
+	var podStateData *types.TrackgatePodState
+	stateConnection := shared.TNode.NodeConnections.GetStateDatabaseConnection()
 
 	podStateDataByte, err := stateConnection.Get([]byte("TrackgatePodState"), nil)
 	//fmt.Println("byte", podStateDataByte)

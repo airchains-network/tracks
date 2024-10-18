@@ -31,11 +31,13 @@ var (
 	TxStateVerifyPod = "VerifyPod"
 
 	//tx states for trackgate
-	TxStateInitPod   = "InitPod"        //
+	TxStateInitPod   = "InitPod" //
+	TxDaSubmit       = "SubmitDA"
 	TxSubmitEspresso = "SubmitEspresso" // submit/submit
 	TxStoreEspresso  = "StoreEspresso"  //save espresso pod in leveldb
 	TxPodEngage      = "VerifyEspresso" //pod engage
-	TxEVCUpdate      = "UpdateEVC"      //update to gin server
+	TxEVCUpdate      = "UpdateEVC"
+	TxStoreDb        = "StoreDB" //update to gin server
 )
 
 type Votes struct {
@@ -63,12 +65,14 @@ type PodState struct {
 }
 
 type TrackgatePodState struct {
-	LatestPodHeight uint64
-	LatestTxState   string // InitPod / SubmitPod / StorePod
-	LatestPodHash   []byte
-	PreviousPodHash []byte
-	TracksAppHash   []byte
-	Batch           *types.BatchStruct
+	LatestPodHeight    uint64
+	LatestTxState      string // InitPod / SubmitPod / StorePod
+	LatestPodHash      []byte
+	PreviousPodHash    []byte
+	LatestPodProof     []byte
+	TracksAppHash      []byte
+	MasterTrackAppHash []byte
+	Batch              *types.BatchStruct
 	//add timestamp in case of p2p
 }
 

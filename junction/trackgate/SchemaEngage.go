@@ -9,10 +9,9 @@ import (
 	trackgateTypes "github.com/airchains-network/tracks/junction/trackgate/types"
 	logs "github.com/airchains-network/tracks/log"
 	"github.com/airchains-network/tracks/node/shared"
+
 	//utils "github.com/airchains-network/tracks/p2p"
 	"net/http"
-	"time"
-
 	//"github.com/airchains-network/tracks/junction/trackgate/types"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosaccount"
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
@@ -80,28 +79,14 @@ func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte) bool
 
 	// Broadcast a transaction from account `charlie` with the message
 	// to create a post store response in txResp
-	for {
-		txResp, err := client.BroadcastTx(ctx, newTempAccount, msg)
-		_ = txResp
-		if err != nil {
-			logs.Log.Error("Error in broadcasting transaction")
-			logs.Log.Error(err.Error())
-			logs.Log.Error("Broadcast transaction failed, retrying in 5 seconds...")
-			time.Sleep(5 * time.Second)
-
-			// latest pod number  pod 1 -> 2
-			//trackgateTypes.
-
-			continue
-		} else {
-			//utils.UpdateTrackgateTxState(shared.TxEVCUpdate)
-
-			//os.Exit(0)
-
-			break
-		}
-
+	// to create a post store response in txResp
+	txResp, err := client.BroadcastTx(ctx, newTempAccount, msg)
+	if err != nil {
+		logs.Log.Error("Error in broadcasting transaction")
+		logs.Log.Error(err.Error())
+		return false
 	}
+	_ = txResp
 
 	// update pod number
 	//fmt.Println("schemaObjetByte", schemaObjectByte)
@@ -117,24 +102,29 @@ func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte) bool
 	//		break
 	//	}
 	//}
-
-	podState := shared.GetPodState()
-	podState.LatestPodHeight = uint64(podNum + 1)
-	shared.SetPodState(podState)
+	//
+	//podState := shared.GetTrackgatePodState()
+	//podState.LatestPodHeight = uint64(podNum + 1)
+	//shared.SetTrackgatePodState(podState)
 
 	return true
 }
 
-func SubmitEspressoTx(schemaObjectByte []byte) bool {
+func SubmitEspressoTx(schemaObjectByte []byte, podNum int) bool {
 
 	//gin server api
-	submitURL := fmt.Sprintf("http://192.168.1.18:8080/track/espresso")
+	submitURL := fmt.Sprintf("http://192.168.1.55:8080/track/espresso")
 
 	resp, err := http.Post(submitURL, "application/json", bytes.NewBuffer(schemaObjectByte))
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error submitting espresso transaction : %v", err))
 		return false
 	}
+
+	podState := shared.GetTrackgatePodState()
+	podState.LatestPodHeight = uint64(podNum + 1)
+	shared.SetTrackgatePodState(podState)
+
 	defer resp.Body.Close()
 	return true
 }

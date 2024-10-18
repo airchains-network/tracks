@@ -253,8 +253,35 @@ func convertIntSliceToBase64(intSlice []int) string {
 	// Now, encode the []byte slice into a Base64 string
 	return base64.StdEncoding.EncodeToString(byteSlice)
 }
+func getEspressoPod(ldt *leveldb.DB, podNum int) (*types.EspressoData, bool, error) {
+	var espressoRes *types.EspressoData
+	//fmt.Println(string(EspressoTxResponseByte))
+	podNumByte := []byte(strconv.Itoa(podNum))
+	//fmt.Println(podNumByte)
 
-func saveEspressoPod(ldt *leveldb.DB, EspressoTxResponse *types.EspressoData, podNum int) error {
+	EspressoTxResponseByte, err := ldt.Get(podNumByte, nil)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in saving tx data : %s", err.Error()))
+		return espressoRes, false, err
+	}
+	err = json.Unmarshal(EspressoTxResponseByte, &espressoRes)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in unmarshalling tx data : %s", err.Error()))
+		return espressoRes, false, err
+	}
+
+	podNumSuccessByte := []byte(strconv.Itoa(podNum) + "_success")
+	successByte, err := ldt.Get(podNumSuccessByte, nil)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in saving tx data : %s", err.Error()))
+		return espressoRes, false, err
+	}
+	success, err := strconv.ParseBool(string(successByte))
+
+	return espressoRes, success, nil
+}
+
+func saveEspressoPod(ldt *leveldb.DB, EspressoTxResponse *types.EspressoData, podNum int, txState string, success bool) error {
 	// marshal
 	EspressoTxResponseByte, err := json.Marshal(EspressoTxResponse)
 	if err != nil {
@@ -271,7 +298,15 @@ func saveEspressoPod(ldt *leveldb.DB, EspressoTxResponse *types.EspressoData, po
 		logs.Log.Error(fmt.Sprintf("Error in saving tx data : %s", err.Error()))
 		return err
 	}
-	UpdateTrackgateTxState(shared.TxStoreEspresso)
+
+	podNumSuccessByte := []byte(strconv.Itoa(podNum) + "_success")
+	err = ldt.Put(podNumSuccessByte, []byte(strconv.FormatBool(success)), nil)
+	if err != nil {
+		logs.Log.Error(fmt.Sprintf("Error in saving tx data : %s", err.Error()))
+		return err
+	}
+	txState = shared.TxStoreDb
+	UpdateTrackgateTxState(txState)
 	fmt.Println("saved")
 
 	return nil
