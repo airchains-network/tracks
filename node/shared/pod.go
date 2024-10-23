@@ -35,8 +35,8 @@ var (
 	TxDaSubmit       = "SubmitDA"
 	TxSubmitEspresso = "SubmitEspresso" // submit/submit
 	TxStoreEspresso  = "StoreEspresso"  //save espresso pod in leveldb
-	TxPodEngage      = "VerifyEspresso" //pod engage
-	TxEVCUpdate      = "UpdateEVC"
+	TxPodEngage      = "PodEngage"      //pod engage
+	TxEVSUpdate      = "UpdateEVS"
 	TxStoreDb        = "StoreDB" //update to gin server
 )
 

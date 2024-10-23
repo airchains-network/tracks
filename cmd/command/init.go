@@ -206,6 +206,10 @@ var InitCmd = &cobra.Command{
 			conf.Prover.ProverRPC = "nil"
 			conf.Prover.ProverVersion = "nil"
 			conf.Prover.ProverKey = "nil"
+			//conf.DA.DaName = "espresso"
+			//conf.DA.DaType = "espresso"
+			//conf.DA.DaRPC = "nil"
+			//conf.DA.DaKey = configs.daKey
 
 			//conf.DA.DaVersion = configs.daVersion
 			//conf.Sequencer.SequencerKey = configs.sequencerKey

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/airchains-network/tracks/config"
 	logs "github.com/airchains-network/tracks/log"
-	"github.com/airchains-network/tracks/node/shared"
 	"github.com/airchains-network/tracks/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"io/ioutil"
@@ -19,7 +18,7 @@ import (
 	"time"
 )
 
-func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Config, podNum int) (*types.EspressoData, error) {
+func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Config, podNum int) (*types.EspressoData, string, error) {
 
 	//hashes := batchInput.TransactionHash
 	//for i := 0; i < len(hashes); i++ {
@@ -30,13 +29,14 @@ func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Confi
 	//base64 encode og 25 batch input to form payload
 	inputBytes, err := json.Marshal(batchInput)
 	if err != nil {
-		return nil, err
+		return nil, "nil", err
 	}
 
 	payload := base64.StdEncoding.EncodeToString(inputBytes)
 	namespace, err := strconv.ParseUint(baseConfig.Sequencer.SequencerNamespace, 10, 64)
 	if err != nil {
-		return nil, err
+		return nil, "nil", err
+
 	}
 	data := types.Payload{
 		Namespace: int(namespace),
@@ -47,7 +47,8 @@ func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Confi
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		log.Fatalf("Error marshaling JSON: %v", err)
-		return nil, err
+		return nil, "nil", err
+
 	}
 
 	// Make the POST request
@@ -97,20 +98,12 @@ func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Confi
 	// Now make the GET request to check availability using the returned transaction hash
 	availabilityURL := fmt.Sprintf("%s/v0/availability/transaction/hash/%s", espressoRPC, txHash)
 
-	//
-	////Make the GET request
-	//resp, err := http.Get(availabilityURL)
-	//if err != nil {
-	//	logs.Log.Error(fmt.Sprintf("Error making GET request: %v", err))
-	//	return nil, err
-	//}
-	//defer resp.Body.Close()
-
 	for {
 		resp2, err = http.Get(availabilityURL)
 		if err != nil {
 			logs.Log.Error(fmt.Sprintf("Error making GET request: %v", err))
-			return nil, err
+			return nil, "nil", err
+
 		}
 		defer resp2.Body.Close()
 
@@ -127,12 +120,14 @@ func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Confi
 	// Read the response from the availability check
 	if resp2.StatusCode != 200 {
 		logs.Log.Debug(fmt.Sprintf("Error making GET request: %v", err))
-		return nil, err
+		return nil, "nil", err
+
 	}
 	availabilityBody, err := ioutil.ReadAll(resp2.Body)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error reading availability response body: %v", err))
-		return nil, err
+		return nil, "nil", err
+
 	}
 
 	// Print the availability response
@@ -147,12 +142,14 @@ func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Confi
 	err = json.Unmarshal(availabilityBody, &espressoTxResponseTemp)
 	if err != nil {
 		log.Fatalf("Error unmarshaling JSON: %v", err)
-		return nil, err
+		return nil, "nil", err
+
 	}
 
 	isFieldsValid := CheckFieldsV1(espressoTxResponseTemp)
 	if !isFieldsValid {
-		return nil, err
+		return nil, "nil", err
+
 	}
 
 	// todo if it give error then new schema may needed
@@ -192,7 +189,8 @@ func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Confi
 	schemaObjectByte, err := json.Marshal(espressoSchemaV1)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error  marshaling JSON: %v", err))
-		return nil, err
+		return nil, "nil", err
+
 	}
 
 	espressoData := types.EspressoData{
@@ -201,7 +199,7 @@ func EspressoBatchSubmit(batchInput *types.BatchStruct, baseConfig *config.Confi
 	}
 
 	//return &espressoSchemaV1, nil
-	return &espressoData, nil
+	return &espressoData, txHash, nil
 }
 func saveStructAsJSON(filename string, data interface{}) error {
 	// Marshal the struct into JSON
@@ -305,9 +303,9 @@ func saveEspressoPod(ldt *leveldb.DB, EspressoTxResponse *types.EspressoData, po
 		logs.Log.Error(fmt.Sprintf("Error in saving tx data : %s", err.Error()))
 		return err
 	}
-	txState = shared.TxStoreDb
-	UpdateTrackgateTxState(txState)
-	fmt.Println("saved")
+	//txState = shared.TxStoreDb
+	//UpdateTrackgateTxState(txState)
+	//fmt.Println("saved")
 
 	return nil
 }
@@ -365,14 +363,14 @@ func CheckFieldsV1(espressoTx types.EspressoTxResponseV1Temp) bool {
 		logs.Log.Error("Proof.PayloadProofNumTxs.Proofs is empty")
 		return false
 	}
-	if isEmpty(espressoTx.Proof.PayloadProofNumTxs.PrefixBytes) {
-		logs.Log.Debug("Proof.PayloadProofNumTxs.PrefixBytes is empty")
-		//return false
-	}
-	if isEmpty(espressoTx.Proof.PayloadProofNumTxs.SuffixBytes) {
-		logs.Log.Debug("Proof.PayloadProofNumTxs.SuffixBytes is empty")
-		//return false
-	}
+	//if isEmpty(espressoTx.Proof.PayloadProofNumTxs.PrefixBytes) {
+	//	//logs.Log.Debug("Proof.PayloadProofNumTxs.PrefixBytes is empty")
+	//	//return false
+	//}
+	//if isEmpty(espressoTx.Proof.PayloadProofNumTxs.SuffixBytes) {
+	//	logs.Log.Debug("Proof.PayloadProofNumTxs.SuffixBytes is empty")
+	//	//return false
+	//}
 	if isEmpty(espressoTx.Proof.PayloadTxTableEntries) {
 		logs.Log.Error("Proof.PayloadTxTableEntries is empty")
 		return false
@@ -381,26 +379,26 @@ func CheckFieldsV1(espressoTx types.EspressoTxResponseV1Temp) bool {
 		logs.Log.Error("Proof.PayloadProofTxTableEntries.Proofs is empty")
 		return false
 	}
-	if isEmpty(espressoTx.Proof.PayloadProofTxTableEntries.PrefixBytes) {
-		logs.Log.Debug("Proof.PayloadProofTxTableEntries.PrefixBytes is empty")
-		//return false
-	}
-	if isEmpty(espressoTx.Proof.PayloadProofTxTableEntries.SuffixBytes) {
-		logs.Log.Debug("Proof.PayloadProofTxTableEntries.SuffixBytes is empty")
-		//return false
-	}
+	//if isEmpty(espressoTx.Proof.PayloadProofTxTableEntries.PrefixBytes) {
+	//	logs.Log.Debug("Proof.PayloadProofTxTableEntries.PrefixBytes is empty")
+	//	//return false
+	//}
+	//if isEmpty(espressoTx.Proof.PayloadProofTxTableEntries.SuffixBytes) {
+	//	logs.Log.Debug("Proof.PayloadProofTxTableEntries.SuffixBytes is empty")
+	//	//return false
+	//}
 	if isEmpty(espressoTx.Proof.PayloadProofTx.Proofs) {
 		logs.Log.Error("Proof.PayloadProofTx.Proofs is empty")
 		return false
 	}
-	if isEmpty(espressoTx.Proof.PayloadProofTx.PrefixBytes) {
-		logs.Log.Debug("Proof.PayloadProofTx.PrefixBytes is empty")
-		//return true
-	}
-	if isEmpty(espressoTx.Proof.PayloadProofTx.SuffixBytes) {
-		logs.Log.Debug("Proof.PayloadProofTx.SuffixBytes is empty")
-		//return true
-	}
+	//if isEmpty(espressoTx.Proof.PayloadProofTx.PrefixBytes) {
+	//	logs.Log.Debug("Proof.PayloadProofTx.PrefixBytes is empty")
+	//	//return true
+	//}
+	//if isEmpty(espressoTx.Proof.PayloadProofTx.SuffixBytes) {
+	//	logs.Log.Debug("Proof.PayloadProofTx.SuffixBytes is empty")
+	//	//return true
+	//}
 	if isEmpty(espressoTx.BlockHash) {
 		logs.Log.Error("BlockHash is empty")
 		return false

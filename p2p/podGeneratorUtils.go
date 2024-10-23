@@ -323,7 +323,7 @@ func createEVMBatch(ldt *leveldb.DB, batchStartIndex []byte, limit []byte) (podD
 	limitInt, _ := strconv.Atoi(strings.TrimSpace(string(limit)))
 	batchStartIndexInt, _ := strconv.Atoi(strings.TrimSpace(string(batchStartIndex)))
 
-	fmt.Println("Batch Start Index : ", batchStartIndexInt)
+	//fmt.Println("Batch Start Index : ", batchStartIndexInt)
 
 	var batch types.BatchStruct
 
@@ -401,7 +401,7 @@ func saveVerifiedPOD() {
 	currentPodNumber := podState.LatestPodHeight
 	currentPodNumberInt := int(currentPodNumber)
 
-	fmt.Println("Current Pod Number : ", currentPodNumberInt)
+	//fmt.Println("Current Pod Number : ", currentPodNumberInt)
 	lds := shared.Node.NodeConnections.GetStaticDatabaseConnection()
 
 	err := lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(config.PODSize*(currentPodNumberInt))), nil)
@@ -442,7 +442,7 @@ func saveVerifiedTrackgatePOD() {
 	currentPodNumber := podState.LatestPodHeight
 	currentPodNumberInt := int(currentPodNumber)
 
-	fmt.Println("Current Pod Number : ", currentPodNumberInt)
+	//fmt.Println("Current Pod Number : ", currentPodNumberInt)
 	lds := shared.TNode.NodeConnections.GetStaticDatabaseConnection()
 
 	err := lds.Put([]byte("batchStartIndex"), []byte(strconv.Itoa(config.PODSize*(currentPodNumberInt))), nil)
@@ -539,9 +539,9 @@ func updateNewPodState(CombinedPodHash, Witness, uZKP, MRH []byte, podNumber uin
 func updateNewBatchState(CombinedPodHash []byte, podNumber uint64, batchInput *types.BatchStruct, txState string) {
 	var podState *shared.TrackgatePodState
 
-	fmt.Printf("podNumber : %d\n", podNumber)
-	fmt.Printf("CombinedPodHash : %s\n", CombinedPodHash)
-	fmt.Printf("PreviousPodHash : %s\n", shared.GetTrackgatePodState().LatestPodHash)
+	//fmt.Printf("podNumber : %d\n", podNumber)
+	//fmt.Printf("CombinedPodHash : %s\n", CombinedPodHash)
+	//fmt.Printf("PreviousPodHash : %s\n", shared.GetTrackgatePodState().LatestPodHash)
 
 	podState = &shared.TrackgatePodState{
 		LatestPodHeight: podNumber,
@@ -563,7 +563,6 @@ func updateTxState(txState string) {
 func UpdateTrackgateTxState(txState string) {
 	podState := shared.GetTrackgatePodState()
 	podState.LatestTxState = txState
-	fmt.Println("Trackgate TxState in function : ", podState.LatestTxState)
 	shared.SetTrackgatePodState(podState)
 	updateTrackgatePodStateInDatabase(podState)
 }

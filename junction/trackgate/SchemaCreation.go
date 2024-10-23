@@ -55,6 +55,7 @@ func SchemaCreation() bool {
 	//logs.Log.Info("tracks address: " + newTempAddr)
 	creator := newTempAddr
 
+	//change the schema version here after updating in types/espressoSchemaVersions
 	schemaByte, err := json.Marshal(SchemaV1)
 	if err != nil {
 		logs.Log.Error(fmt.Sprintf("Error in Marshal of schemaByte: %v", err))

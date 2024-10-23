@@ -45,7 +45,6 @@ func TrackgatePodGenerator() {
 	//previousStateData
 	podStateData, err := GetTrackgatePodStateFromDatabase()
 	CheckErrorAndExit(err, "Error in getting previous station data", 0)
-	//shared.SetTrackgatePodState((*shared.TrackgatePodState)(podStateData))
 
 	var (
 		previousTrackAppHash []byte
@@ -56,10 +55,10 @@ func TrackgatePodGenerator() {
 	)
 
 	currentPodNumber, _ := strconv.Atoi(strings.TrimSpace(string(rawCurrentPodNumber)))
-	fmt.Println("podstate data ", podStateData)
+	//initial pod state data
+	//fmt.Println("podstate data ", podStateData)
 	podData := junction.QueryTrackgatePod(uint64(currentPodNumber))
 	if podData != nil {
-		//check if sequencer detail is empty
 		if podStateData.LatestTxState == shared.TxStoreDb {
 			currentPodNumber++
 		}
@@ -76,12 +75,9 @@ func TrackgatePodGenerator() {
 
 	batchNumber = currentPodNumber
 	log.Info().Str("module", "p2p").Msg(fmt.Sprintf("Processing Pod Number: %d", batchNumber))
-	fmt.Println("current state", txState)
-	// create batch
 	if txState == shared.TxStatePreInit {
 		txState = shared.TxStateInitPod
 		UpdateTrackgateTxState(txState)
-		fmt.Println("current state", txState)
 		previousTrackAppHash = podStateData.TracksAppHash
 		if previousTrackAppHash == nil {
 			previousTrackAppHash = []byte("nil")
@@ -104,12 +100,13 @@ func TrackgatePodGenerator() {
 		trackAppHash = generateBatchHash(rawCurrentPodNumber)
 		updateNewBatchState(trackAppHash, uint64(batchNumber), batchInput, txState)
 	} else {
-		fmt.Println("previous state", txState)
 		trackAppHash = podStateData.TracksAppHash
 		batchInput = podStateData.Batch
 
 		storeNewBatchState(trackAppHash, uint64(batchNumber), batchInput, txState)
 	}
+	//fmt.Println("stopped here")
+	//os.Exit(0)
 
 	//	multi node
 	selectedMaster := MasterTracksSelection(Node, string(previousTrackAppHash))
@@ -118,7 +115,6 @@ func TrackgatePodGenerator() {
 
 	if decodedMaster == Node.ID() {
 		podState := shared.GetTrackgatePodState()
-		fmt.Println("PodState", podState)
 
 		shared.SetTrackgatePodState(podState)
 		Peers := getAllPeers(Node)
@@ -307,38 +303,28 @@ func TrackgatePodGenerator() {
 				}
 				txState = shared.TxDaSubmit
 				UpdateTrackgateTxState(txState)
-				fmt.Println("current state", txState)
 
 			} else {
 				log.Warn().Str("module", "p2p").Msg("Pod already submitted, moving to next step")
 			}
 
 			var EspressoTxResponse *types.EspressoData
-			fmt.Println("current in esptxresp  state", txState)
+			var ackHash string
+
 			if txState == shared.TxDaSubmit {
 				// espresso data submit
-				fmt.Println("current state", txState)
-				EspressoTxResponse, err = EspressoBatchSubmit(batchInput, baseConfig, PodNumber)
+				EspressoTxResponse, ackHash, err = EspressoBatchSubmit(batchInput, baseConfig, PodNumber)
 				if err != nil {
 					logs.Log.Error("Error in submitting data to Espresso")
 					return
 				}
 				txState = shared.TxSubmitEspresso
 				UpdateTrackgateTxState(txState)
-				err := saveEspressoPod(espressoDBConnection, EspressoTxResponse, PodNumber, txState, false)
+				err = saveEspressoPod(espressoDBConnection, EspressoTxResponse, PodNumber, txState, false)
 				if err != nil {
 					return
 				}
-				fmt.Println("current state", txState)
-				fmt.Println("Pod Number: ", PodNumber)
 			}
-
-			//
-
-			// schema engage
-			fmt.Println("current before schema engage state", txState)
-			//fmt.Println("espresso tx resp", EspressoTxResponse)
-			//fmt.Println("current before schema engage state", podStateData.LatestTxState)
 
 			if txState == shared.TxSubmitEspresso {
 				EspressoTxResponse2, _, err := getEspressoPod(espressoDBConnection, PodNumber)
@@ -346,31 +332,35 @@ func TrackgatePodGenerator() {
 					logs.Log.Error("Error in getting Espresso pod")
 					return
 				}
-				fmt.Println("current in schema engage state", txState)
-				success := trackgate.SchemaEngage(baseConfig, PodNumber, EspressoTxResponse2.Data)
+
+				podData1 := junction.QueryTrackgatePod(uint64(PodNumber))
+				var success bool
+				if podData1 != nil {
+					//check if sequencer detail is empty
+					success = true
+				} else {
+					success = trackgate.SchemaEngage(baseConfig, PodNumber, EspressoTxResponse2.Data, ackHash)
+				}
+
 				if !success {
 					logs.Log.Error("Failed to submit pod")
 					return
 				} else {
-					txState = shared.TxPodEngage
-					UpdateTrackgateTxState(txState)
-					logs.Log.Info("Successfully submitted pod")
-					err := saveEspressoPod(espressoDBConnection, EspressoTxResponse, PodNumber, txState, false)
+					err = saveEspressoPod(espressoDBConnection, EspressoTxResponse2, PodNumber, txState, false)
 					if err != nil {
 						return
 					}
-				}
+					txState = shared.TxPodEngage
+					UpdateTrackgateTxState(txState)
+					log.Info().Str("module", "p2p").Msg(fmt.Sprintf("Successfully submitted pod"))
 
-			} else {
-				fmt.Println("previous state after schema engage", txState)
-				//log.Error().Str("module", "p2p").Msg("Database Error. LatestTxState should equal to TxStatePreInit at this point")
-				//log.Error().Str("module", "p2p").Msg("LatestTxState: " + shared.GetTrackgatePodState().LatestTxState)
-				//return // stop sequencer, there is some error
+					//logs.Log.Info("Successfully submitted pod")
+					//fmt.Println("stopped here")
+					//os.Exit(0)
+				}
 			}
 
-			//call gin server
 			if txState == shared.TxPodEngage {
-				fmt.Println("current state in gin server step", txState)
 				EspressoTxResponse3, _, err := getEspressoPod(espressoDBConnection, PodNumber)
 				if err != nil {
 					logs.Log.Error("Error in getting Espresso pod")
@@ -383,21 +373,26 @@ func TrackgatePodGenerator() {
 						time.Sleep(5 * time.Second)
 						continue
 					} else {
-						fmt.Println("Gin server call success")
+						//fmt.Println("Gin server call success")
 						break
 					}
 				}
-				txState = shared.TxEVCUpdate
+				podState1 := shared.GetTrackgatePodState()
+				podState1.LatestPodHeight = uint64(PodNumber + 1)
+				shared.SetTrackgatePodState(podState1)
+				txState = shared.TxEVSUpdate
 				UpdateTrackgateTxState(txState)
-				logs.Log.Info(fmt.Sprintf("Transaction state updated to EVC: %s", txState))
-			}
 
-			fmt.Println("current state before save esp pod", txState)
-			saveEspressoPod(espressoDBConnection, EspressoTxResponse, PodNumber, txState, true)
-			//if err1 != nil {
-			//	return
-			//}
-			fmt.Println("saved espresso pod")
+				log.Info().
+					Str("module", "p2p").
+					Msg("Transaction state updated to EVS")
+			}
+			err = saveEspressoPod(espressoDBConnection, EspressoTxResponse, PodNumber, txState, true)
+			if err != nil {
+				return
+			}
+			txState = shared.TxStoreDb
+			UpdateTrackgateTxState(txState)
 			saveVerifiedTrackgatePOD()
 			TrackgatePodGenerator()
 			//os.Exit(0)

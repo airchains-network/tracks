@@ -17,7 +17,7 @@ import (
 	"github.com/ignite/cli/v28/ignite/pkg/cosmosclient"
 )
 
-func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte) bool {
+func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte, ackHash string) bool {
 
 	ctx := context.Background()
 
@@ -50,7 +50,7 @@ func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte) bool
 		logs.Log.Error(fmt.Sprintf("Error getting address: %v", err))
 		return false
 	}
-	logs.Log.Info("tracks address: " + newTempAddr)
+	//logs.Log.Info("tracks address: " + newTempAddr)
 	creator := newTempAddr
 
 	sequencerDetails := &trackgateTypes.SequencerDetails{
@@ -70,15 +70,12 @@ func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte) bool
 		Operator:            creator,
 		ExtTrackStationId:   stationId,
 		SchemaObject:        schemaObjectByte,
-		AcknowledgementHash: "acknowledgementHash",
+		AcknowledgementHash: ackHash,
 		PodNumber:           uint64(podNum),
 		SequencerDetails:    sequencerDetailsBytes,
 	}
 
-	fmt.Println("podNum", podNum)
-
 	// Broadcast a transaction from account `charlie` with the message
-	// to create a post store response in txResp
 	// to create a post store response in txResp
 	txResp, err := client.BroadcastTx(ctx, newTempAccount, msg)
 	if err != nil {
@@ -87,25 +84,6 @@ func SchemaEngage(conf *config.Config, podNum int, schemaObjectByte []byte) bool
 		return false
 	}
 	_ = txResp
-
-	// update pod number
-	//fmt.Println("schemaObjetByte", schemaObjectByte)
-	//
-	//for {
-	//	espressoDataSubmitSuccess := SubmitEspressoTx(schemaObjectByte)
-	//	if !espressoDataSubmitSuccess {
-	//		logs.Log.Error("Gin server call failed, retrying in 5 seconds...")
-	//		time.Sleep(5 * time.Second)
-	//		continue
-	//	} else {
-	//
-	//		break
-	//	}
-	//}
-	//
-	//podState := shared.GetTrackgatePodState()
-	//podState.LatestPodHeight = uint64(podNum + 1)
-	//shared.SetTrackgatePodState(podState)
 
 	return true
 }
